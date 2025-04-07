@@ -18,106 +18,106 @@ type Podcast = {
 const podcasts: Podcast[] = [
   {
     id: "1",
-    title: "Episode 1 - September 13, 2024",
+    title: "The Whitepaper",
     description: "First episode of the Earth2 Radio show.",
     duration: "23:00",
-    image: "/placeholder.svg?height=80&width=80",
+    image: "/images/radio_thumbnail.jpeg",
     audioUrl: "/radio/Sept132024ep1.mp3"
   },
   {
     id: "2",
-    title: "Episode 2 - September 14, 2024",
+    title: "Earth2 Deepdive",
     description: "Second episode of the Earth2 Radio show.",
     duration: "21:00",
-    image: "/placeholder.svg?height=80&width=80",
+    image: "/images/radio_thumbnail.jpeg",
     audioUrl: "/radio/Sept142024ep2.mp3"
   },
   {
     id: "3",
-    title: "Episode 3 - September 15, 2024",
+    title: "Fiat Withdrawals",
     description: "Third episode of the Earth2 Radio show.",
     duration: "14:00",
-    image: "/placeholder.svg?height=80&width=80",
+    image: "/images/radio_thumbnail.jpeg",
     audioUrl: "/radio/Sept152024ep3.mp3"
   },
   {
     id: "4",
-    title: "Episode 4 - September 18, 2024",
+    title: "Future of Earth2",
     description: "Fourth episode of the Earth2 Radio show.",
     duration: "18:00",
-    image: "/placeholder.svg?height=80&width=80",
+    image: "/images/radio_thumbnail.jpeg",
     audioUrl: "/radio/sept182024ep4.mp3"
   },
   {
     id: "5",
-    title: "Episode 5 - September 19, 2024",
+    title: "Wildlife in Earth2",
     description: "Fifth episode of the Earth2 Radio show.",
     duration: "28:00",
-    image: "/placeholder.svg?height=80&width=80",
+    image: "/images/radio_thumbnail.jpeg",
     audioUrl: "/radio/sept192024ep5.mp3"
   },
   {
     id: "6",
-    title: "Episode 6 - October 8, 2024",
+    title: "Earth2 Buildings",
     description: "Sixth episode of the Earth2 Radio show.",
     duration: "31:00",
-    image: "/placeholder.svg?height=80&width=80",
+    image: "/images/radio_thumbnail.jpeg",
     audioUrl: "/radio/oct82024ep6.mp3"
   },
   {
     id: "7",
-    title: "Episode 7 - October 9, 2024",
+    title: "Land Essence Upgrade",
     description: "Seventh episode of the Earth2 Radio show.",
     duration: "29:00",
-    image: "/placeholder.svg?height=80&width=80",
+    image: "/images/radio_thumbnail.jpeg",
     audioUrl: "/radio/oct92024ep7.mp3"
   },
   {
     id: "8",
-    title: "Episode 8 - October 11, 2024",
+    title: "Shane addresses rumours",
     description: "Eighth episode of the Earth2 Radio show.",
     duration: "18:00",
-    image: "/placeholder.svg?height=80&width=80",
+    image: "/images/radio_thumbnail.jpeg",
     audioUrl: "/radio/oct112024ep8.mp3"
   },
   {
     id: "9",
-    title: "Episode 9 - October 18, 2024",
+    title: "Earth2 Launcher",
     description: "Ninth episode of the Earth2 Radio show.",
     duration: "21:00",
-    image: "/placeholder.svg?height=80&width=80",
+    image: "/images/radio_thumbnail.jpeg",
     audioUrl: "/radio/oct182024ep9.mp3"
   },
   {
     id: "10",
-    title: "Episode 10 - November 15, 2024",
+    title: "Resource Mining  [Ecosim]",
     description: "Tenth episode of the Earth2 Radio show.",
     duration: "43:00",
-    image: "/placeholder.svg?height=80&width=80",
+    image: "/images/radio_thumbnail.jpeg",
     audioUrl: "/radio/nov152024ep10.mp3"
   },
   {
     id: "11",
-    title: "Episode 11 - November 20, 2024",
+    title: "Creation Process [Avatar]",
     description: "Eleventh episode of the Earth2 Radio show.",
     duration: "34:00",
-    image: "/placeholder.svg?height=80&width=80",
+    image: "/images/radio_thumbnail.jpeg",
     audioUrl: "/radio/nov202024ep11.mp3"
   },
   {
     id: "12",
-    title: "Episode 12 - January 30, 2025",
+    title: "E2v1 Status Update",
     description: "Twelfth episode of the Earth2 Radio show.",
     duration: "41:00",
-    image: "/placeholder.svg?height=80&width=80",
+    image: "/images/radio_thumbnail.jpeg",
     audioUrl: "/radio/jan302025ep12.mp3"
   },
   {
     id: "13",
-    title: "Episode 13 - February 9, 2025",
+    title: "E2V1 release for testers",
     description: "Thirteenth episode of the Earth2 Radio show.",
     duration: "48:00",
-    image: "/placeholder.svg?height=80&width=80",
+    image: "/images/radio_thumbnail.jpeg",
     audioUrl: "/radio/feb92025ep13.mp3"
   }
 ]
