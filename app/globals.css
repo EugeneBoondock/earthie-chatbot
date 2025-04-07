@@ -62,3 +62,9 @@
   background: #3bc0a0;
 }
 
+/* Remove this custom background class */
+/* .topographic-bg { ... } */
+
+/* Remove the gradient styles and animation if they existed */
+/* @keyframes topographic-flow { ... } */
+

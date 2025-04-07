@@ -1,0 +1,63 @@
+coal is a D1 resource and is boosted by anthracite jewels and can slot into Fury droid
+
+iron ore is a D1 resource and is boosted by ochre jewels and can slot into Cephalo droid
+
+limestone is a D1 resource and is boosted by grey jewels and can slot into Motus droid
+
+oil is a D1 resource and is boosted by black jewels and can slot into Gileumbo droid
+
+sand is a D1 resource and is boosted by sandy jewels and can slot into moleh droid
+
+freshwater is a D1 resource and is boosted by blue jewels and can slot into Sphera droid
+
+wood is a D1 resource and is boosted by green jewels and can slot into Salix droid
+
+copper is a D1 resource and is boosted by malachite jewels and can slot into guli droid
+
+gold is a D2 resource and is boosted by yellow jewels and can slot into an aurum droid
+
+bauxite is a D2 resource and is boosted by garnet jewels and can slot into Zephyr droid
+
+zinc is a D2 resource and is boosted by sunstone jewels and can slot into Fangmaw droid
+
+silver is a D3 resource pyrite jewel and can slot into Dela droid
+
+tin is a D3 resource and is boosted by ruby jewels and can slot into Gambit droid
+
+nickel is a D3 resource and is boosted by tiger eye jewels and can slot into a caelier droid
+
+tungsten is a D3 resource and is boosted by amber jewels and can slot into necro signal droid
+
+chromium is a D4 resource and is boosted by sunset jewels and can slot into Venator droid
+
+cobalt is a D4 resource and is boosted by azurite jewels and can slot into Jingo droid
+
+platinum is a D5 resource and is boosted by sodalite jewels and can slot into starlight-fury droid
+
+niobium is a D5 resource and is boosted by topaz jewels and can slot into starlight-fury droid
+
+Diamond is a D5 resource and is boosted by turquoise jewels and can slot into starlight-fury droid
+
+neodymium is a D6 resource and is boosted by slate jewels and can slot into Howler droid
+
+zirconium is a D6 resource and is boosted by zircon jewels and can slot into Howler droid
+
+titanium is a D6 resource and is boosted by titanite jewels and can slot into zirah droid
+
+molybdenum is a D7 resource and is boosted by Catseye jewels and can slot into ember droid
+
+boron is a D7 resource and is boosted by andalusite jewels and can slot into ember droid
+
+tantalum is a D7 resource and is boosted by obsidian jewels and can slot into Blaizer droid
+
+tellurium is a D7 resource and is boosted by aquamarine jewels and can slot into Blaizer droid
+
+uranium is a D8 resource and is boosted by prehnite jewels and can slot into Alukah droid
+
+rhenium is a D8 resource and is boosted by peridot jewels and can slot into Ohr droid
+
+vanadium is a D8 resource and is boosted by bloodstone jewels and can slot into scarab droid
+
+thorium is a D9 resource and is boosted by tanzanite jewels and can slot into roteor droid
+
+iridium is a D9 resource and is boosted by purple jewels and can slot into Magnetar droid

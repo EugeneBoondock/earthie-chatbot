@@ -1,0 +1,5 @@
+Some properties on Earth 2 generate very limited amounts - or even none - of a specific type of Resource, even though they may be found in the corresponding physical location on Earth. There are several reasons why this may be, and there is now the opportunity to not only help improve Resource generation but also corroborate your Claim with the wider Community and participate in the first instance of Essence staking on Earth 2.
+
+All you need to do is submit a Claim via the Claims Manager. When submitting your Claim, you should ensure that you supply conclusive, publicly available evidence to support your Claim (e.g. evaluations of geological research, images from Google Maps, etc.).
+
+If your Claim is successfully approved by Earth 2, your property and all properties in the affected area will reflect the real-world presence of the Resource claimed. This will take effect with the next update following confirmation of a successful Claim.

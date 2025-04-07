@@ -1,0 +1,30 @@
+When you log in to Earth 2 page all detected E-ther from the past 48 hours will be offered for you to claim: The E-ther Icon in the top bar is highlighted. By clicking on it, a popup appears and informs you about the amount of claimable Essence. By clicking Claim, the Essence is now claimed. Each tile has a daily chance of evaporating 1 E-ther. Mentars on larger properties usually have lower efficiency in detecting the evaporating E-ther, but their effectiveness can be boosted by filling the Mentars' open Jewel slots. Detected E-ther will vanish 48 hours after evaporating on your property, so it is important to visit Earth 2 to claim your E-ther regularly. Once you claim your detected E-ther, you will be asked to transform it into Essence. When you click the Transform button, your E-ther will be turned into Essence. Not all E-ther is the same, so the same amount of E-ther can yield a rather wide range of Essence. The Ether to Essence conversion rates for Tier 1 and Tier 2 also affect Essence generation.
+
+What is a Blueprint? A Blueprint is a design or technical drawing created by a player that has been saved and includes one or more virtual HoloBuildings. By owning a specific blueprint, you can create, edit, position, and place it on your property. If you are the creator or if you own the full rights to a created blueprint, you will be able to sell your blueprint to other players who will in turn have the right to place that blueprint design on their properties or use it inside Earth 2.
+
+What is a HoloBuilding? A HoloBuilding is the resulting product of a Blueprint that has been activated, constructed then placed on a Property. Amongst other things, HoloBuildings serve aesthetical and practical purposes inside Earth 2
+
+What is a Property? A Property is a parcel of land owned by a player on Earth 2. The Editor allows you to search for Properties you own when placing or building a new Blueprint.
+
+What is Space? Space is the volume of a HoloBuilding which is stored inside the Editor. When placing new HoloBuildings on your Tiles, Space is generated and becomes part of every HoloBuilding. It can be utilized for various purposes such as storing resources, additional Essence, convertible Space volume toward Phase 3 structures, and more. If a player retrospectively decides to remove or reduce the volume of a HoloBuilding after it is placed on a property, part of the volumetric will be credited to their Space virtual wallet and will become available for subsequent HoloBuildings or other purposes yet to be disclosed.
+
+Boosted E-ther is first and foremost a massive bonus for all T1 and T2 lan that is visible day-to-day and has the potential to accrue substantially in the size of available E-ther weeks, months, and possibly years. The boost mechanics are applied to all T1 and T2 tiles and these mechanics have been designed in such a way that places full control of the potential benefits into the hands of any Players that own T1 or T2 land.
+
+The Earth2 Property Locator (EPL) (format of e2.me/nd) is a unique global identifier Players can upgrade on their property. It provides a similar function as a URL to a website yet for now, in holders' initial release, it is universal and more simplified. The EPL allows users to overwrite the standard cryptic identifier with a more EPLitsu and discoverable word or phrase. These words or phrases are unique and therefore limited and being universal will have limited availability. EPLs will be an integral part of the Earth 2 platform, be key in connectivity, and even have their own dedicated premium Earth 1 portal.
+
+Marketplace
+The Marketplace is the place where players can trade their properties.
+To access the Marketplace, click the Marketplace button in the Navigation Bar at the top of your screen.
+On this page, you can search for specific offers by using filters.
+Market Value History will bring you to the Country Statistics page which displays additional information about each country's value.
+Note that we will be updating the website from time to time by reworking and adding new features.
+The page will show multiple results. All the properties for sale are submitted by the players of Earth 2.
+Tiles: Size of the property in tiles.
+Tier: The tier of the property.
+Class: Class number of the property.
+Country: In which country the property is located?
+Essence Promised: The amount of promised Essence attached to the property.
+New Land Value: Value of a newly bought property of the same size in that country.
+Name/Advertised Price:  The selling player sets the property's name and price.
+percentage vs New Land Value: The price difference between New Land Value and Advertised Price.
+Actions: View or buy the property listed in the Marketplace.

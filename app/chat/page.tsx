@@ -1,161 +1,141 @@
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
+import { useState, useRef, useEffect, FormEvent } from "react"
 import { Card, CardContent } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Avatar } from "@/components/ui/avatar"
-import { Send } from "lucide-react"
-import Image from "next/image"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Message } from "@/app/lib/gemini"
 
-type Message = {
-  id: string
-  content: string
-  role: "user" | "assistant"
-  timestamp: Date
-}
+// Simple typing indicator component
+const TypingIndicator = () => (
+  <div className="flex items-center space-x-2 p-2 justify-start">
+    <Avatar className="h-8 w-8">
+      <AvatarImage src="/images/earthie_logo.png" alt="Earthie" />
+      <AvatarFallback>E</AvatarFallback>
+    </Avatar>
+    <div className="flex space-x-1.5 p-2 bg-gray-700 rounded-lg">
+        <span className="h-2 w-2 bg-[#50E3C1] rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+        <span className="h-2 w-2 bg-[#50E3C1] rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+        <span className="h-2 w-2 bg-[#50E3C1] rounded-full animate-bounce"></span>
+    </div>
+  </div>
+)
 
 export default function ChatPage() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "1",
-      content: "Hello! I'm Earthie, your Earth2 assistant. How can I help you today?",
-      role: "assistant",
-      timestamp: new Date(),
-    },
-  ])
-  const [input, setInput] = useState("")
+  const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [inputValue, setInputValue] = useState("")
+  const scrollAreaRef = useRef<HTMLDivElement>(null)
+  const viewportElementRef = useRef<HTMLDivElement | null>(null)
 
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault()
+  // Initial welcome message
+  useEffect(() => {
+    setMessages([
+      { role: "assistant", content: "Hi there! I'm Earthie, your guide to Earth 2. Ask me anything!" }
+    ])
+  }, [])
 
-    if (!input.trim()) return
-
-    // Add user message
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      content: input,
-      role: "user",
-      timestamp: new Date(),
+  // Auto-scroll effect - Find viewport after mount and scroll
+  useEffect(() => {
+    if (!viewportElementRef.current && scrollAreaRef.current) {
+        viewportElementRef.current = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
     }
+    if (viewportElementRef.current) {
+        viewportElementRef.current.scrollTop = viewportElementRef.current.scrollHeight;
+    }
+  }, [messages, isLoading])
 
-    setMessages((prev) => [...prev, userMessage])
-    setInput("")
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault()
+    const userInput = inputValue.trim()
+    if (!userInput || isLoading) return
+
+    const newUserMessage: Message = { role: "user", content: userInput }
+    setMessages(prev => [...prev, newUserMessage])
+    setInputValue("")
     setIsLoading(true)
 
-    // Simulate AI response
-    setTimeout(() => {
-      const responses = [
-        "Earth2 is a futuristic virtual world where you can buy, sell, and develop virtual land.",
-        "The E2 economy is based on the concept of digital land ownership and resource extraction.",
-        "Essence is a resource in Earth2 that can be used for various activities in the game.",
-        "Jewels are a form of currency in Earth2 that can be earned through various activities.",
-        "Properties in Earth2 can be developed and customized according to your preferences.",
-        "Earth2 is divided into different phases, with each phase introducing new features and gameplay elements.",
-      ]
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ messages: [...messages, newUserMessage] }),
+      })
 
-      const botMessage: Message = {
-        id: Date.now().toString(),
-        content: responses[Math.floor(Math.random() * responses.length)],
-        role: "assistant",
-        timestamp: new Date(),
+      if (!response.ok) {
+        // Handle HTTP errors (e.g., 500 from API route)
+        const errorData = await response.json().catch(() => ({ error: "Failed to process response" }))
+        console.error("API Error Response:", errorData)
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
       }
 
-      setMessages((prev) => [...prev, botMessage])
+      const data = await response.json()
+      const assistantMessage: Message = { role: "assistant", content: data.response }
+      setMessages(prev => [...prev, assistantMessage])
+    } catch (error) {
+      console.error("Chat error:", error)
+      // Add an error message to the chat for the user
+      const errorMessage: Message = {
+        role: "assistant",
+        content: `Sorry, I encountered an error. ${error instanceof Error ? error.message : "Please try again."}`
+      }
+      setMessages(prev => [...prev, errorMessage])
+    } finally {
       setIsLoading(false)
-    }, 1000)
+    }
   }
 
   return (
-    <div className="container max-w-4xl py-8 bg-earthie-dark">
-      <h1 className="text-3xl font-bold mb-8 text-center text-white">Chat with Earthie</h1>
-
-      <Card className="border-2 border-earthie-mint/20 bg-earthie-dark-light">
-        <CardContent className="p-4">
-          <div className="flex flex-col space-y-4 h-[60vh] overflow-y-auto p-4">
-            {messages.map((message) => (
-              <div key={message.id} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
-                <div
-                  className={`flex items-start gap-2 max-w-[80%] ${message.role === "user" ? "flex-row-reverse" : ""}`}
-                >
-                  {message.role === "assistant" ? (
-                    <Avatar className="w-8 h-8 bg-earthie-mint">
-                      <div className="relative w-full h-full">
-                        <Image src="/images/earthie_logo.png" alt="Earthie" fill className="object-cover" />
-                      </div>
-                    </Avatar>
-                  ) : (
-                    <Avatar className="w-8 h-8 bg-earthie-mint text-earthie-dark">
-                      <span>U</span>
-                    </Avatar>
-                  )}
-                  <div
-                    className={`rounded-lg px-4 py-2 ${
-                      message.role === "user"
-                        ? "bg-earthie-mint text-earthie-dark"
-                        : "bg-earthie-dark border border-earthie-mint/30 text-white"
-                    }`}
-                  >
-                    <p>{message.content}</p>
-                    <p className="text-xs opacity-50 mt-1">
-                      {message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                    </p>
-                  </div>
-                </div>
+    <div className="flex flex-col h-[calc(100vh-100px)] max-h-[calc(100vh-100px)] bg-transparent relative z-10">
+      <ScrollArea className="flex-grow p-4" ref={scrollAreaRef}>
+        <div className="space-y-4">
+          {messages.map((msg, index) => (
+            <div key={index} className={`flex items-end space-x-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              {msg.role === 'assistant' && (
+                <Avatar className="h-8 w-8 flex-shrink-0">
+                  <AvatarImage src="/images/earthie_logo.png" alt="Earthie" />
+                  <AvatarFallback>E</AvatarFallback>
+                </Avatar>
+              )}
+              <div className={`p-3 rounded-lg max-w-[70%] break-words whitespace-pre-wrap ${ 
+                msg.role === 'user' 
+                  ? 'bg-[#383A4B] text-white'
+                  : 'bg-gray-700 text-gray-100' 
+              }`}>
+                {msg.content}
               </div>
-            ))}
-            {isLoading && (
-              <div className="flex justify-start">
-                <div className="flex items-start gap-2 max-w-[80%]">
-                  <Avatar className="w-8 h-8 bg-earthie-mint">
-                    <div className="relative w-full h-full">
-                      <Image src="/images/earthie_logo.png" alt="Earthie" fill className="object-cover" />
-                    </div>
+              {msg.role === 'user' && (
+                  <Avatar className="h-8 w-8 flex-shrink-0">
+                      <AvatarFallback>U</AvatarFallback> 
                   </Avatar>
-                  <div className="rounded-lg px-4 py-2 bg-earthie-dark border border-earthie-mint/30">
-                    <div className="flex space-x-1">
-                      <div
-                        className="w-2 h-2 rounded-full bg-earthie-mint animate-bounce"
-                        style={{ animationDelay: "0ms" }}
-                      ></div>
-                      <div
-                        className="w-2 h-2 rounded-full bg-earthie-mint animate-bounce"
-                        style={{ animationDelay: "150ms" }}
-                      ></div>
-                      <div
-                        className="w-2 h-2 rounded-full bg-earthie-mint animate-bounce"
-                        style={{ animationDelay: "300ms" }}
-                      ></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <form onSubmit={handleSendMessage} className="mt-4 flex items-center gap-2">
-            <Input
-              placeholder="Ask anything about Earth2..."
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              disabled={isLoading}
-              className="flex-1 bg-earthie-dark border-earthie-mint/30 text-white"
-            />
-            <Button
-              type="submit"
-              size="icon"
-              disabled={isLoading || !input.trim()}
-              className="bg-earthie-mint text-earthie-dark hover:bg-earthie-mint/90"
-            >
-              <Send className="h-4 w-4" />
-              <span className="sr-only">Send message</span>
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+              )}
+            </div>
+          ))}
+          {isLoading && <TypingIndicator />}
+        </div>
+      </ScrollArea>
+      <div className="p-4 border-t border-gray-700 bg-gray-800">
+        <form onSubmit={handleSubmit} className="flex items-center space-x-3">
+          <Input 
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            placeholder="Ask Earthie anything..." 
+            className="flex-grow bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500 rounded-md"
+            disabled={isLoading}
+          />
+          <Button 
+             type="submit" 
+             disabled={isLoading || !inputValue.trim()}
+             className="bg-[#50E3C1] hover:bg-[#40c0a0] text-gray-900 font-semibold rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Send
+          </Button>
+        </form>
+      </div>
     </div>
   )
 }
