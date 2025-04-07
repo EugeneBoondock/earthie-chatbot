@@ -1,0 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 240 6% 21%;
+    --foreground: 0 0% 98%;
+
+    --card: 240 6% 21%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 240 6% 21%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 165 73% 60%;
+    --primary-foreground: 240 6% 21%;
+
+    --secondary: 240 6% 30%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 240 6% 30%;
+    --muted-foreground: 240 5% 65%;
+
+    --accent: 240 6% 30%;
+    --accent-foreground: 0 0% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 240 6% 30%;
+    --input: 240 6% 30%;
+    --ring: 165 73% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Custom scrollbar for dark mode */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #2f2e3d;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #50e2c0;
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3bc0a0;
+}
+

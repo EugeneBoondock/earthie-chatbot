@@ -1,0 +1,106 @@
+import type { NextAuthOptions } from "next-auth"
+import CredentialsProvider from "next-auth/providers/credentials"
+import GithubProvider from "next-auth/providers/github"
+import { compare, hash } from "bcrypt"
+
+// This is a simple in-memory database for demo purposes
+// In a real app, you would use a real database
+const users = [
+  {
+    id: "1",
+    name: "Admin",
+    email: "admin@example.com",
+    // Password: "password"
+    password: "$2b$10$zQSMW7UiBn8t3EBSuP6w3e5iUH0ZldqUXYXG6J.5W8dVOq1SkTKHe",
+  },
+]
+
+export const authOptions: NextAuthOptions = {
+  providers: [
+    GithubProvider({
+      clientId: process.env.GITHUB_ID as string,
+      clientSecret: process.env.GITHUB_SECRET as string,
+    }),
+    CredentialsProvider({
+      name: "Credentials",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          return null
+        }
+
+        const user = users.find((user) => user.email === credentials.email)
+        if (!user) {
+          return null
+        }
+
+        const isPasswordValid = await compare(credentials.password, user.password)
+        if (!isPasswordValid) {
+          return null
+        }
+
+        return {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+        }
+      },
+    }),
+  ],
+  pages: {
+    signIn: "/auth/login",
+    signOut: "/auth/signout",
+    error: "/auth/error",
+  },
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id
+      }
+      return token
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.id as string
+      }
+      return session
+    },
+  },
+  session: {
+    strategy: "jwt",
+  },
+  secret: process.env.NEXTAUTH_SECRET,
+}
+
+// Helper function to register a new user
+export async function registerUser(name: string, email: string, password: string) {
+  // Check if user already exists
+  const existingUser = users.find((user) => user.email === email)
+  if (existingUser) {
+    throw new Error("User already exists")
+  }
+
+  // Hash password
+  const hashedPassword = await hash(password, 10)
+
+  // Create new user
+  const newUser = {
+    id: (users.length + 1).toString(),
+    name,
+    email,
+    password: hashedPassword,
+  }
+
+  // Add user to "database"
+  users.push(newUser)
+
+  return {
+    id: newUser.id,
+    name: newUser.name,
+    email: newUser.email,
+  }
+}
+
