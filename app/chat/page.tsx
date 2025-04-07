@@ -91,8 +91,8 @@ export default function ChatPage() {
 
   return (
     <div className="flex flex-col h-full bg-transparent">
-      <ScrollArea className="flex-grow p-4 bg-transparent" ref={scrollAreaRef}>
-        <div className="space-y-4">
+      <ScrollArea className="flex-grow bg-transparent" ref={scrollAreaRef}>
+        <div className="space-y-4 p-4">
           {messages.map((msg, index) => (
             <div key={index} className={`flex items-end space-x-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               {msg.role === 'assistant' && (
