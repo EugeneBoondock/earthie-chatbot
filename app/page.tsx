@@ -9,7 +9,7 @@ export default function Home() {
       <section className="container mx-auto px-4 flex justify-center py-12 md:py-16 lg:py-20">
         <div className="bg-gray-800 rounded-lg shadow-xl p-8 md:p-12 flex flex-col md:flex-row items-center gap-8 md:gap-12 w-full max-w-6xl">
           <div className="flex-1 text-center md:text-left">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4 text-white leading-tight">
+            <h1 className="text-3xl md:text-5xl font-bold mb-4 text-white leading-tight">
               Meet Earthie, Your<br />Earth2 Companion
             </h1>
             <p className="text-lg text-gray-300 mb-8">
@@ -61,6 +61,11 @@ export default function Home() {
               <p className="text-center text-gray-300">
                 Get instant answers to all your Earth2 questions from property management to gameplay strategies.
               </p>
+              <Link href="/chat" passHref className="mt-auto pt-4">
+                <Button variant="outline" className="text-[#50E3C1] border-[#50E3C1] hover:bg-[#50E3C1]/10 hover:text-[#50E3C1]">
+                  Start Chatting <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
             </div>
             <div className="flex flex-col items-center space-y-4 p-6 border border-gray-700 rounded-lg bg-gray-800">
               <div className="p-3 rounded-full bg-[#50E3C1]/20">
@@ -70,6 +75,11 @@ export default function Home() {
               <p className="text-center text-gray-300">
                 Listen to podcasts and updates about the latest developments in the Earth2 universe.
               </p>
+              <Link href="/radio" passHref className="mt-auto pt-4">
+                <Button variant="outline" className="text-[#50E3C1] border-[#50E3C1] hover:bg-[#50E3C1]/10 hover:text-[#50E3C1]">
+                  Listen Now <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
             </div>
             <div className="flex flex-col items-center space-y-4 p-6 border border-gray-700 rounded-lg bg-gray-800">
               <div className="p-3 rounded-full bg-[#50E3C1]/20">
@@ -79,6 +89,11 @@ export default function Home() {
               <p className="text-center text-gray-300">
                 Submit and share your Earth2 scripts to enhance the community experience.
               </p>
+              <Link href="/dev-tools" passHref className="mt-auto pt-4">
+                <Button variant="outline" className="text-[#50E3C1] border-[#50E3C1] hover:bg-[#50E3C1]/10 hover:text-[#50E3C1]">
+                  Explore Tools <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
