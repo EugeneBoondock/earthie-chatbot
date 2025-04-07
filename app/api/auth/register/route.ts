@@ -1,6 +1,6 @@
 // app/api/auth/register/route.ts
 import { type NextRequest, NextResponse } from "next/server"
-const { registerUser } = require("@/auth.config.js")
+import { registerUser } from "@/auth.config"
 
 export async function POST(req: NextRequest) {
   try {
