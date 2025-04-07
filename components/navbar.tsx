@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Menu, X } from "lucide-react"
 import { useState } from "react"
-import { useSession, signOut } from "next-auth/react"
 
 const navItems = [
   { name: "Home", path: "/" },
@@ -18,8 +17,6 @@ const navItems = [
 export default function Navbar() {
   const pathname = usePathname()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const { data: session, status } = useSession()
-  const isLoading = status === "loading"
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-earthie-dark-light bg-earthie-dark/95 backdrop-blur supports-[backdrop-filter]:bg-earthie-dark/60">
@@ -54,45 +51,8 @@ export default function Navbar() {
           ))}
         </nav>
 
-        {/* Auth buttons */}
-        <div className="hidden md:flex items-center gap-4">
-          {isLoading ? (
-            <div className="h-9 w-20 bg-earthie-dark-light rounded-xl animate-pulse"></div>
-          ) : session ? (
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-300">Hi, {session.user?.name || "User"}</span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => signOut()}
-                className="rounded-xl border-earthie-mint text-earthie-mint hover:bg-earthie-mint/10"
-              >
-                Sign Out
-              </Button>
-            </div>
-          ) : (
-            <>
-              <Link href="/auth/login">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-gray-300 hover:text-earthie-mint hover:bg-earthie-dark-light rounded-xl"
-                >
-                  Login
-                </Button>
-              </Link>
-              <Link href="/auth/register">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="rounded-xl border-earthie-mint text-earthie-mint hover:bg-earthie-mint/10"
-                >
-                  Sign Up
-                </Button>
-              </Link>
-            </>
-          )}
-        </div>
+        {/* Placeholder for potential future buttons if needed */}
+        <div className="hidden md:flex items-center gap-4"></div>
 
         {/* Mobile menu button */}
         <Button
@@ -122,48 +82,6 @@ export default function Navbar() {
                 {item.name}
               </Link>
             ))}
-
-            {/* Mobile auth buttons */}
-            <div className="pt-4 border-t border-earthie-dark-light">
-              {isLoading ? (
-                <div className="h-9 w-full bg-earthie-dark-light rounded-xl animate-pulse"></div>
-              ) : session ? (
-                <div className="flex flex-col gap-2">
-                  <span className="text-sm text-gray-300">Hi, {session.user?.name || "User"}</span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => signOut()}
-                    className="rounded-xl border-earthie-mint text-earthie-mint hover:bg-earthie-mint/10 w-full"
-                  >
-                    Sign Out
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-2">
-                  <Link href="/auth/login" className="w-full">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-gray-300 hover:text-earthie-mint hover:bg-earthie-dark-light rounded-xl w-full"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      Login
-                    </Button>
-                  </Link>
-                  <Link href="/auth/register" className="w-full">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="rounded-xl border-earthie-mint text-earthie-mint hover:bg-earthie-mint/10 w-full"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      Sign Up
-                    </Button>
-                  </Link>
-                </div>
-              )}
-            </div>
           </nav>
         </div>
       )}
