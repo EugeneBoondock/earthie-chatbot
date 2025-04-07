@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Play, Pause, SkipBack, SkipForward, Volume2 } from "lucide-react"
@@ -12,58 +12,167 @@ type Podcast = {
   description: string
   duration: string
   image: string
+  audioUrl: string
 }
 
 const podcasts: Podcast[] = [
   {
     id: "1",
-    title: "Earth2 Market Updates",
-    description: "Weekly updates on the Earth2 marketplace, property values, and trading tips.",
-    duration: "32:45",
+    title: "Episode 1 - September 13, 2024",
+    description: "First episode of the Earth2 Radio show.",
+    duration: "23:00",
     image: "/placeholder.svg?height=80&width=80",
+    audioUrl: "/radio/Sept132024ep1.mp3"
   },
   {
     id: "2",
-    title: "Resource Farming Guide",
-    description: "Learn the best strategies for resource farming and maximizing your yields in Earth2.",
-    duration: "45:12",
+    title: "Episode 2 - September 14, 2024",
+    description: "Second episode of the Earth2 Radio show.",
+    duration: "21:00",
     image: "/placeholder.svg?height=80&width=80",
+    audioUrl: "/radio/Sept142024ep2.mp3"
   },
   {
     id: "3",
-    title: "Earth2 Developer Interview",
-    description: "Exclusive interview with Earth2 developers about upcoming features and roadmap.",
-    duration: "58:30",
+    title: "Episode 3 - September 15, 2024",
+    description: "Third episode of the Earth2 Radio show.",
+    duration: "14:00",
     image: "/placeholder.svg?height=80&width=80",
+    audioUrl: "/radio/Sept152024ep3.mp3"
   },
   {
     id: "4",
-    title: "Community Spotlight",
-    description: "Highlighting amazing creations and achievements from the Earth2 community.",
-    duration: "26:18",
+    title: "Episode 4 - September 18, 2024",
+    description: "Fourth episode of the Earth2 Radio show.",
+    duration: "18:00",
     image: "/placeholder.svg?height=80&width=80",
+    audioUrl: "/radio/sept182024ep4.mp3"
   },
   {
     id: "5",
-    title: "Beginner's Guide to Earth2",
-    description: "Everything new players need to know to get started in the world of Earth2.",
-    duration: "41:05",
+    title: "Episode 5 - September 19, 2024",
+    description: "Fifth episode of the Earth2 Radio show.",
+    duration: "28:00",
     image: "/placeholder.svg?height=80&width=80",
+    audioUrl: "/radio/sept192024ep5.mp3"
   },
+  {
+    id: "6",
+    title: "Episode 6 - October 8, 2024",
+    description: "Sixth episode of the Earth2 Radio show.",
+    duration: "31:00",
+    image: "/placeholder.svg?height=80&width=80",
+    audioUrl: "/radio/oct82024ep6.mp3"
+  },
+  {
+    id: "7",
+    title: "Episode 7 - October 9, 2024",
+    description: "Seventh episode of the Earth2 Radio show.",
+    duration: "29:00",
+    image: "/placeholder.svg?height=80&width=80",
+    audioUrl: "/radio/oct92024ep7.mp3"
+  },
+  {
+    id: "8",
+    title: "Episode 8 - October 11, 2024",
+    description: "Eighth episode of the Earth2 Radio show.",
+    duration: "18:00",
+    image: "/placeholder.svg?height=80&width=80",
+    audioUrl: "/radio/oct112024ep8.mp3"
+  },
+  {
+    id: "9",
+    title: "Episode 9 - October 18, 2024",
+    description: "Ninth episode of the Earth2 Radio show.",
+    duration: "21:00",
+    image: "/placeholder.svg?height=80&width=80",
+    audioUrl: "/radio/oct182024ep9.mp3"
+  },
+  {
+    id: "10",
+    title: "Episode 10 - November 15, 2024",
+    description: "Tenth episode of the Earth2 Radio show.",
+    duration: "43:00",
+    image: "/placeholder.svg?height=80&width=80",
+    audioUrl: "/radio/nov152024ep10.mp3"
+  },
+  {
+    id: "11",
+    title: "Episode 11 - November 20, 2024",
+    description: "Eleventh episode of the Earth2 Radio show.",
+    duration: "34:00",
+    image: "/placeholder.svg?height=80&width=80",
+    audioUrl: "/radio/nov202024ep11.mp3"
+  },
+  {
+    id: "12",
+    title: "Episode 12 - January 30, 2025",
+    description: "Twelfth episode of the Earth2 Radio show.",
+    duration: "41:00",
+    image: "/placeholder.svg?height=80&width=80",
+    audioUrl: "/radio/jan302025ep12.mp3"
+  },
+  {
+    id: "13",
+    title: "Episode 13 - February 9, 2025",
+    description: "Thirteenth episode of the Earth2 Radio show.",
+    duration: "48:00",
+    image: "/placeholder.svg?height=80&width=80",
+    audioUrl: "/radio/feb92025ep13.mp3"
+  }
 ]
 
 export default function RadioPage() {
   const [currentPodcast, setCurrentPodcast] = useState<Podcast | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [volume, setVolume] = useState(80)
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(0)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
 
   const handlePlayPodcast = (podcast: Podcast) => {
     setCurrentPodcast(podcast)
     setIsPlaying(true)
+    if (audioRef.current) {
+      audioRef.current.src = podcast.audioUrl
+      audioRef.current.play()
+    }
   }
 
   const togglePlayPause = () => {
-    setIsPlaying(!isPlaying)
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.pause()
+      } else {
+        audioRef.current.play()
+      }
+      setIsPlaying(!isPlaying)
+    }
+  }
+
+  const handleTimeUpdate = () => {
+    if (audioRef.current) {
+      setCurrentTime(audioRef.current.currentTime)
+    }
+  }
+
+  const handleLoadedMetadata = () => {
+    if (audioRef.current) {
+      setDuration(audioRef.current.duration)
+    }
+  }
+
+  const handleVolumeChange = (value: number[]) => {
+    setVolume(value[0])
+    if (audioRef.current) {
+      audioRef.current.volume = value[0] / 100
+    }
+  }
+
+  const formatTime = (time: number) => {
+    const minutes = Math.floor(time / 60)
+    const seconds = Math.floor(time % 60)
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`
   }
 
   return (
@@ -112,11 +221,14 @@ export default function RadioPage() {
                 <h3 className="font-bold text-white">{currentPodcast.title}</h3>
                 <p className="text-sm text-gray-300 line-clamp-1">{currentPodcast.description}</p>
                 <div className="flex items-center gap-2 mt-2">
-                  <span className="text-xs text-gray-400">00:00</span>
+                  <span className="text-xs text-gray-400">{formatTime(currentTime)}</span>
                   <div className="flex-1 h-1 bg-earthie-dark rounded-full overflow-hidden">
-                    <div className="h-full bg-earthie-mint" style={{ width: "30%" }}></div>
+                    <div 
+                      className="h-full bg-earthie-mint" 
+                      style={{ width: `${(currentTime / duration) * 100}%` }}
+                    ></div>
                   </div>
-                  <span className="text-xs text-gray-400">{currentPodcast.duration}</span>
+                  <span className="text-xs text-gray-400">{formatTime(duration)}</span>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -148,13 +260,21 @@ export default function RadioPage() {
                   max={100}
                   step={1}
                   className="w-24"
-                  onValueChange={(value) => setVolume(value[0])}
+                  onValueChange={handleVolumeChange}
                 />
               </div>
             </div>
           </CardContent>
         </Card>
       )}
+
+      <audio
+        ref={audioRef}
+        onTimeUpdate={handleTimeUpdate}
+        onLoadedMetadata={handleLoadedMetadata}
+        onEnded={() => setIsPlaying(false)}
+        className="hidden"
+      />
     </div>
   )
 }
