@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useRef, useEffect, FormEvent } from "react"
-import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -28,7 +27,6 @@ export default function ChatPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [inputValue, setInputValue] = useState("")
   const scrollAreaRef = useRef<HTMLDivElement>(null)
-  const viewportElementRef = useRef<HTMLDivElement | null>(null)
 
   // Initial welcome message
   useEffect(() => {
@@ -37,15 +35,17 @@ export default function ChatPage() {
     ])
   }, [])
 
-  // Auto-scroll effect - Find viewport after mount and scroll
+  // Auto-scroll effect
   useEffect(() => {
-    if (!viewportElementRef.current && scrollAreaRef.current) {
-        viewportElementRef.current = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
+    if (scrollAreaRef.current) {
+      const viewport = scrollAreaRef.current.querySelector<HTMLDivElement>('[data-radix-scroll-area-viewport]');
+      if (viewport) {
+        requestAnimationFrame(() => {
+           viewport.scrollTop = viewport.scrollHeight;
+        });
+      }
     }
-    if (viewportElementRef.current) {
-        viewportElementRef.current.scrollTop = viewportElementRef.current.scrollHeight;
-    }
-  }, [messages, isLoading])
+  }, [messages, isLoading]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -90,8 +90,8 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-100px)] max-h-[calc(100vh-100px)] bg-transparent relative z-10">
-      <ScrollArea className="flex-grow p-4" ref={scrollAreaRef}>
+    <div className="flex flex-col h-full bg-transparent">
+      <ScrollArea className="flex-grow p-4 bg-transparent" ref={scrollAreaRef}>
         <div className="space-y-4">
           {messages.map((msg, index) => (
             <div key={index} className={`flex items-end space-x-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -118,7 +118,7 @@ export default function ChatPage() {
           {isLoading && <TypingIndicator />}
         </div>
       </ScrollArea>
-      <div className="p-4 border-t border-gray-700 bg-gray-800">
+      <div className="p-4 border-t border-gray-700 bg-gray-800 shrink-0">
         <form onSubmit={handleSubmit} className="flex items-center space-x-3">
           <Input 
             value={inputValue}

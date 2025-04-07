@@ -20,18 +20,14 @@ export default function Home() {
                   virtual world experience.
                 </p>
               </div>
-              <div className="flex flex-col gap-2 min-[400px]:flex-row">
-                <Link href="/chat">
-                  <Button size="lg" className="bg-earthie-mint hover:bg-earthie-mint/90 text-earthie-dark rounded-xl">
-                    Chat with Earthie <ArrowRight className="ml-2 h-4 w-4" />
+              <div className="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-4 w-full max-w-xs md:max-w-md">
+                <Link href="/chat" passHref className="w-full md:w-auto">
+                  <Button size="lg" className="bg-[#50E3C1] hover:bg-[#40c0a0] text-gray-900 font-semibold rounded-md w-full">
+                    Chat with Earthie
                   </Button>
                 </Link>
-                <Link href="/radio">
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    className="border-earthie-mint text-earthie-mint hover:bg-earthie-mint/10 rounded-xl"
-                  >
+                <Link href="/radio" passHref className="w-full md:w-auto">
+                  <Button size="lg" variant="outline" className="text-white border-gray-600 hover:bg-gray-700 hover:text-white rounded-md w-full">
                     Listen to Radio
                   </Button>
                 </Link>

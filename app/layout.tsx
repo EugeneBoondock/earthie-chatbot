@@ -33,13 +33,13 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
-      <body className={`${inter.className} text-white`}>
+    <html lang="en" className="dark h-full" suppressHydrationWarning>
+      <body className={`${inter.className} text-white h-full`}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} forcedTheme="dark">
           <TopographicBackground />
-          <div className="flex flex-col min-h-screen relative z-0">
+          <div className="flex flex-col h-full relative z-0">
             <Navbar />
-            <main className="flex-grow container mx-auto px-4 py-8 relative z-10">
+            <main className="flex-grow container mx-auto px-4 py-8 overflow-y-auto relative z-10">
               {children}
             </main>
             <Footer />

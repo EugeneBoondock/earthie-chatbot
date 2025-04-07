@@ -32,6 +32,14 @@
     --input: 240 6% 30%;
     --ring: 165 73% 60%;
   }
+
+  html, 
+  body, 
+  body > div:first-child, 
+  div#__next, 
+  div#__next > div {
+    height: 100%;
+  }
 }
 
 @layer base {
