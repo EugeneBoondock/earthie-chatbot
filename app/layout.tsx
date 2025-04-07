@@ -39,10 +39,8 @@ export default function RootLayout({
           <TopographicBackground />
           <div className="flex flex-col h-full relative z-0">
             <Navbar />
-            <main className="flex-grow overflow-y-auto relative z-10 flex justify-center items-start py-8 md:py-12">
-              <div className="bg-gray-800 rounded-lg shadow-xl p-6 md:p-8 w-full max-w-6xl">
-                {children}
-              </div>
+            <main className="flex-grow overflow-y-auto relative z-10 py-8 md:py-12">
+              {children}
             </main>
             <Footer />
           </div>
