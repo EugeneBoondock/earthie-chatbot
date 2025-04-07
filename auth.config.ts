@@ -1,7 +1,7 @@
 // auth.config.ts
 import type { User, Session } from "next-auth"; // Import necessary types
 import type { JWT } from "next-auth/jwt";
-import type { NextAuthOptions } from "next-auth";
+import type { AuthOptions } from "@auth/core";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GithubProvider from "next-auth/providers/github";
 import { compare, hash } from "bcryptjs"; // Use import for bcryptjs
@@ -29,7 +29,7 @@ interface Credentials {
   password: string;
 }
 
-export const authOptions = {
+export const authOptions: AuthOptions = {
   providers: [
     GithubProvider({
       clientId: process.env.GITHUB_ID || "",
