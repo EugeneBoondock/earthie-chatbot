@@ -28,7 +28,19 @@ const nextConfig = {
     parallelServerCompiles: true,
   },
   webpack: (config) => {
-    config.resolve.extensions = ['.js', '.jsx', '.ts', '.tsx', ...config.resolve.extensions]
+    // Add TypeScript loader
+    config.module.rules.push({
+      test: /\.tsx?$/,
+      use: [
+        {
+          loader: 'ts-loader',
+          options: {
+            transpileOnly: true,
+          },
+        },
+      ],
+      exclude: /node_modules/,
+    })
     return config
   }
 }
