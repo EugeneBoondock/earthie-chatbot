@@ -2,12 +2,8 @@ import { Button } from "@/components/ui/button"
 import Image from "next/image"
 import Link from "next/link"
 import { ArrowRight, Headphones, Code, MessageSquare } from "lucide-react"
-import { getServerSession } from "next-auth/next"
-import { authOptions } from "@/auth.config"
 
-export default async function Home() {
-  const session = await getServerSession(authOptions)
-
+export default function Home() {
   return (
     <div className="flex flex-col min-h-[calc(100vh-8rem)] bg-earthie-dark">
       {/* Hero Section */}
@@ -17,7 +13,7 @@ export default async function Home() {
             <div className="flex flex-col justify-center space-y-4">
               <div className="space-y-2">
                 <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none text-white">
-                  {session ? `Welcome back, ${session.user?.name || "Friend"}!` : "Meet Earthie, Your Earth2 Companion"}
+                  Meet Earthie, Your Earth2 Companion
                 </h1>
                 <p className="max-w-[600px] text-gray-300 md:text-xl">
                   The AI chatbot that knows everything about Earth2. Get answers, discover tips, and enhance your
@@ -56,7 +52,6 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Rest of the component remains the same */}
       {/* Features Section */}
       <section className="py-12 md:py-24 lg:py-32 bg-earthie-dark">
         <div className="container px-4 md:px-6">
