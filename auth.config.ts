@@ -15,7 +15,7 @@ const users = [
   },
 ]
 
-export const authOptions = {
+export const authOptions: NextAuthOptions = {
   providers: [
     GithubProvider({
       clientId: process.env.GITHUB_ID || "",
@@ -73,7 +73,7 @@ export const authOptions = {
     strategy: "jwt",
   },
   secret: process.env.NEXTAUTH_SECRET,
-} satisfies NextAuthOptions
+}
 
 // Helper function to register a new user
 export async function registerUser(name: string, email: string, password: string) {
