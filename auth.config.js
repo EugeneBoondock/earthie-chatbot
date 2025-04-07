@@ -1,9 +1,8 @@
 // auth.config.js
 
-// Use import instead of require
-import CredentialsProvider from "next-auth/providers/credentials";
-import GithubProvider from "next-auth/providers/github";
-import { compare, hash } from "bcryptjs"; // Use import
+const CredentialsProvider = require("next-auth/providers/credentials");
+const GithubProvider = require("next-auth/providers/github");
+const { compare, hash } = require("bcryptjs");
 
 // This is a simple in-memory database for demo purposes
 // In a real app, you would use a real database
@@ -16,8 +15,7 @@ const users = [
   },
 ];
 
-// Use export const instead of putting it in module.exports
-export const authOptions = {
+const authOptions = {
   providers: [
     GithubProvider({
       clientId: process.env.GITHUB_ID || "",
@@ -37,7 +35,6 @@ export const authOptions = {
         if (!user) {
           return null;
         }
-        // compare function imported via ES Module import
         const isPasswordValid = await compare(credentials.password, user.password);
         if (!isPasswordValid) {
           return null;
@@ -64,8 +61,7 @@ export const authOptions = {
     },
     async session({ session, token }) {
       if (session.user && token.id) {
-        // Add id to session user object (adjust type if using JSDoc/TS checks)
-         session.user.id = token.id;
+        session.user.id = token.id;
       }
       return session;
     },
@@ -77,13 +73,11 @@ export const authOptions = {
 };
 
 // Helper function to register a new user
-// Use export async function instead of putting it in module.exports
-export async function registerUser(name, email, password) {
+async function registerUser(name, email, password) {
   const existingUser = users.find((user) => user.email === email);
   if (existingUser) {
     throw new Error("User already exists");
   }
-  // hash function imported via ES Module import
   const hashedPassword = await hash(password, 10);
   const newUser = {
     id: (users.length + 1).toString(),
@@ -99,5 +93,4 @@ export async function registerUser(name, email, password) {
   };
 }
 
-// Remove the old module.exports line completely
-// module.exports = { authOptions, registerUser }; // DELETE THIS LINE
+module.exports = { authOptions, registerUser };

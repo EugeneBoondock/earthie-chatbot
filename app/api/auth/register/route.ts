@@ -1,7 +1,6 @@
 // app/api/auth/register/route.ts
 import { type NextRequest, NextResponse } from "next/server"
-// Remove .js extension here
-import { registerUser } from "@/auth.config" // <-- CHANGE THIS LINE
+const { registerUser } = require("@/auth.config.js")
 
 export async function POST(req: NextRequest) {
   try {

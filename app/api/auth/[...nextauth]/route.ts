@@ -1,5 +1,5 @@
 import NextAuth from "next-auth"
-import { authOptions } from "@/auth.config.js"
+const { authOptions } = require("@/auth.config.js")
 
 const handler = NextAuth(authOptions)
 
