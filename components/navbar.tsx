@@ -12,6 +12,7 @@ const navItems = [
   { name: "Radio", path: "/radio" },
   { name: "Chat", path: "/chat" },
   { name: "Dev Tools", path: "/dev-tools" },
+  { name: "Thoughts", path: "/thoughts" },
 ]
 
 export default function Navbar() {
@@ -36,45 +37,41 @@ export default function Navbar() {
           </Link>
         </div>
 
-        {/* Desktop navigation */}
-        <nav className="hidden md:flex gap-6">
-          {navItems.map((item) => (
-            <Link
-              key={item.path}
-              href={item.path}
-              className={`text-sm font-medium transition-colors hover:text-earthie-mint ${
-                pathname === item.path ? "text-earthie-mint border-b-2 border-earthie-mint" : "text-gray-300"
-              }`}
-            >
-              {item.name}
-            </Link>
-          ))}
-        </nav>
-
-        {/* Placeholder for potential future buttons if needed */}
-        <div className="hidden md:flex items-center gap-4"></div>
-
-        {/* Mobile menu button */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="md:hidden text-white hover:text-earthie-mint hover:bg-earthie-dark-light"
-          onClick={() => setIsMenuOpen(!isMenuOpen)}
-        >
-          {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          <span className="sr-only">Toggle menu</span>
-        </Button>
-      </div>
-
-      {/* Mobile navigation */}
-      {isMenuOpen && (
-        <div className="md:hidden container py-4 pb-6 border-b border-earthie-dark-light">
-          <nav className="flex flex-col space-y-4">
+        <div className="flex items-center gap-4">
+          <nav className="hidden md:flex gap-6">
             {navItems.map((item) => (
               <Link
                 key={item.path}
                 href={item.path}
                 className={`text-sm font-medium transition-colors hover:text-earthie-mint ${
+                  pathname === item.path ? "text-earthie-mint border-b-2 border-earthie-mint" : "text-gray-300"
+                }`}
+              >
+                {item.name}
+              </Link>
+            ))}
+          </nav>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden text-white hover:text-earthie-mint hover:bg-earthie-dark-light"
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+          >
+            {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            <span className="sr-only">Toggle menu</span>
+          </Button>
+        </div>
+      </div>
+
+      {isMenuOpen && (
+        <div className="md:hidden container py-4 pb-6 border-t border-earthie-dark-light">
+          <nav className="flex flex-col space-y-4">
+            {navItems.map((item) => (
+              <Link
+                key={item.path}
+                href={item.path}
+                className={`text-base font-medium transition-colors hover:text-earthie-mint ${
                   pathname === item.path ? "text-earthie-mint font-bold" : "text-gray-300"
                 }`}
                 onClick={() => setIsMenuOpen(false)}
