@@ -3,7 +3,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { ArrowRight, Headphones, Code, MessageSquare } from "lucide-react"
 import { getServerSession } from "next-auth/next"
-import { authOptions } from "@/auth.config"
+import { authOptions } from "@/auth.config.js"
 
 export default async function Home() {
   const session = await getServerSession(authOptions)

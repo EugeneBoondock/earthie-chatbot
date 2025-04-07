@@ -26,6 +26,10 @@ const nextConfig = {
     webpackBuildWorker: true,
     parallelServerBuildTraces: true,
     parallelServerCompiles: true,
+  },
+  webpack: (config) => {
+    config.resolve.extensions = ['.js', '.jsx', '.ts', '.tsx', ...config.resolve.extensions]
+    return config
   }
 }
 

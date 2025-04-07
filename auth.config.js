@@ -1,7 +1,6 @@
-import type { NextAuthOptions } from "next-auth"
-import CredentialsProvider from "next-auth/providers/credentials"
-import GithubProvider from "next-auth/providers/github"
-import { compare, hash } from "bcrypt"
+const CredentialsProvider = require("next-auth/providers/credentials")
+const GithubProvider = require("next-auth/providers/github")
+const { compare, hash } = require("bcrypt")
 
 // This is a simple in-memory database for demo purposes
 // In a real app, you would use a real database
@@ -15,7 +14,8 @@ const users = [
   },
 ]
 
-export const authOptions: NextAuthOptions = {
+/** @type {import("next-auth").NextAuthOptions} */
+const authOptions = {
   providers: [
     GithubProvider({
       clientId: process.env.GITHUB_ID || "",
@@ -64,7 +64,7 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id as string
+        session.user.id = token.id
       }
       return session
     },
@@ -76,7 +76,7 @@ export const authOptions: NextAuthOptions = {
 }
 
 // Helper function to register a new user
-export async function registerUser(name: string, email: string, password: string) {
+async function registerUser(name, email, password) {
   // Check if user already exists
   const existingUser = users.find((user) => user.email === email)
   if (existingUser) {
@@ -104,3 +104,7 @@ export async function registerUser(name: string, email: string, password: string
   }
 }
 
+module.exports = {
+  authOptions,
+  registerUser
+} 
