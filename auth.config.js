@@ -1,6 +1,6 @@
 const CredentialsProvider = require("next-auth/providers/credentials")
 const GithubProvider = require("next-auth/providers/github")
-const { compare, hash } = require("bcrypt")
+const { compare, hash } = require("bcryptjs")
 
 // This is a simple in-memory database for demo purposes
 // In a real app, you would use a real database
