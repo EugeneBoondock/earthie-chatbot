@@ -20,7 +20,7 @@ export default function Navbar() {
   const pathname = usePathname()
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b border-gray-700 bg-gray-900/80 backdrop-blur-md relative">
+    <nav className="sticky top-0 z-50 w-full border-b border-gray-700 bg-[#383A4B]/90 backdrop-blur-md relative">
       <div className="container mx-auto px-4 flex h-16 items-center justify-between">
         <div className="flex items-center gap-2">
           <Link href="/" className="flex items-center gap-2">
@@ -61,7 +61,7 @@ export default function Navbar() {
       </div>
 
       {isMobileMenuOpen && (
-        <div className="absolute left-0 top-full w-full bg-gray-800 border-t border-gray-700 md:hidden shadow-lg">
+        <div className="absolute right-0 top-full w-2/3 bg-gray-800 border-t border-l border-gray-700 md:hidden shadow-lg max-h-[50vh] overflow-y-auto rounded-bl-lg">
           <div className="flex flex-col space-y-2 p-4">
             {navItems.map((item) => (
               <Link

@@ -94,7 +94,7 @@ export default function PrivacyPage() {
           <h2 className="text-2xl font-semibold text-white pt-4">9. Contact Us</h2>
           <p className="leading-relaxed">
             If you have any questions about this Privacy Policy, please contact us at: 
-            [Insert Contact Email or Method].
+            <a href="mailto:eugeneboondock@gmail.com" className="text-[#50E3C1] hover:underline">eugeneboondock@gmail.com</a>.
           </p>
         </div>
       </div>

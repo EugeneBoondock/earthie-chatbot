@@ -83,14 +83,14 @@ export default function TermsPage() {
 
           <h2 className="text-2xl font-semibold text-white pt-4">8. Governing Law</h2>
           <p className="leading-relaxed">
-            These Terms shall be governed and construed in accordance with the laws of 
-            [Insert Jurisdiction, e.g., Your State/Country], without regard to its conflict of law provisions.
+            These Terms shall be governed and construed in accordance with the laws of the 
+            United States and South Africa, without regard to its conflict of law provisions.
           </p>
 
           <h2 className="text-2xl font-semibold text-white pt-4">9. Contact Us</h2>
           <p className="leading-relaxed">
             If you have any questions about these Terms, please contact us at: 
-            [Insert Contact Email or Method].
+            <a href="mailto:eugeneboondock@gmail.com" className="text-[#50E3C1] hover:underline">eugeneboondock@gmail.com</a>.
           </p>
         </div>
       </div>

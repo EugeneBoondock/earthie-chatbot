@@ -3,43 +3,23 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    --background: 240 6% 21%;
-    --foreground: 0 0% 98%;
-
-    --card: 240 6% 21%;
-    --card-foreground: 0 0% 98%;
-
-    --popover: 240 6% 21%;
-    --popover-foreground: 0 0% 98%;
-
-    --primary: 165 73% 60%;
-    --primary-foreground: 240 6% 21%;
-
-    --secondary: 240 6% 30%;
-    --secondary-foreground: 0 0% 98%;
-
-    --muted: 240 6% 30%;
-    --muted-foreground: 240 5% 65%;
-
-    --accent: 240 6% 30%;
-    --accent-foreground: 0 0% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-
-    --border: 240 6% 30%;
-    --input: 240 6% 30%;
-    --ring: 165 73% 60%;
-  }
-
+  /* Remove this block */
+  /* 
   html, 
   body, 
   body > div:first-child, 
   div#__next, 
   div#__next > div {
     height: 100%;
+  } 
+  */
+
+  /* Keep other base layer customizations if any */
+  /* Example:
+  :root {
+     // ... css variables ... 
   }
+  */
 }
 
 @layer base {

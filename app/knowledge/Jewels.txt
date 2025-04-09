@@ -1,0 +1,540 @@
+Base jewels that can spawn are black, blue, green, grey, ochre, sandy, yellow,
+and anthracite.
+●
+●
+●
+●
+●
+●
+
+Combine 3 of the same type of jewel to make 1 jewel of 1 higher tier.
+purple jewel = 1 t2 ochre jewel + 1 t2 blue jewel
+orange jewel + 1 grey jewel + 1 sandy jewel
+sunrise jewel = 1 blue jewel + 1 red jewel + and 1 grey jewel
+sunset jewel = 1 sandy jewel + 1 purple jewel + 1 orange jewel
+jamaica jewel = 1 black jewel + 1 yellow jewel + 1 green jewel
+
+For T1 tiles only here is what you need to upgrade the quality of a jewel using
+cracked jewel as a starter: Cracked to Cloudy = 3 shards 3 essence, Cracked to
+Common = 9 shards 9 essence, Cracked to Clear = 18 Shards 18 essence, Cracked to
+Luminous = 30 Shards 30 Essence
+For T2 tiles only here is what you need to upgrade the quality of a jewel using
+a cracked jewel as a starter: Cracked to Cloudy = 6 shards 6 essence, Cracked to
+Common = 18 Shards 18 essence, Cracked to Clear = 36 shards 36 essence, Cracked
+to Lumi = 60 shards 60 essence
+For T3 tiles only here is what you need to upgrade the quality of a jewel using
+a cracked jewel as a starter: Cracked to Cloudy = 12 shards 12 essence, Cracked
+to Common = 36 shards 36 essence, Cracked to Clear = 72 shards 72 essence,
+Cracked to Lumi = 120 shards 120 essence
+Crafted jewels come out as cracked and can be upgraded to increase quality, to
+upgrade a jewel, add said jewel to crafting and input shards, the amount of
+shards may vary for the level of quality you want to achieve and essence equal
+to the amount of shards used will be required to make any upgrade.
+Note that each luminous upgrade has a small chance of becoming a brilliant
+quality.
+Using 24 shards alone will make any base jewel of your choice.
+To make shards put any jewel you want to shatter into crafting and hit shatter
+To craft brilliant jewels you need to upgrade the quality of any jewel to
+luminous and there is a small chance it will become a brilliant.
+T3 yellow and t3 Ochre create an Amber jewel.
+T3 Anthracite and t3 sandy give you an Andalusite jewel.
+T3 blue and t3 green give you an Aquamarine jewel.
+T3 black and t3 blue give you an Azurite jewel.
+T3 black and t3 ochre gives you a Bloodstone
+T3 Yellow and t3 black give a Catseye
+T3 Blue and t3 Anthracite gives a Chrysocolla
+T3 Yellow and T3 Blue gives an Emerald
+T3 Ochre and t3 Sandy for a Garnet
+T3 Black and t3 green for a Jade
+T3 Anthracite and t3 Green for a Malachite
+T3 Black and t3 Anthracite for a Obsidian
+
+T3 green and t3 Sandy for an Opal.
+T3 Ochre and t3 green for a Peridot
+T3 Yellow and t3 Green Prehnite
+T3 gray and t3 Anthracite gives you Pyrite
+T3 Ochre and t3 Anthracite gives Ruby
+T3 Green and t3 Gray give Serpentine
+T3 Gray and t3 Sandy give you Slate
+T3 grey and T3 blue give Sodalite
+T3 Black and t3 grey give Spinel
+T3 Yellow and t3 grey give Sunstone
+T3 Ochre and t3 blue give Tanzanite
+T3 Anthracite and t3 Yellow give you Tigerseye
+T3 Black and t3 sandy give Titanite
+T3 sandy and t3 yellow gives you Topaz
+T3 blue and t3 sandy gives you Turquoise
+T3 gray and t3 ochre give you Zircon
+There are multiple jewels in Earth2 here is a list and the corresponding usecases for each:
+Tier 1 Jewels:
+Prime Blue Jewel: Primes Freshwater production on the property where it is
+slotted.
+Prime Anthracite Jewel: Primes Coal Production on the property where it is
+slotted.
+Prime Black Jewel: Primes Oil production on the property where it is slotted.
+Prime Green Jewel: Primes Wood production on the property where it is slotted.
+Prime Grey Jewel: Primes Limestone production on the property where it is
+slotted.
+Prime Ochre Jewel: Primes Iron ore production on the property where it is
+slotted.
+Prime Sandy Jewel: Primes Sand production on the property where it is slotted.
+Prime Yellow Jewel: Primes Gold production on the property where it is slotted.
+Tier 2 Jewels:
+Jamaica Jewel: Increases Oil & Wood production by 1% per day on the property
+where it is
+used, if there is such a production. It also increases E-ther evaporation by 2%.
+Orange Jewel: Diminish Building Time for new Buildings by a certain percentage
+(rounded up in
+seconds).
+Purple Jewel: Primes Iridium production on the property where it is used.
+Diminish Research
+Time for new Blueprints by a certain percentage (rounded up in seconds).
+Sunset Jewel: Primes Chromium production on the property where it is slotted.
+Increases Sand
+& Limestone production by a per day on the property where it is used, if there
+is such a
+production. It also increases E-ther evaporation by 2%.
+Sunrise Jewel: Increases Freshwater & Iron Ore production by a certain
+percentage per day on
+
+the property where it is used, if there is such a production. It also increases
+E-ther evaporation
+by 2%.
+Tier 3 Jewels:
+Azurite Jewel: Primes Cobalt production on the property where it is used.
+Increases Freshwater
+& Oil production by a certain percentage per day on the property where it is
+used, if there is
+such a production. It also increases E-ther evaporation by 3%.
+Amber Jewel: Primes Tungsten production on the property where it is used.
+Increases Iron &
+Gold production by a certain percentage per day on the property where it is
+used, if there is
+such a production. It also increases E-ther evaporation by 3%.
+Andalusite Jewel: Primes Boron production on the property where it is used.
+Increases Coal &
+Sand production by a certain percentage per day on the property where it is
+used, if there is
+such a production. It also increases E-ther evaporation by 3%.
+Aquamarine Jewel: Primes Tellurium production on the property where it is used.
+Increases Coal
+& Sand production by a certain percentage per day on the property where it is
+used, if there is
+such a production. It also increases E-ther evaporation by 3%.
+Bloodstone Jewel: Primes Vanadium production on the property where it is used.
+Increases Iron
+& Oil production by a certain percentage per day on the property where it is
+used, if there is
+such a production. It also increases E-ther evaporation by 3%.
+Catseye Jewel: Primes Molybdenum production on the property where it is used.
+Increases Oil
+& Gold production by a certain percentage per day on the property where it is
+used, if there is
+such a production. It also increases E-ther evaporation by 3%.
+Chrysocolla Jewel: Increases Freshwater & Coal production by a certain
+percentage per day on
+the property where it is used, if there is such a production. It also increases
+E-ther evaporation
+by 3%.
+Emerald Jewel: Increases Freshwater & Gold production by a certain percentage
+per day on the
+property where it is used, if there is such a production. It also increases Ether evaporation by
+3%.
+Garnet Jewel: Primes Bauxite production on the property where it is used.
+Increases Iron &
+Sand production by a certain percentage per day on the property where it is
+used, if there is
+such a production. It also increases E-ther evaporation by 3%
+Jade Jewel: Increases Oil & Wood production by a certain percentage per day on
+the property
+where it is used, if there is such a production. It also increases E-ther
+evaporation by 3%.
+Malachite Jewel: Primes Copper production on the property where it is used.
+Increases Coal &
+Wood production by a certain percentage per day on the property where it is
+used, if there is
+such a production. It also increases E-ther evaporation by 3%.
+Obsidian Jewel: Primes Tantalum production on the property where it is used.
+Increases Oil &
+Coal production by a certain percentage per day on the property where it is
+used, if there is
+such a production. It also increases E-ther evaporation by 3%.
+Opal Jewel: Increases Wood & Sand production by a certain percentage per day on
+
+the property
+where it is used, if there is such a production. It also increases E-ther
+evaporation by 3%.
+Peridot Jewel: Primes Rhenium production on the property where it is used.
+Increases Wood &
+Iron production by a certain percentage per day on the property where it is
+used, if there is such
+a production. It also increases E-ther evaporation by 3%. Also has a cydroid
+slotting advantage
+of relocation, it increases the relocation distance of a cydroid, making it
+possibel for a cydroid to
+relocate to properties very far.
+Prehnite Jewel: Primes Uranium production on the property where it is used.
+Increases Wood &
+Gold production by a certain percentage per day on the property where it is
+used, if there is
+such a production. It also increases E-ther evaporation by 3%. Also Increases
+the Power Cell
+Essence Concentration Level (PCL). Power Cells can later be crafted with various
+default
+Power Concentration Levels. The higher the Power Cell Concentration level is,
+the more Energy
+Units and the more Essence is required. However, Prehnite is able to increase
+the
+Concentration Level of a Power Cell without requiring the Player to add
+additional Essence to
+power the higher grade Power Cell.
+Pyrite Jewel: Primes Silver production on the property where it is used.
+Increases Coal &
+Limestone production by a certain percentage per day on the property where it is
+used, if there
+is such a production. It also increases E-ther evaporation by 3%.
+Ruby Jewel: Primes Tin production on the property where it is used. Increases
+Coal & Iron Ore
+production by a certain percentage per day on the property where it is used, if
+there is such a
+production. It also increases E-ther evaporation by 3%.
+Serpentine Jewel: Increases Wood & Limestone production by a certain percentage
+per day on
+the property where it is used, if there is such a production. It also increases
+E-ther evaporation
+by 3%.
+Slate Jewel: Primes Neodymium production on the property where it is used.
+Increases
+Limestone & Sand production by a certain percentage per day on the property
+where it is used,
+if there is such a production. It also increases E-ther evaporation by 3%.
+Sodalite Jewel: Primes Platinum production on the property where it is used.
+Increases
+Freshwater & Limestone production by a certain percentage per day on the
+property where it is
+used, if there is such a production. It also increases E-ther evaporation by 3%.
+Sunstone Jewel: Primes Zinc production on the property where it is used.
+Increases Limestone
+& Gold production by a certain percentage per day on the property where it is
+used, if there is
+such a production. It also increases E-ther evaporation by 3%.
+Spinel Jewel: Increases Oil & Limestone production by a certain percentage per
+day on the
+property where it is used, if there is such a production. It also increases Ether evaporation by
+3%.
+Tigereye Jewel: Primes Nickel production on the property where it is used.
+Increases Coal &
+
+Gold production by a certain percentage per day on the property where it is
+used, if there is
+such a production. It also increases E-ther evaporation by 3%.
+Tanzanite Jewel: Primes Thorium production on the property where it is used.
+Increases
+Freshwater & Iron production by a certain percentage per day on the property
+where it is used, if
+there is such a production. It also increases E-ther evaporation by 3%.
+Titanite Jewel: Primes Titanium production on the property where it is used.
+Increases Oil &
+Sand production by a certain percentage per day on the property where it is
+used, if there is
+such a production. It also increases E-ther evaporation by 3%.
+Topaz Jewel: Primes Niobium production on the property where it is used.
+Increases Sand &
+Gold production by a certain percentage per day on the property where it is
+used, if there is
+such a production. It also increases E-ther evaporation by 3%.
+Turquoise Jewel: Primes Diamond production on the property where it is used.
+Increases
+Freshwater & Sand production by a certain percentage per day on the property
+where it is used,
+if there is such a production. It also increases E-ther evaporation by 3%.
+Zircon Jewel: Primes Zirconium production on the property where it is used.
+Increases Iron &
+Limestone production by a certain percentage per day on the property where it is
+used, if there
+is such a production. It also increases E-ther evaporation by 3%.
+Crafting certain jewels:
+There are five different versions of these jewels announced — cracked, cloudy,
+common, clear,
+luminous and brilliant. All of these versions are expected to bring multiple
+levels of utility in other
+areas of Earth 2 like generating higher quantity resources, functionalities in
+PVP games, etc.
+There are three components required to make these different-tier jewels.
+1. Tier 1 Jewels (Blue, Black, Ochre, Anthracite, Sandy, Yellow, Grey, Green)
+2. Shards — Which are created by Shattering (breaking down) other jewels {Shards
+can be
+used to create new cracked jewels, each cracked jewel requires 24 shards, only
+Tier 1
+types of jewels can be made from shards, but remember they will be cracked
+jewels}
+3. Essence {Only when improving Jewels}
+Using various combinations of the above three, you would be able to build
+various forms of new
+jewels.
+Failed attempts to create rare Jewels will destroy the original Jewels and
+create shards. Shards
+can be re-combined to make original Jewels but will cost you essence. So follow
+Earth2
+community users to get working recipes to avoid this scenario.
+Tier 2 Jewels of basic colors (Blue, Black, Ochre, Anthracite, Sandy, Yellow,
+Grey, Green) can
+be formed by combining 3 Tier 1 Jewels of the same color. You must ensure the
+jewels are
+added to 3 different slots.
+How are shards made?
+Shards can get created during the below 3 scenarios:
+Shattering a jewel
+As leftovers, while creating a new jewel
+When a jewel creation fails when trying a new recipe.
+Tier 2 Mixed:
+Orange Jewel
+
+Purple Jewel
+Jamaica Jewel
+Sunrise Jewel
+Sunset Jewel
+Recipes For Crafting Certain Jewels:
+● Amber Jewel = 1 Tier 3 Yellow Jewel + 1 Tier 3 Ochre Jewel.
+● Andalusite Jewel = 1 Tier 3 Anthracite Jewel + 1 Tier 3 Sandy Jewel.
+● Aquamarine Jewel = 1 Tier 3 Blue Jewel + 1 Tier 3 Green Jewel
+● Azurite Jewel = 1 Tier 3 Blue Jewel + 1 Tier 3 Black Jewel.
+● Bloodstone Jewel = 1 Tier 3 Black Jewel + 1 Tier 3 Ochre Jewel.
+● Catseye Jewel = 1 Tier 3 Black Jewel + 1 Tier 3 Yellow Jewel.
+● Chrysocolla Jewel = 1 Tier 3 Anthracite Jewel + 1 Tier 3 Blue Jewel.
+● Emerald Jewel = 1 Tier 3 Blue Jewel + 1 Tier 3 Yellow Jewel.
+● Garnet Jewel = 1 Tier 3 Sandy Jewel + 1 Tier 3 Ochre Jewel.
+● Jade Jewel = 1 Tier 3 Green Jewel + 1 Tier 3 Black Jewel.
+● Malachite Jewel = 1 Tier 3 Anthracite Jewel + 1 Tier 3 Green Jewel.
+● Obsidian Jewel = 1 Tier 3 Anthracite Jewel + 1 Tier 3 Black Jewel.
+● Opal Jewel = 1 Tier 3 Green Jewel + 1 Tier 3 Sandy Jewel.
+● Prehnite Jewel = 1 Tier 3 Green Jewel + 1 Tier 3 Yellow Jewel.
+● Peridot Jewel = 1 Tier 3 Green Jewel + 1 Tier 3 Ochre Jewel.
+● Pyrite Jewel = 1 Tier 3 Anthracite Jewel + 1 Tier 3 Grey Jewel.
+● Ruby Jewel = 1 Tier 3 Anthracite Jewel + 1 Tier 3 Ochre Jewel.
+● Serpentine Jewel = 1 Tier 3 Green Jewel + 1 Tier 3 Grey Jewel.
+● Slate Jewel = 1 Tier 3 Sandy Jewel + 1 Tier 3 Grey Jewel.
+● Sodalite Jewel = 1 Tier 3 Blue Jewel + 1 Tier 3 Grey Jewel.
+● Spinel Jewel = 1 Tier 3 Black Jewel + 1 Tier 3 Grey Jewel.
+● Sunstone Jewel = 1 Tier 3 Yellow Jewel + 1 Tier 3 Grey Jewel.
+● Tigereye Jewel = 1 Tier 3 Anthracite Jewel + 1 Tier 3 Yellow Jewel.
+● Topaz Jewel = 1 Tier 3 Sandy Jewel + 1 Tier 3 Yellow Jewel.
+● Turquoise Jewel = 1 Tier 3 Sandy Jewel + 1 Tier 3 Blue Jewel.
+● Titanite Jewel = 1 Tier 3 Sandy Jewel + 1 Tier 3 Black Jewel.
+● Tanzanite Jewel = 1 Tier 3 Blue Jewel + 1 Tier 3 Ochre Jewel.
+● Zircon Jewel = 1 Tier 3 Grey Jewel + 1 Tier 3 Ochre Jewel
+
+There are multiple jewels in Earth2 here is a list and the corresponding use-cases for each:
+
+Tier 1 Jewels:
+Prime Blue Jewel: Primes Freshwater production on the property where it is slotted.
+Prime Anthracite Jewel: Primes Coal Production on the property where it is slotted.
+Prime Black Jewel: Primes Oil production on the property where it is slotted.
+Prime Green Jewel: Primes Wood production on the property where it is slotted.
+Prime Grey Jewel: Primes Limestone production on the property where it is slotted.
+Prime Ochre Jewel: Primes Iron ore production on the property where it is slotted.
+Prime Sandy Jewel: Primes Sand production on the property where it is slotted.
+Prime Yellow Jewel: Primes Gold production on the property where it is slotted.
+
+Tier 2 Jewels:
+Jamaica Jewel: Increases Oil & Wood production by 1% per day on the property where it is
+used, if there is such a production. It also increases E-ther evaporation by 2%.
+Orange Jewel: Diminish Building Time for new Buildings by a certain percentage (rounded up in
+seconds).
+Purple Jewel: Primes Iridium production on the property where it is used. Diminish Research
+Time for new Blueprints by a certain percentage (rounded up in seconds).
+Sunset Jewel: Primes Chromium production on the property where it is slotted. Increases Sand
+& Limestone production by a per day on the property where it is used, if there is such a
+production. It also increases E-ther evaporation by 2%.
+Sunrise Jewel: Increases Freshwater & Iron Ore production by a certain percentage per day on
+the property where it is used, if there is such a production. It also increases E-ther evaporation
+by 2%.
+
+Tier 3 Jewels:
+Azurite Jewel: Primes Cobalt production on the property where it is used. Increases Freshwater
+& Oil production by a certain percentage per day on the property where it is used, if there is
+such a production. It also increases E-ther evaporation by 3%.
+Amber Jewel: Primes Tungsten production on the property where it is used. Increases Iron &
+Gold production by a certain percentage per day on the property where it is used, if there is
+such a production. It also increases E-ther evaporation by 3%.
+Andalusite Jewel: Primes Boron production on the property where it is used. Increases Coal &
+Sand production by a certain percentage per day on the property where it is used, if there is
+such a production. It also increases E-ther evaporation by 3%.
+Aquamarine Jewel: Primes Tellurium production on the property where it is used. Increases Coal
+& Sand production by a certain percentage per day on the property where it is used, if there is
+such a production. It also increases E-ther evaporation by 3%.
+Bloodstone Jewel: Primes Vanadium production on the property where it is used. Increases Iron
+& Oil production by a certain percentage per day on the property where it is used, if there is
+such a production. It also increases E-ther evaporation by 3%.
+Catseye Jewel: Primes Molybdenum production on the property where it is used. Increases Oil
+& Gold production by a certain percentage per day on the property where it is used, if there is
+such a production. It also increases E-ther evaporation by 3%.
+Chrysocolla Jewel: Increases Freshwater & Coal production by a certain percentage per day on
+the property where it is used, if there is such a production. It also increases E-ther evaporation
+by 3%.
+Emerald Jewel: Increases Freshwater & Gold production by a certain percentage per day on the
+property where it is used, if there is such a production. It also increases E-ther evaporation by
+3%.
+Garnet Jewel: Primes Bauxite production on the property where it is used. Increases Iron &
+Sand production by a certain percentage per day on the property where it is used, if there is
+such a production. It also increases E-ther evaporation by 3%
+Jade Jewel: Increases Oil & Wood production by a certain percentage per day on the property
+where it is used, if there is such a production. It also increases E-ther evaporation by 3%.
+Malachite Jewel: Primes Copper production on the property where it is used. Increases Coal &
+Wood production by a certain percentage per day on the property where it is used, if there is
+such a production. It also increases E-ther evaporation by 3%.
+
+Obsidian Jewel: Primes Tantalum production on the property where it is used. Increases Oil &
+Coal production by a certain percentage per day on the property where it is used, if there is
+such a production. It also increases E-ther evaporation by 3%.
+Opal Jewel: Increases Wood & Sand production by a certain percentage per day on the property
+where it is used, if there is such a production. It also increases E-ther evaporation by 3%.
+Peridot Jewel: Primes Rhenium production on the property where it is used. Increases Wood &
+Iron production by a certain percentage per day on the property where it is used, if there is such
+a production. It also increases E-ther evaporation by 3%. Also has a cydroid slotting advantage
+of relocation, it increases the relocation distance of a cydroid, making it possibel for a cydroid to
+relocate to properties very far.
+Prehnite Jewel: Primes Uranium production on the property where it is used. Increases Wood &
+Gold production by a certain percentage per day on the property where it is used, if there is
+such a production. It also increases E-ther evaporation by 3%. Also Increases the Power Cell
+Essence Concentration Level (PCL). Power Cells can later be crafted with various default
+Power Concentration Levels. The higher the Power Cell Concentration level is, the more Energy
+Units and the more Essence is required. However, Prehnite is able to increase the
+Concentration Level of a Power Cell without requiring the Player to add additional Essence to
+power the higher grade Power Cell.
+Pyrite Jewel: Primes Silver production on the property where it is used. Increases Coal &
+Limestone production by a certain percentage per day on the property where it is used, if there
+is such a production. It also increases E-ther evaporation by 3%.
+
+Ruby Jewel: Primes Tin production on the property where it is used. Increases Coal & Iron Ore
+production by a certain percentage per day on the property where it is used, if there is such a
+production. It also increases E-ther evaporation by 3%.
+Serpentine Jewel: Increases Wood & Limestone production by a certain percentage per day on
+the property where it is used, if there is such a production. It also increases E-ther evaporation
+by 3%.
+Slate Jewel: Primes Neodymium production on the property where it is used. Increases
+Limestone & Sand production by a certain percentage per day on the property where it is used,
+if there is such a production. It also increases E-ther evaporation by 3%.
+Sodalite Jewel: Primes Platinum production on the property where it is used. Increases
+Freshwater & Limestone production by a certain percentage per day on the property where it is
+used, if there is such a production. It also increases E-ther evaporation by 3%.
+
+Sunstone Jewel: Primes Zinc production on the property where it is used. Increases Limestone
+& Gold production by a certain percentage per day on the property where it is used, if there is
+such a production. It also increases E-ther evaporation by 3%.
+Spinel Jewel: Increases Oil & Limestone production by a certain percentage per day on the
+property where it is used, if there is such a production. It also increases E-ther evaporation by
+3%.
+Tigereye Jewel: Primes Nickel production on the property where it is used. Increases Coal &
+Gold production by a certain percentage per day on the property where it is used, if there is
+such a production. It also increases E-ther evaporation by 3%.
+Tanzanite Jewel: Primes Thorium production on the property where it is used. Increases
+Freshwater & Iron production by a certain percentage per day on the property where it is used, if
+there is such a production. It also increases E-ther evaporation by 3%.
+Titanite Jewel: Primes Titanium production on the property where it is used. Increases Oil &
+Sand production by a certain percentage per day on the property where it is used, if there is
+such a production. It also increases E-ther evaporation by 3%.
+Topaz Jewel: Primes Niobium production on the property where it is used. Increases Sand &
+Gold production by a certain percentage per day on the property where it is used, if there is
+such a production. It also increases E-ther evaporation by 3%.
+Turquoise Jewel: Primes Diamond production on the property where it is used. Increases
+Freshwater & Sand production by a certain percentage per day on the property where it is used,
+if there is such a production. It also increases E-ther evaporation by 3%.
+Zircon Jewel: Primes Zirconium production on the property where it is used. Increases Iron &
+Limestone production by a certain percentage per day on the property where it is used, if there
+is such a production. It also increases E-ther evaporation by 3%.
+
+Crafting certain jewels:
+There are five different versions of these jewels announced — cracked, cloudy, common, clear,
+luminous and brilliant. All of these versions are expected to bring multiple levels of utility in other
+areas of Earth 2 like generating higher quantity resources, functionalities in PVP games, etc.
+There are three components required to make these different-tier jewels.
+1. Tier 1 Jewels (Blue, Black, Ochre, Anthracite, Sandy, Yellow, Grey, Green)
+
+2. Shards — Which are created by Shattering (breaking down) other jewels {Shards can be
+used to create new cracked jewels, each cracked jewel requires 24 shards, only Tier 1
+types of jewels can be made from shards, but remember they will be cracked jewels}
+3. Essence {Only when improving Jewels}
+Using various combinations of the above three, you would be able to build various forms of new
+jewels.
+Failed attempts to create rare Jewels will destroy the original Jewels and create shards. Shards
+can be re-combined to make original Jewels but will cost you essence. So follow Earth2
+community users to get working recipes to avoid this scenario.
+Tier 2 Jewels of basic colors (Blue, Black, Ochre, Anthracite, Sandy, Yellow, Grey, Green) can
+be formed by combining 3 Tier 1 Jewels of the same color. You must ensure the jewels are
+added to 3 different slots.
+How are shards made?
+Shards can get created during the below 3 scenarios:
+Shattering a jewel
+As leftovers, while creating a new jewel
+When a jewel creation fails when trying a new recipe.
+Tier 2 Mixed:
+Orange Jewel
+Purple Jewel
+Jamaica Jewel
+Sunrise Jewel
+Sunset Jewel
+
+Recipes For Crafting Certain Jewels:
+
+●
+●
+●
+●
+●
+●
+●
+●
+●
+
+Amber Jewel = 1 Tier 3 Yellow Jewel + 1 Tier 3 Ochre Jewel.
+Andalusite Jewel = 1 Tier 3 Anthracite Jewel + 1 Tier 3 Sandy Jewel.
+Aquamarine Jewel = 1 Tier 3 Blue Jewel + 1 Tier 3 Green Jewel
+Azurite Jewel = 1 Tier 3 Blue Jewel + 1 Tier 3 Black Jewel.
+Bloodstone Jewel = 1 Tier 3 Black Jewel + 1 Tier 3 Ochre Jewel.
+Catseye Jewel = 1 Tier 3 Black Jewel + 1 Tier 3 Yellow Jewel.
+Chrysocolla Jewel = 1 Tier 3 Anthracite Jewel + 1 Tier 3 Blue Jewel.
+Emerald Jewel = 1 Tier 3 Blue Jewel + 1 Tier 3 Yellow Jewel.
+Garnet Jewel = 1 Tier 3 Sandy Jewel + 1 Tier 3 Ochre Jewel.
+
+●
+●
+●
+●
+●
+●
+●
+●
+●
+●
+●
+●
+●
+●
+●
+●
+●
+●
+●
+
+Jade Jewel = 1 Tier 3 Green Jewel + 1 Tier 3 Black Jewel.
+Malachite Jewel = 1 Tier 3 Anthracite Jewel + 1 Tier 3 Green Jewel.
+Obsidian Jewel = 1 Tier 3 Anthracite Jewel + 1 Tier 3 Black Jewel.
+Opal Jewel = 1 Tier 3 Green Jewel + 1 Tier 3 Sandy Jewel.
+Prehnite Jewel = 1 Tier 3 Green Jewel + 1 Tier 3 Yellow Jewel.
+Peridot Jewel = 1 Tier 3 Green Jewel + 1 Tier 3 Ochre Jewel.
+Pyrite Jewel = 1 Tier 3 Anthracite Jewel + 1 Tier 3 Grey Jewel.
+Ruby Jewel = 1 Tier 3 Anthracite Jewel + 1 Tier 3 Ochre Jewel.
+Serpentine Jewel = 1 Tier 3 Green Jewel + 1 Tier 3 Grey Jewel.
+Slate Jewel = 1 Tier 3 Sandy Jewel + 1 Tier 3 Grey Jewel.
+Sodalite Jewel = 1 Tier 3 Blue Jewel + 1 Tier 3 Grey Jewel.
+Spinel Jewel = 1 Tier 3 Black Jewel + 1 Tier 3 Grey Jewel.
+Sunstone Jewel = 1 Tier 3 Yellow Jewel + 1 Tier 3 Grey Jewel.
+Tigereye Jewel = 1 Tier 3 Anthracite Jewel + 1 Tier 3 Yellow Jewel.
+Topaz Jewel = 1 Tier 3 Sandy Jewel + 1 Tier 3 Yellow Jewel.
+Turquoise Jewel = 1 Tier 3 Sandy Jewel + 1 Tier 3 Blue Jewel.
+Titanite Jewel = 1 Tier 3 Sandy Jewel + 1 Tier 3 Black Jewel.
+Tanzanite Jewel = 1 Tier 3 Blue Jewel + 1 Tier 3 Ochre Jewel.
+Zircon Jewel = 1 Tier 3 Grey Jewel + 1 Tier 3 Ochre Jewel.
+
+

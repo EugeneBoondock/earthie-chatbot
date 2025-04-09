@@ -1,0 +1,2225 @@
+The Earth 2 White Paper
+
+1
+
+INTRODUCTION
+
+WHAT IS EARTH 2?
+
+Earth 2 is a concept for a second virtual Earth; a metaverse, between virtual and physical reality in which real-world geolocations
+on a sectioned map correspond to geographically accurate digital virtual environments inside a 1:1 scale virtual Earth. These
+environments currently have the ability to detect, mine and produce digital assets, can be bought , owned and sold, and - in the
+near future interactable and playable inside a 3D world.
+This White Paper will provide a light introduction to Earth, some of our current features and some of the future plans for our
+platform.
+
+WHAT WE ARE BUILDING
+We are building the world’s geolocational metaverse; an evolving creation of a second virtual Earth that bridges a clear, familiar
+and relatable link between physical and virtual reality. This innovative approach to the metaverse establishes a direct correlation
+between locations in the real-world, to locations in the metaverse and our plan is to create a pristine 1:1 scale interactive 3D Earth
+based on this concept which will give people a place to participate in and build an alternate reality around our physical existence.
+
+INITIAL LAUNCH AND PROOF OF CONCEPT
+Earth 2 first launched as a proof of concept in November 2020 by releasing “the Grid”, a mathematically calculated digitalised
+layer of land our team developed and delivered via our website. The Grid covered every continent, sea, country, state, city and
+suburb on our planet and provided people with a way to begin reserving their land inside the metaverse. Earth 2 has since grown
+to become the outright largest virtual land registry in the world.
+
+CREATING PURPOSE AND VALUE INSIDE A VIRTUAL EARTH
+Each piece of virtual land will maintain an irrefutable link back to the physical world through its unique, corresponding
+geolocational attribute. Similar to our physical world, people can reserve their own land inside this second Earth and begin
+mining E-ther which is then transformable into a high utility, disinflationary, ERC-20 token called Essence. Depending on the
+location and tier type, land inside Earth 2 also has the ability to detect and mine up to 32 different types of resources. These
+resources will provide the initial gateway for people to craft and create technology to interact with and rebuild the world the way
+they wish.
+Therefore, the ability to build, create or produce something inside Earth 2 will be the result of either Player time, ownership,
+management, trading, acquisition, effort, or a mixture of all 6. This approach will support a justifiable extrinsic value on
+everything that is Player mined or produced within Earth 2 setting the foundation for a true Earth size EcoSim.
+
+THE METAVERSE
+If you’re unfamiliar with the Metaverse concept, you may be familiar with the general ideology of a Metaverse after watching
+films like The Matrix or Ready Player 1 or reading books such as Snow Crash, however, we note that nobody really knows what the
+actual Metaverse will look like just yet, or how it will start, we just know it’s coming and we’re committed to start building early.
+It is impossible to ignore the fact that the Metaverse space is an exciting one, with a growing number of reasons as to why
+reputable companies such as JP Morgan are claiming it will become a trillion dollar market opportunity in yearly revenues over
+the next decade, but at this early stage the metaverse space is convoluted and is fast becoming a difficult area for people to
+understand, navigate and most importantly, discover.
+Earth 2 brings an instant familiarity to the concept of an alternate digital reality becoming a great starting point for anyone
+looking for the immersive, escaping gift of the Metaverse.
+2
+
+WHAT IS EARTH 2? CONTINUED
+
+THIS WILL BE A LONG TERM PROJECT
+We have spent the past 3 years building during a bear market into what will be a long-term multi-year project focused on
+creating a 1:1 scale second virtual Earth with humanmade artifacts such as cities, roads and other infrastructure programmatically
+removed. Effectively resetting our planet, the result will be a pristine Earth going back to a time it was yet untouched by humans,
+beckoning a new start for virtual representations of ourselves to explore, play, own, survive, craft, mine, trade, build, battle,
+experience, learn, socialise, escape to and much more.
+
+AMBITION
+There is no doubt that Earth 2 is an extremely ambitious project and that we have many large tasks ahead of us, however, since
+launching 3 years ago and in the face of very heavy public scepticism, our team has been rapidly prototyping and developing the
+early foundations for this alternate reality inside a 1:1 scale 3D Earth.
+
+RECENT BREAKTHROUGHS
+We recently confirmed significant breakthroughs showcasing a public demo of our seamless 1:1 scale 3D Earth to some of the
+biggest game developers in the world and proving we have in fact made incredible progress with the creation of this ‘impossible
+world’. Defying sceptics who doubted its feasibility, this showcasing took place at none other than the biggest global gaming
+event of the year, GDC 2024, San Francisco, front and centre of the exhibition between the very central Meta and Unity stands.
+
+SELF SUFFICIENT
+Since launching the concept in November, 2020, Earth 2’s business model has been 100% self-sufficient, we have not raised any
+outside capital from VCs, although we had many opportunities to do so. Not all VC capital is bad, but it is well known that such
+captial puts pressure on making returns for the fund before the platform.
+All of the development and progress we have made has been supported by our business model. This is an important fact as it
+allows us to be in better control of the way we run our project and the opportunities we can then provide back to our Players
+and those supporting the Token. We avoided any official ICOs or ITOs instead prioritising development of the platform, therefore,
+when the Essence token launches, the vast majority of tokens will be those that have been mined by Players from their land.
+
+APPROACH
+Instead of closing our doors with the goal to release more robust product in 5 to 10 years time, our approach to building
+the Earth 2 Metaverse has been to develop and release core features via our website as we make progress with the 3D world
+development. Our plan is to ship a very early version of this 3D world (E2V1) and get it into the hands of our community
+providing not only something for people to do as we continue to develop, but help us remain agile in development and pivot
+feature focus based on real use examples.
+
+AR AND VR
+Though E2V1 will first be released on PC, we have do have long term goals to include Augmented Reality elements and support
+VR. We have tested early versions of VR and the results are encouraging. Earth 2 is now close to entering a new phase of our
+journey with the E2V1 pre-alpha and an externally tradeable utility token. With this intro out of the way, read on for more specific
+details.
+This document cannot and will not include all evolving facets of Earth 2 as many in our community will note, but rather provide a
+high level overview of summarised key points that are good for people new to the Earth 2 concept to understand.
+
+3
+
+4
+
+ALL OF THESE NUMBERS ACHIEVED
+
+WITHOUT THE
+
+RELEASE OF OUR UPCOMING FLAGSHIP PRODUCT
+
+5
+
+WHAT IS E2V1?
+
+Earth 2 Version 1 (E2V1) is the starting point for Earth 2’s flagship product, a seamless, real time, 510,072,000 km2 1:1 scale
+persistent virtual planet Earth that accurately reflects real world topology and geographical locations. To achieve this goal, Earth
+2 is developing the Earth 2 Engine, a proprietary engine that sits on top of Unity 3D. The Earth 2 Engine is being designed to
+deliver high-performance, massive-scale 64-bit real-time rendering and physics in both close up and distant views.
+
+MASSIVE SCALE OPEN WORLD TERRAIN RENDERING
+Our proprietary Terrain Renderer is one of the key subsystems of the Earth 2 Engine and is responsible for the real-time, semiphotorealistic terrain and enivironment rendering that takes place on a massive scale delivering an immersive experience along
+with extraordinary view distances.
+It is exceptionally optimised and employs innovative techniques to deliver significantly improved performance compared to
+traditional rendering methods. The view range and close-up detail are virtually limitless, as the terrain can effectively be of any
+size. Moreover, the system automatically adjusts the terrain mesh’s detail level when moving at high speeds, ensuring faster
+rendering and streaming without over-compromising visual quality resulting in a more seamless and realistic overall experience.
+
+ACCURACY ON A GLOBAL SCALE
+The Earth 2 Engine Terrain Renderer uses elevation data from an extensive variety of public and private sector sources worldwide
+to create highly detailed and accurate Digital Elevation Models, representing the Earth’s topographic surface. The elevation data
+undergoes refinement and validation processes using various algorithms to ensure consistency with real-world topological
+features, including rivers, mountains, shorelines, and canyons. For example, the data has been adjusted to match heights at water
+levels and even has the capability to ensure the correct direction of flowing streams and rivers. The height map data is used to
+derive a lot of other useful geometric information such as surface detail, steepness, and curvature.
+Unlike traditional approaches that utilise satellite imagery, Earth 2 opts for synthesising satellite data in real-time using a
+parametric and procedural approach. This method avoids the limitations and drawbacks associated with satellite images, such as
+low quality, large file sizes, and artifacts caused by lighting, shadows, and man-made structures..
+
+BIOME GENERATION SYSTEM
+The Earth 2 Engine Biome Generation System has been developed to allow for the simulation of various biomes in different
+geographical areas on a global scale. Much like the real world, biomes are generally spread over large regions based on climate
+patterns, vegetation, wildlife, and soil types. The Earth 2 Engine Biome Generation System has been designed in such a way that
+it can be programmatically applied to vast areas to match the appearance of satellite images or otherwise reseached details of a
+biome in those areas.
+Each biome includes unique cominbation sets of 3D models and textures which spawn based on a list of internal variables
+detected with the terrain data. The rules for each biome are currently manually created and applied by our team in some, but not
+all, areas of the world. This approach which will remain the case during the testing phases but may switch in the future to a more
+automated system .
+To enhance their natural appearance, biomes incorporate clustered fractal randomization when placing contents such as
+sub-biomes and transition areas. Biomes encompass parameters for elements like snow, forest, foliage, and grass, specifying
+coverage, height or color, as well as probabilities and types of dynamic events such as NPC movement, animal behavior, storms,
+and natural disasters.
+
+6
+
+WHAT IS E2V1? CONTINUED
+BIOME GENERATION SYSTEM (CONT’D)
+The early versions of the Earth 2 Engine Biome Generation System will support around 250 biome variations, a number that will set
+a strong foundation for a realistic and diverse world. The Earth 2 Engine automatically accounts for seamless transitions between
+biomes so that they blend naturally at points where they overlap. Some example biomes you may expect to find inside E2V1 are
+Arid Deserts, Volcanic, Flooded Grasslands, Tropical Savanna, Subtropical Rainforest, Alpine Forest, Savanas, Temperate Broadleaf,
+Mangrove Forest, Arctic Tundra, Temperate Steppe, Polar Ice Caps and many others.
+
+A PLAYABLE WORLD
+The open world we are building is not only being developed to look at, but will also be playable, meaning Players can spawn an
+avatar and interact with the world, anywhere on the 510,072,000 km2 Earth’s surface.
+
+MULTIPLAYER SYSTEM
+Interaction with other people inside E2V1 is also important. In 2023, we internally developed the first version of our own multiplayer
+system, customised to work on massive open world terrain. For example, the system we developed would allow one Player to be in
+London while another is in New York persistently on the same server instance.
+With regards to scaling concurrent users our internal multiplayer system faced the same limitations that all multiplayer games face
+nowadays, however, we are pushing the boundaries in this regard by working with emerging multiplayer solution providers who have
+demonstrated impressive prototypes supporting hundreds or thousands of CCUs on a single sharded server.
+
+IS ALL OF THIS REAL?
+Shortly after we launched Earth 2 and as our project went viral, we received a lot of public scepticism around whether this
+geographically accurate 510,072,000 km2 world was possible. Although we released numerous footage via our YouTube channel,
+displaying the progress we were making on creating this world, many sceptics still believed the footage was pre-rendered or
+otherwise fake.
+
+GAME DEVELOPERS CONFERENCE (GDC) 2024, SAN FRANCISCO, USA
+The put any doubt to rest, Earth 2 officially demonstrated the E2V1 build live at the biggest global gaming conference in the world,
+GDC. Located in the busiest area of the exposition section between the mega booths of Meta and Unity, E2V1 was live and publicly
+available over 3 days for anyone walking past to try out and validate the 1:1 scale Earth.
+There were multiple senior members from Unity stop by to look at the tech, visiting the pristine terrain of the cities they live in
+and each of which were extremely impressed, questioning how we managed to build such a world at scale but also performant. A
+number of other studios stopped by, some asking if we would be willing to license the technology for them to build games inside of.
+Game producers, Web3 companies, indie devs stopped by and had incredibly positive compliments.
+Many developers who have been involved with or focused on building open worlds also stopped by to ask questions about how we
+managed to create such a build. Geography lovers spent time zooming around the world, remarking on the accurancy of the topology
+on a global scale. Almost everyone was impressed by the seamless transitioning and freedom of movement at such scale.
+The reality is our team took a strong stance toward only releasing actual in-engine footage of Earth 2 shortly after we launched,
+going against the trend of games typically using high quality pre-rendered cinematic videos to hype and promote a version of
+their product that doesn’t really exist. We can confirm that apart from the very first promotional inception video we released in
+November, 2020 - every video we have released since has been real-time in game footage of the actual E2V1 product.
+7
+
+WHAT IS LAND & THE
+ECOSIM?
+Much like its significance in the physical world, land on Earth 2 holds paramount importance within the metaverse serving as the
+primary source of utility for resources, not only for sustaining development and life, but also providing forms of entertainment for
+it inside Earth 2.
+The first opportunity the outside world had at reserving land was when we released our proof of concept in November 2020 by
+launching “the Grid”, a mathematically calculated digitalised layer of land we developed which was accessible via our website and
+covered every continent, sea, country, state, city and suburb on our planet. The Grid allowed people to begin reserving their land
+inside the metaverse in the form of tiles.
+Since then, people have been able to reserve land inside Earth 2 using a credit card by purchasing E$ (E$1 = $1USD). People have
+been able to trade their land and other digital items for E$ and the ability to withdraw those E$ back to their credit card or bank
+account.
+
+IT ALL COMES FROM THE LAND - THE KING OF UTILITY
+When Earth 2 first launched our key focus was to continue adding utility and purpose to land. Three years later and nothing has
+changed, land is not only used to mine E-ther, Essence, Jewels and Resources, but will also be required to build, host mini-games,
+advertise, store, Raid from, provide PvP experiences, e-commerce and much more.
+When considered, almost any product or experience in the physical world is only made possible due to some form of attribution
+back to the land or sea of this world, and like the physical world, our goal is to replicate similar attributions back to land in the
+metaverse in order to provide actual intrinsic value to products and experiences developed in Earth 2 as a result of the work
+required to achieve such products and experiences.
+There will be a supply cap of 250 million T1 and T2 tiles with 225 million being directly purchasable as new land and 25 million T2
+tile positions reserved for T3 upgrades. There will be an unlimited supply for T3 tiles so new Players can always build in new areas
+and have an opportunity to attract uncollected E-ther.
+
+THE EARTH 2 ECOSIM
+The EcoSim, short for Economic Simulator, starts with land but ends with everything else. It is the core means of producing
+anything inside of Earth 2 and the driving force behind objects and items having an initial, inherent intrinsic value.
+In addition to the other utility land provides, it can also detect Resources in the form of Occurence Units via the Mentar and
+Prospeecting Cydroids. These Occurence Units can then be use to produce Raw Material via an Essence staking mechanism which
+in turn opens the door to building the initial EcoSim buildings, producing building blocks and advancing technology to build or
+create more advanced buildings or items.
+
+VALUE THROUGH WORK
+If you look around you in the real world you will see buildings, vehicles, objects and all types of possessions that have been
+created as a result of work and resources. In most cases there is a complex process behind creating these things, and although it
+will be easier to produce things inside of Earth 2 when compared to the real world, the premise remains that work and resources
+being required as core components to produce an item gives it initial value.
+Therefore, inside of Earth 2, almost every item you see will have either been discovered, crafted or a byproduct of the EcoSim,
+meaning Players cannot just click their fingers for something to appear, but that there has been some level of discovery, work
+or effort put into creating that object - whatever it may be. All of these items will be tradeable between Players for either E$
+(pegged USD) or Essence.
+8
+
+E-THER
+
+WHAT IS E-THER?
+E-ther is an unstable and somewhat mysterious matter that
+evaporates from owned land inside Earth 2. Theory has it that
+when land is claimed and ownership is recorded in the binary
+code of that land, the land itself commits to improving its
+own environment to the will of the Player who owns it. E-ther
+cannot be captured or stored naturally, but can be detected and
+identified by the Mentar linked to that land.
+Once detected, the Mentar can keep the E-ther stable for 24
+hours, however, if the E-ther is not claimed within this period by
+the Player it becomes unstable and raidable by other Players with
+the correct type of Cydroid.
+
+E-THER TRANSFORMATION
+After the E-ther is collected by the Mentar it can then be used to
+either synthesise life or transform into Essence. Once collected,
+it cannot be redistributed into its particle form and therefore
+cannot be recollected.
+
+E-THER STORAGE
+For now, an ulimited amount of E-ther can be stored within an
+ulimited amount of networked Mentars, that is Mentars with the
+same owner, for an unlimited amount of time. However, over time
+this rule will be adjusted, especially the time factor E-ther can be
+stored for.
+In the future, Players will need to transform their E-ther into
+Essence within a specific period of time.
+
+E-THER BASE SPAWN RATE
+The E-ther base spawn rate is the rate T2 land spawns E-ther. This
+is important to remember when Base Spawn Rate multipliers are
+referenced.
+
+9
+
+WHAT IS ESSENCE?
+Essence will be a high utility, disinflationary, ERC-20 Utility
+Token on the Ethereum Blockchain. It is crafted through the
+transformation of mined E-ther by the Mentar. Essence is
+arguably the most coveted commodity inside of Earth 2, largely
+due to the core utility it will provide.
+
+ESSENCE
+
+WHAT BIGGER UTILITY THAN POWER?
+Essence will be the core commodity required to power almost
+everything inside of Earth 2. People will need it to craft Power
+Cells, which will in turn be needed to power things such as :
+• buildings
+• Cydroids
+• vehicles
+• cities
+• devices
+• and more
+Using Essence to power objects is what we refer to as direct
+staking, that is staking into an object that can then be used for
+alternative purposes providing opportunities for the Player to gain
+more via the utlity of the object staked.
+Players will also need to stake Essence in order to generate Raw
+Materials opening the gateway to build and trade. Additional
+Essence may be used to supercharge production, in which case
+the supercharged amount will subject to a burn mechanism by
+which 50% of the Essence used to supercharge is burned.
+We are also excited to confirm that at some point in the future
+Essence may also used to trade items on the platform, much like
+Players use E$ today.
+
+ADAPTIVE VALUE OF ESSENCE
+Many aspiring web3 projects make the mistake of tying token
+quantity to essential products, items or commodities which
+are prerequisites for users to have any meaningful experience
+or hands-on involvement with their platform. This approach
+results in hyper inflated prices that may make for great headlines
+when super early token holders decide to splurge, but can
+subsequently result in blocking the scalability and growth of the
+project due to the establishment of exorbitant and unrealistic
+prices that new users face when they want to get involved or
+become part of its ecosystem
+Our approach with Essence is to lock in some values, especially
+for core facets of the EcoSim such as powering buildings and
+objects. This will mean tethering an internal measurement unit
+to a locked fiat figure which can be remunerated using Essence
+resulting in an adaptable token value system that slides, not only
+rewarding Players holding Essence if the externally traded price
+of Essence increases, but incentivising Players actively holding
+to build and utilise their dynamically empowered Essence inside
+Earth 2 on the back of such growth.
+
+MORE DETAILS
+For more details about Essence, please see the Tokenomics
+section.
+
+10
+
+JEWELS
+
+WHAT ARE JEWELS?
+Jewels are a digital commodity that can sometimes spawn and
+be detected on Player-owned land. These spawned Jewels can be
+manually collected and have existing utility now, and in various
+areas of the growing EcoSim. There are currently 8 basic Jewel
+types that may spawn on a Player’s property. These Jewels can
+then be crafted into higher Tier 2 or Tier 3 Jewels. Each Jewel
+provides different benefits to the Player and can help the Player
+in different areas within Earth 2, depending on what activities
+and goals the Player wants to focus on.
+To date, approximately 69,200,000 base level Tier 1 Jewels
+have been collected from Player owned properties. The total
+capped number of discoverable Tier 1 Jewels will be capped at
+150,000,000 with Jewel detection and collection on Player owned
+properties will be capped at 125,000,000 and the remaining
+25,000,000 being discoverable or earnable inside E2V1.
+
+JEWEL CRAFTING
+Jewels can also be crafted with a mixture of Essence and Jewel
+Shards to create higher quality Jewels that have greater boost
+effects. During the Jewel quality improvement process, there is
+a slim, completely random possibility of crafting a Brilliant Jewel
+which has even higher boosts but is extremely rare.
+
+JEWEL UTILITY
+Jewels can be used in many areas of Earth 2 as boosts or buffs on
+objects. Currently they can be slotted into T1 and T2 land Mentars
+to increase E-ther detection and boost resource OU production.
+They can also be slotted into Cydroids to improve base specs.
+
+JEWEL TRADING
+Players are able to trade their Jewels for E$ in a secondary
+market called the Bazaar. Jewels tend to sell from anywhere
+between E$0.04 to E$50.00 each. However, Brilliant Jewels sell for
+hundreds if not thousands of dollars with the highest sale to date
+being E$8,500 (or $8,500 USD) for a single Brilliant Jewel.
+Currently, Players can slot Jewels into their properties’ Mentars
+to increase E-ther detection or speed up building times. Soon
+they will also be able to slot Jewels into their Cydroids to receive
+special Raiding boosts and unlock other abilities. Jewels will also
+play a big role in Resource discovery and replication, and within
+the EcoSim system in general.
+
+11
+
+UPGRADING LAND TIERS
+
+UPGRADING LAND
+
+Land owners will have the ability to upgrade their land via the
+Earth 2 Land Upgrade System. This system requires either Essence
+alone or Essence plus a Red, Yellow, Green or Blue energy type
+which is then used to infuse your land with a sudden burst of
+power through the Mentar resulting in a permanent upgrade of
+that land.
+
+HOW DOES IT WORK?
+The amount of Essence or Energy required to upgrade land can
+fluctuate and is determined by two major factors: the popularity
+or demand for land within a country or territory which is
+reflected by the New Land Price (NLP), and the external trade
+price of Essence. These two main factors should be taken into
+consideration when upgrading your land in order to determine
+whether it is a good time for you to upgrade, or not.
+
+SPECIAL CAMPAIGN
+The Land Upgrade System has a special campaign built in for
+T2 land owners. The first 25,000 thousand T2 to T1 tile upgrades
+in each of the 5 methods (Essence alone, Essence + Red Energy,
+Essence + Yellow Energy, Essence + Blue energy and Essence +
+Green energy) in each country will receive a permanent boosted
+base E-ther spawn for what will be a Tier 1 Special property.
+The boosted E-ther spawn rate on a Tier 1 Special property will 5x
+the base E-ther spawn rate, higher than a standard T1 but still less
+than a T1 + EDC.
+
+IMPACT ON NEW LAND PRICES
+The Land Upgrade system will set in motion unprecedented
+and dynamic changes to the NLP of every Tier of land in Earth
+2. As tiles transition from a lower tier to a higher one, the total
+number of tiles in each tier will change following each upgrade.
+This can and will affect the rise and fall of NLPs for each Tier
+within the same territory (T3) and country (T1 and T2) as tiles are
+upgraded from one Tier to another. The constant fluctuations of
+NLPs for each Tier, as well as the external trade price of Essence
+will provide an array of opportunities related to land ownership,
+including adding another dimension to player-to-player property
+trading.
+More specific information on Land Upgrades will be released in
+an upcoming article.
+
+ESSENCE BURN RATE
+The Essence burn rate on land upgrades will be 50-50 meaning
+50% of the Essence used to upgrade land will be permanently
+burned and the other 50% will sent to the Earth 2 Treasury.
+
+12
+
+CYDROIDS
+
+WHAT ARE CYDROIDS?
+Cydroids are cybernetic beings created through the Mentar using
+Essence. First Gen of Cydroids are designed with a primary ability
+for Raiding, but can acquire Prospecting abilities when fused with
+a Prospecting Resources Jewel. Second Gen Cydroids will be able
+to help with prospecting, but not have the ability to Raid E-ther.
+Cydroids can only be built on Tier 1 and Tier 2 lands hosted by
+Mentars, as Tier 3 lands, hosted by T3 SEEDs, are incapable of
+directly building Cydroids. Only 5,000,000 First Gen Cydroids may
+ever be built.
+
+HOW ARE CYDROIDS POWERED?
+The process of creating a First Gen Cydroid is fixed to 2.5 Essence
+largely due to the fact First Gen Cydroids have the ability to
+recoup their cost via succesful Raids. Once a Cydroid is built, it
+needs to be powered in order to function. A First Gen Cydroid
+requires 5 fully charged Essence units which are injected into a
+Power Cell before the Cydroid can be used.
+These 5 Essence units can be 100% recouped at any time if
+removed in a fully charged state. This process of using Essence to
+power the First Gen Cydroid in order to use it for potential gain
+provides a classic example of how Essence can be staked inside
+Earth 2 for benefit to the Player.
+
+CYDROIDS AND JEWELS
+Specific jewels can be temporarily or permanently slotted into
+Cydroids to enhance or unlock certain gameplay abilities. In
+particular, Prospecting Jewels can be permanently fused to a
+Cydroid, granting access to their prospecting abilities.
+Each Cydroid has its own unique type of Prospecting Jewel, so
+experimentation may be necessary to find the compatible Jewel.
+
+PROSPECTING CYDROIDS
+Prospecting, a crucial aspect of resource gathering in the Ecosim,
+involves using Cydroids to decode and collect specific resources.
+This ability is unlocked when a Cydroid is fused with the
+appropriate Prospecting Jewel for a specific type of Resource.
+The right jewel not only enables prospecting but may also
+enhance the Cydroid’s capabilities based on the jewel’s quality
+and tier.
+
+13
+
+WHAT IS RAIDING?
+
+RAIDING
+
+Raiding in Earth 2 Raiding is a strategic gameplay feature that
+allows players to utilise their First Gen Cydroids to conduct
+operations on nearby properties with the objective of gaining
+E-ther, a valuable resource within Earth 2, from other Players.
+
+HOW DOES IT WORK?
+At a high level, the Raiding system is designed to be easy to play
+but challenging to master. Players will build Cydroids on their
+land properties, which are then sent out to conduct Raids on
+nearby properties. The purpose of these Raids is to collect E-ther
+that has become unstable due to not being collected within a 24hour period after it spawned on other Player properties.
+The success of the Raid depends on the Cydroid’s capabilities, the
+surrounding competition of fellow Raiders and the amount of
+unstable E-ther available on the raided property.
+
+E-THER AND ESSENCE
+Raiding rewards strategic thinking and careful management. At
+its core, it revolves around a balanced utilization of Essence.
+Essence not only provides operational capabilities for
+Cydroids but also unlocks the potential for increased Essence
+accumulation through Raiding. Players invest Essence to create
+Essence-based Cydroids, which are then deployed to gain more
+E-ther. In addition to this, while the Essence required to form
+the Cydroid’s physical form itself is unattainable, The Essence
+allocated as the absorbent material for Power Cells is.
+This cycle exemplifies the resource management that will be
+required in other areas of Earth 2. Players will need to carefully
+decide when to allocate Essence to build and power Cydroids,
+and when to withdraw Essence from Power Cells for other
+operations.
+
+14
+
+CIVILIANS
+
+WHAT ARE CIVILIANS?
+Civilians are semi-sentient beings synthesised by Players and
+employed to automate the operation of various Raiding tasks,
+removing the need for the Player to carry out each task manually.
+Civilians are essential for Players with a large portfolio of properties
+to manage all their tasks efficiently. However, Civilians may also be
+used by Players who are wanting to reduce their manual task-load
+in general.
+There are currently 3 types of Civilians, the E-ther Reckoner, the
+Cydroid Technician and the Raid Commander, all of which have a
+maximum supply of 500,000 each and assist with automating the
+Raiding process on properties they reside on.
+
+SUSTENANCE FOR CIVILIANS
+Civilians also introduced the very first sustenance system inside
+Earth 2. Players were able to keep their Civilians happy, sustained,
+and focused on their tasks by feeding them Red Energy (a type
+of energy that can be gained via conflict-type activities such as
+executing successful raids on other Player’s properties).
+Red Energy is instantly transferable via a Player’s Mentar network,
+meaning a Player can use their global Red Energy balance to
+sustain their Civilians on any of their properties around the world.
+This means that Red Energy earned in Africa can be used to
+sustain a Player’s Civilians in America, and vice versa.
+If a Player does not have enough Red Energy to sustain their First
+Edition Civilians, then those Civilians who miss out on Red Energy
+will cease working and begin wandering in the wilderness,
+looking for food or another source to sustain them to stay alive.
+For now, a Player will have the ability to convince their wandering
+Civilians to return automatically to their property and tasks once
+they have enough Red Energy to lure them back.
+First Edition Civilians will require one Red Energy unit per
+week to keep them loyal and happy. The unit of Red Energy is
+automatically distributed to each Civilian, once a week based on
+the day they received their first sustenance of Red Energy. For
+example, if you synthesise a Civilian on a Monday, you will need
+to replenish that Civilian with Red Energy every Monday. If a
+Civilian that was usually replenished on a Monday wandered
+into the wilderness and was lured back on a Wednesday, the new
+weekly sustenance cycle would occur on a Wednesday.
+
+CIVILIANS XP
+The first XP system was also implemented inside Earth 2 at
+the same time Civilians were released. The Civilians XP system
+allows Players to level up their Civilians, boosting productivity
+and obtaining new skills through hands-on experience. The first
+Civilians, which assists Players to execute their Raiding activities,
+gains XP from successful Raids when E-ther is dispensed on that
+property. Initially, every 0.01 E-ther dispensed will equate to 1 XP.
+It takes a team effort between the Civilians to Charge, Raid and
+Dispense, therefore, the XP is evenly split between however many
+Civilians Players have dedicated to their Raiding system for each
+specific property.
+
+15
+
+E2V1 MINI GAMES
+
+During our recent E2V1 Pre-Alpha Youtube premier and again at GDC 2024, San Francisco, we demonstrated not only a massive,
+open, 510,072,000 km2 planet Earth but also confirmation of our own multiplayer system including hints at what some of Earth
+2’s first mini-games might look like. Our approach to the first mini-games inside Earth 2 is to allow them to take place on Player
+owned properties and to make them simple, quick, competitive and fun.
+
+E-THER ROYALE
+E-ther Royale is a prototype game we are testing which will operate on Player owned properties of 4 tiles or larger. The concept
+is simple, multiple Players spawn on a property scattered with E-ther particles. The larger the property, the more Players that can
+spawn. Each Player starts at a slow-motion walking speed, but each time a Player collects an E-ther particle, their avatar speeds
+up a little. Once the first particle is collected, a cool down timer begins and the Player needs to collect another E-ther particle
+before the timer expires otherwise they will reduce in speed and lose an E-ther particle for each level of speed they reduce until
+they return to zero again.
+There are a lot of additional rules to the game, but the objective is simple - collect as many E-ther particles as you can until there
+are no particles remaining. The Player with the most E-ther particles gets to keep them!
+
+MULTIPLAYER
+During 2023 the Earth 2 team successfully implemented our own multiplayer system. This was the system showcased in our E2V1
+Pre-Alpha invite video. While our long term goals are naturally focused on working with specialised partners to push the limits
+on concurrent players interacting on a single sharder server, in the short term our own multiplayer system would be sufficient
+enough to provide mini-game experiences to our player base.
+
+LOBBY SYSTEM
+Irrespective of which multiplayer option is being utilised, Earth 2 intends to implement a Lobby system in which Players can enter
+via close proximity to a Mentar then search and wait for mini-games to start. Once a mini-game is confirmed, the Player’s avatar
+will teleport to that location and the game will commence.
+
+UPCOMING MECHANICS
+As demonstrated at GDC 2024, the Earth 2 team is also working on additional game mechanics such as the rifle blaster, rocket
+launchers and grenades not to mention wheeled vehicles, flying machines and boats. These game controllers and mechanics will
+allow us to slowly expand the type of mini-games we can provide to property owners over time.
+
+ALLOWING PLAYERS TO BUILD
+Our longer term goal is not only to provide Earth 2 built mini-games for land owners and Players to enjoy, but for the mechanics
+of those mini-games to slowly accrue allowing Earth 2 to open up access to the various mechanics to Players and land owners
+have the opportunity to create their own unique games and experiences.
+
+16
+
+WHAT IS BROADCASTING?
+
+BROADCASTING
+
+Broadcasting is a concept in which ads are broadcasted to Players
+waiting to join mini-games or in game experiences. This forms an
+integral part of our long term vision in creating a self sustaining
+Metaverse which provides a direct, or at least indirect, way of
+benefiting those who take part in or spend time on the platform.
+
+HOW DOES IT WORK?
+Broadcasting introduces the very first Utility for Resource
+Occurrence Units. Players will be able to use their Occurence
+Units to craft Broadcasting Devices inside the Mentar or Seed to
+unlock the ability to broadcast ads to Players who are waiting in
+the lobby before starting a mini-game.
+
+BROADCASTER TYPES
+Broadcasting Devices will have different levels of efficiency
+depending on the Discovery Tier level of the Resource
+Occurrence Units used to craft the device. The higher the
+Discovery Tier level the more efficient it is at broadcasting and
+the less Essence required to power the device and deliver the ads.
+
+POWER AND CONSUMPTION
+As with most objects inside Earth 2, Broadcasting Devices will
+need to be powered by an Essence powered power cell in order
+to function.
+Once fully powered, the Broadcasting Device will require
+additional loaded Essence at a set ratio depending on its level
+of efficiency. Essence is only consumed based on the fiat value
+profit being made on the ad deilvered.
+For example, a D1 crafted Broadcasting Device might return
+a 25% bonus on consumption, meaning that if $1.00 worth of
+Essence was consumed, at least $1.25 of ad revenue would have
+been generated meaning the owner would receive $1.25 in
+withdrawable credit. However, a D9 Broadcasting Device might
+generate 200% on the value of any Essence consumed.
+
+ESSENCE BURN
+50% of all Essence consumed during the Broadcasting process
+will be burned and 50% will be sent to the Treasury.
+
+RELATIONSHIP
+Land Owners who utilise this service will require a specific type
+of relationship setup with Earth 2. Effectively Earth 2 is hosting
+your 3D digital space and is providing you credits for ad revenue
+generated on inside your space.
+
+17
+
+SKINS
+
+SKINS AND THE METAVERSE
+Being able to change your appearance with skins inside a game
+is important, it helps reflect the way you feel or provides you with
+something you enjoy looking at or becoming while playing. It’s
+not just what we think, in fact gaming skins alone is now over a
+$50 Billion industry.
+The ability to alter your virtual avatar is even more important
+inside the Metaverse where Players will ultimately wish to take on
+completely different appearances and personas in a virtual world
+not bound to a single genre.
+
+EARTH 2 CREATING ITS OWN IP
+There are many contributing factors that will make up the
+Metaverse and wearable cosmetics will certainly form one big
+part of it all. We believe it is important for a contending platform
+in the Metaverse space to display the capability of creating
+its own appealing IP, effectively designing and developing a
+platform other IP brands want to be part of over time.
+Each Earth 2 skin starts from concept art which is reviewed
+and travels through numerous iterations before final approval.
+Once approved, it is then passed to our 3D modelling team for
+sculpting into high-poly then into low-poly with further reviews
+and strict adherence to our pipeline protocols throughout the
+process. When the low-poly model is finished, the 3D team
+finalises the model with UV mapping and texture baking, running
+through their own QA processes during this stage.
+Once the entire 3D-sculpted model is approved, the models enter
+the skinning, rigging and weight painting process before being
+passed on to our animation team for further testing with various
+animations involving another set of QA such as minimising
+clipping and identifying any other potential flaws in the model.
+The model then proceeds through the final process of approval
+with a game developer to ensure it passes all final tests and is
+absolutely game-ready for E2V1.
+
+THE BLUEPRINT SYSTEM
+The Earth 2 Blueprint system will almost always require the
+Player to have the base item first before they can apply the
+skin. For example, if the Player has an avatar skin, they will first
+need a base avatar, or living Earth 2 being, to apply the skin to.
+In the case of a full avatar skin, this would be a case of having a
+synthesised avatar to apply the skin to, you would not need base
+versions of all the various clothing items for a full avatar skin.
+Many base items will be discovered, crafted or earned via various
+game play or a byproduct of the EcoSim inside Earth 2, meaning
+the Player first needs to do something in order to acquire the
+base item. Players will almost always be able to sell skins, but not
+always base items, however, base items which are a byproduct
+from the EcoSim will have a higher chance of being tradeable.
+Skins will be tradeable between Players for E$ and Essence.
+18
+
+EPLS
+
+OTHER FEATURES
+
+Players will ultimately need a way to find areas or places inside
+Earth 2. The EPL (Earth 2 Property Locator) serves as a type of
+URL which will allow Players to teleport directly to those specific
+properties.
+EPLs, like a website URL, will become very important to Players
+searching for specific experiences or visiting specific properties
+inside the Earth 2 Metaverse.
+
+THE BAZAAR
+The Bazaar is a massive trading hub for various digital items
+inside Earth 2. At present it provides a place for Players to buy
+and sell Jewels, Cydroids, Civilians and more on a secondary
+market for E$ (E$1 = $1USD) and Essence in the future.
+
+HOLOBUILDINGS
+The Holobuilding Editor is a refined design tool that allows
+Players to create custom buildings and structures which can
+either be built on properties, or sold in the Bazaar.
+This feature was primary developed to allow Players to explore
+and express their creativity. however, Holobuildings also have a
+level of utility in that Holobduildings that are built on properties
+have the ability to store Resource Occurrence Units for future
+Resource replication.
+
+RESOURCE VALIDATION SYSTEM
+Even with the processing of what is probably the most accurate
+resource location data in the world, there were always going
+to be edge cases where our system missed a resource. For this
+purpose we created the Earth 2 Player Resource Validation system
+which is a 2 part system whereby Players are able to submit a
+claim for a particular Resource they believe exists in their land.
+Originally developed as a way for Players to ensure they do not
+miss out on Resource distribution whilst encouraging community
+collaboration, the E2PRV system has since been refined to focus
+more on rewarding Players who participate in the system.
+
+U2U HOLOBUILDING TRADING SYSTEM
+HoloBlueprints can be bought and sold in the Bazaar, as either
+Holobuildings (built form) or Blueprints (design plans). This
+trading system is highly sophisticated and enables creative
+Players to share and profit from their talent, creativity, and time.
+From a Player-to-Player trading perspective, the Bazaar displays
+all the details relevant to the sale such as the type (Holobuilding
+or Blueprint), original designer, current seller, creation date, as
+well as the listed price, built size, number of vertices and overall
+volume of a HoloBlueprint.
+The U2U Holobuilding Trading system is so advanced it can
+track joint ownership of combined digital assets and accurately
+distributed royalties for every ongoing sale on the secondary
+market. This system can be reused for almost any type of digital
+item inside of Earth 2, whether user generated or not.
+
+19
+
+OTHER FEATURES CONTINUED
+
+KYC SYSTEM
+Compliance and customer support have always been a high
+priority and were critical areas we needed to get right for our
+business and customers. To protect all users, especially the end
+user, a Player wanting to sell any property or digital items on
+Earth 2 is required to be verified via a KYC process.
+This is not only an industry standard procedure to integrate
+KYC processes for compliance requirements, but ensures we are
+taking all necessary steps to protect our Players and maintain a
+safe platform that promotes Player-to-Player activities.
+Earth 2 has a full time team who maintain compliance checks
+which clearly represents our underlying commitment to safety
+and security on the Earth 2 platform.
+
+WITHDRAWAL SYSTEM
+Inside Earth 2, Players can either purchase a property directly
+with their credit card, crypto wallet, or account balance in the
+form of E$ (E$1 = $1USD), which can be topped up by the user
+beforehand.
+Concurrent to streamlined crediting of E$ to an Earth 2 account,
+Earth 2 developed a purpose-built withdrawal system to facilitate
+the withdrawal of Players’ E$ directly to fiat currency.
+This robust, high quality system handles payouts in numerous
+currencies, and is built with high security, never having been
+breached to date.
+We employ multiple senior accountants full time to oversee the
+process and to provide support to the few customers who have
+problems withdrawing using our refined, automated withdrawal
+system.
+To date our system withdrawal system has processed over
+$22,000,000 USD in Player withdrawals.
+
+CUSTOMER SUPPORT SYSTEM
+For general Customer Service, we developed our own internal
+procedures and implemented a customised complex yet efficient
+version of Zendesk. We have a ticket numbering system which
+tracks the start and end of every ticket and for complicated or
+specialised cases. We employ in house full time staff based in
+Sydney, Australia and Europe to provide further assistance.
+
+20
+
+OTHER FEATURES CONTINUED
+THE MARKETPLACE
+Since launching in November, 2020, Players have had the opportunity to purchase virtual real estate directly from Earth 2 and
+leverage that real estate for various purposes within Earth 2, including activities such as Player-to-Player trading via a secondary
+market purely based on fiat currency.
+This system is a fully fledged automated Virtual Real Estate solution, is highly complex to build and functions at scale with high
+level transactions and over 120 million correctly processed land positions spanning across the entire globe. It also has the ability
+to control transfer fees.
+
+MARKETPLACE MVP
+Our first MVP included a foundational system that allowed Players to purchase, own, sell and bid on properties. Ownership of
+virtual land within Earth 2 is a core component of establishing a truly Player-focused metaverse, which currently facilitates:
+Players purchasing land directly from Earth 2, with protection from race conditions (i.e two people trying to buy the same land at
+the same time) via instant assignment of ownership;
+Players accessing the complete description of all the properties they own, including details of:
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+
+The unique Property Deed,
+Owner of Property,
+Land Tier,
+Land Class,
+Player-built assets on theproperty (i.e Mentar, Holobuildings),
+Property size,
+Location of the Property with the precise coordinates to the location of every tile within the Property,
+Satellite Image of the location of the Property,
+Property Address,
+Country,
+Purchase Price,
+Market Value Price (including price fluctuation estimates),
+Any Resources discoverable and exploitable on the Property,
+Essence transformed to date, and
+Property market status (For Sale / Not For Sale);
+
+A system which allows Players to bid on another Player’s property including features for;
+•
+•
+•
+•
+•
+•
+•
+•
+
+Placing a bid,
+Updating a bid,
+accepting a bid, with includes the automatic transfer of the ownership title
+rejecting a bid,
+counter offering a bid,
+seeing the bid history,
+automated ESCROW to increase bid security and proof of available funds, and
+Automatic return of amount held in escrow if bids are rejected.
+
+And a system which allows Players to list and trade their property with other Players via the Marketplace.
+
+21
+
+TOKENOMICS
+
+ESSENCE TOKENOMICS
+After much anticipation, Earth 2 is making its first move into
+the Web3 space. Essence will become a disinflationary ERC-20
+Utility Token initially launching on the Ethereum Blockchain. The
+Layer 1 Etherium Blockchain was chosen for its superior security,
+compliance and decentralisation merits.
+
+WHY ARE MAKING ESSENCE A TOKEN?
+The core reason for making Essence into a Utility Token is not
+only for the assistance it provides Earth 2 with the development
+of such an ambitious project, but to provide our community with a
+compliant place to trade the token.
+
+ESSENCE SUPPLY CAP
+Essence will be capped at a maximum supply of 1,000,000,000
+(one billion) tokens with the majority of these tokens being
+mineable over time by land holders.
+
+SYMBIOTIC RELATIONSHIP
+Each time an Essence token is mined, a smaller amount of
+Essence is unlocked in the Earth 2 Treasury, gradually providing
+access to funds the Earth 2 team requires in order to build, scale,
+market, expand and support such an ambitious project.
+
+ESSENCE HALVING
+Essence will be disinflationary with halving events set to activate
+when the total mined + unlocked Essence reaches 500,000,000
+(five hundred million), 750,000,000 (seven hundred and fifty
+million) and 875,000,000 (eight hundred and seventy five million)
+respectively. At each halving event, the E-ther spawn rate, or
+minable E-ther, for each respective land tier type will reduce by
+50%.
+
+E-THER TO ESSENCE TRANSFORMATION
+E-ther to Essence transformation will remain at 6.5%.
+
+22
+
+TOKEN LAUNCH DETAILS
+
+TOKENOMICS CONTINUED
+
+As many will be aware, the Web3 space is still stabilising and is often
+very upredictable. There are mistakes made every day, even by well
+established names in the space. Earth 2 has always planned to move
+cautiously into the Web3 space, therefore, we will be implementing a
+number of steps and procedures, at least initially, to ensure all of the
+systems are secure and work as expected.
+We highly suggest that each Player do their own due dilligence on
+best practice security with anything related to tokens, storage, wallets,
+transacting and anything else Web3 related.
+
+WALLET CONNECTION
+To begin, Players will be able to connect a MetaMask wallet to their
+Earth 2 account. In order to connect this wallet, the Player will need to
+have their 2FA activated on their Earth 2 account as they will need the
+Authenticator Code to complete the connection of their wallet.
+Any time the Player wishes to move their Essence tokens into their
+connected wallet, they will need to confirm using the correct 2FA code.
+
+TOKEN OUT-FLOW
+To begin, all Essence tokens that appear in the Player profile when
+logged into their Earth 2 account will be stored in a default wallet for
+the ecosystem. When tokens are in this wallet, Players will be able to use
+them inside of Earth 2 for a multitude of reasons without being subjected
+to gas transfer fees. Security for this wallet will naturally be important,
+therefore it will be a multi-sig wallet meaning multiple signatures are
+required before transfers are processed.
+Players will be able to lodge a request to transfer their Essence tokens to
+the wallet they have successfully linked to their Earth 2 account using the
+2FA authenticator.
+This request will be batched and reviewed by our accounting team to
+ensure the Player withdrawing the tokens has acquired them legitimately
+and to perform other security spot checks in the best interest of the Earth
+2 Players and platform.
+We do not foresee any KYC restrictions on this procedure just yet, but if
+a Player is caught attempting to process illegitimate withdrawals their
+account will be frozen and further action will be taken.
+
+TOKEN IN-FLOW
+To bring tokens back into Earth 2 and use them within the ecosystem,
+the Player simply needs to send the tokens from the wallet they have
+successfully connected to their Earth 2 account to the main default wallet
+for the ecosystem. This will trigger an event that automatically credits
+the transferred Essence to that Players account, ready for use inside Earth
+2.
+More details on all of the above steps will be provided via the website
+once the system is live.
+
+23
+
+TOKENOMICS CONTINUED
+
+EXCHANGE
+The Essence Utility Token will first launch on the UniSwap DEX. An
+official date is not yet announced, but at this point in time it will
+be late April or May.
+
+LIQUIDITY POOL
+From a legal standpoint and for a number of other reasons, Earth
+2 will not be providing a liquidity pool. Our focus as a project will
+be on what we always set out to achieve, building a geolocational
+metaverse, focusing our time and effort on building a sustainable
+metaverse platform which we believe will have positive organic
+on-flow effects to other aspects of the project over time.
+It is clear we want the best for those who are actively supporting
+our project, which is reflected in the supply cap and many of the
+features we are developing.
+
+EDC
+EDC is Essence that was promised to Players who have it assigned
+to specific land they own. EDC is protected for guaranteed
+detection and collection in any is remaining in years to come at
+the end of the mining cycle.
+
+INITIAL SUPPY
+At the point of launch, we anticipate approximately 300 million
+tokens in circulation. This includes tokens unlocked from the
+Treasury and Tokens spent by Players to date, but the majority of
+these tokens (over 200 million) have been mined or earned by
+Players.
+
+DEFLATIONARY
+In addition to being disinflationary, Essence is also deflationary.
+In many cases, but not all, a percentage of Essence sent to the
+Treasury will be burned. Two prime examples of this are Land
+Upgrades and Ad Broadcasting with both cases having a 50%
+burn rate.
+
+24
+
+TOKEN ALLOCATION
+
+25%
+TREASURY
+65%
+MINED FROM
+LAND
+
+10%
+REWARDS
+
+65% - MINED FROM LAND
+We have kept the Token Allocation very simple. The first and largest is the pool of Essence reserved for Land Owners and
+accounts for E-ther detected on land which in then mined or raided. If the E-ther evaporates without being mined or raided it will
+re-enter the Earth 2 ecosystem to be spawned again. Much of this pool may also be considered as Play to Earn, especially if Land
+Owners decide to use the Ad Broadcasting system with mini-games or experiences.
+
+25% - TREASURY
+The Web3 industry is still in its infancy and if projects are to thrive there must be a level of freedom to adjust when needed.
+For this reason the Treasury is a central multipurpose wallet Earth 2 will utilise for various needs, including but not limited to
+development, supporting the project, marketing and promotion, costs, team allocations, liquidity pools when and if required
+from future potential exchanges, advisers, MODs and so forth. These tokens will be unlocked progressively via the symbiotic
+relationship with Player earned tokens.
+
+10% - REWARDS AND PLAY TO EARN
+The Rewards and Play for Earn wallet is reserved for Play 2 Earn acivities Earth 2 may promote from time to time, rewards via
+staking opportunities such as Earth 2 Player Resource Validations, Yellow Energy Rewards, Air Drops, Sponsorships and other
+activities that might reward the community or help grow the project.
+25
+
+WHY IS EARTH 2 A GOOD
+CHOICE FOR BUILDING
+THE METAVERSE?
+
+BUILDING & DEDICATION
+Over our short history, Earth 2 has already faced a number
+of trialing situations. In each case we have pushed through
+remaining focused on building the product we set out to build and
+consistently releasing production ready features to our community
+during a bear market.
+The significant number of features we have released and visual
+progress we have shown is a clear demonstration of our capability,
+dedication and intention to build Earth 2.
+
+BUSINESS MODEL
+Since launching in November 2020, the Earth 2 business model
+has been 100% self-sufficient - everything we have built and the
+progress we have made has been achieved without Venture Captial
+meaning our business model is sustainable.
+The Essence Token and E2V1 will open up new opportunities and
+allow us to push forward through new boundaries and beyond.
+
+IDEOLOGY
+We are building a platform that will be sustainable long term, based
+on an ideology of a symbiotic relationship with our Players and
+people interacting on our platform.
+We have long term realistic exit strategies via advertising,
+e-commerce, secondary markets, the EcoSim and numerous other
+options which will be developed over time.
+
+OWNERSHIP
+Finally, there is ownership - it is inevitable that the Metaverse will
+be built - do you really want the Metaverse built by a corporate
+giant which has the goal to only benefit its own stakeholders?
+
+TRACK RECORD
+We have track record of trying to benefit our Players. We have also
+consistently built over the past 3 years and will continue to build
+for years to come as is evident in our history Road Map on the
+following page.
+Whether you want to own land or just play inside the metaverse be part of Earth 2 and let’s build the People’s Metaverse together.
+
+26
+
+T IM E L IN E
+DEC-JAN
+2021
+
+NOV 2020
+
+-
+
+Officia launch of Earth 2
+platform and entire suite of
+base features
+- Earth 2 Inception video
+created in October, 2020
+
+-
+
+Extensive performance
+updates
+Earth 2’s very first dev stream
+live on Twitch, YouTube, Twitter
+& Facebook
+
+MAR 2021
+
+-
+
+-
+
+-
+
+Uplod verification documents
+New username selections
+Block bids under 30% solution
+
+-
+
+Heatmap view
+Bot prevention
+Map based promos
+LIT upgrade
+Dubai opening
+
+MAY 2021
+
+JUN 2021
+
+-
+
+Added How-To, Careers &
+Partners sections
+Leaderboard & Notification
+improvements
+Withdrawal improvements
+
+-
+
+-
+
+Introduction of Mentars
+Introduction of E-ther being
+processed into Essence
+Introduction of Jewel Slotting
+into Mentars
+
+-
+
+FEB 2021
+CONT’D
+
+-
+
+Official video release of Earth
+2’s Terrain Engine System in 4K
+Earth 2’s second dev stream
+(Terrain video LIVE)
+
+-
+
+JUN 2021
+CONT’D
+
+Revamp of automated credit
+car payout system
+Released Earth2 virtual card
+
+-
+
+-
+
+JUL 2021
+
+CONT’D
+
+Introduction of Holobuilding
+Editor (Blueprints)
+
+-
+
+-
+
+Introduction of automated KYC system
+Restrictions on non-KYC User-to-User trading
+
+-
+
+Introduction of Jewel system
+Major upgrade to React
+framework
+Introduction of the Bazaar
+
+AUG 2021
+
+AUG 2021
+
+SEP 2021
+
+CONT’D
+
+CONT’D
+
+-
+
+Official video release of
+Physics inside the Earth 2
+Terrain Engine
+
+JUL 2021
+
+-
+
+AUG 2021
+
+-
+
+-
+
+CONT’D
+
+CONT’D
+
+-
+
+Grid and general UI updates
+Profile page banners
+Phone number fied filter
+-
+
+-
+
+JUL 2021
+
+JUL 2021
+
+2FA Security
+New Login
+New payment processing
+system
+
+MAR 2021
+
+New support page
+New FAQ section
+- 1st version of automatic
+credit card payout system
+
+APR 2021
+
+FEB 2021
+
+Automated referral code
+system
+- Marketplace filters
+
+CONT’D
+
+Pagination & loading spee
+improvements
+3D Map view with Choropleth
+
+-
+
+-
+
+MAR 2021
+
+CONT’D
+
+-
+
+JAN 2021
+
+Bidding System Improvement
+Slotting Expansion
+
+-
+
+Partnership with Jumio,
+provider of AI-powered
+verification technology
+
+-
+
+-
+
+ear th2.io
+
+-
+
+Introduction of EPLs
+Updated Real Time Price
+Change Detectibility on listed
+Properties
+Introduction of Notification
+Hub
+
+TIMELINE
+OCT 2021
+
+-
+
+Introduction of Game Activity
+Ticker
+MultiColour Property Display
+Portfolio UI Update with more
+Filters
+
+-
+
+-
+
+-
+
+-
+
+-
+
+JAN 2022
+
+-
+
+Second Earth 2 Egg Hunt
+2022 with prizes in E$ and NFTs
+
+First Dev Vlog video in new
+Series goes Live: Dev VLOG #1
+- E2V1 Digital Earth Rendering
+Progress
+
+DRONE acquisition
+
+EDC Released
+Essence Drop distributed to
+Players
+Introduction of T1 and T2 Land
+Numerous other major
+updates
+from EDC
+
+-
+
+-
+
+Introduction of Gift Feature
+Gift Feature email delivery
+system
+
+DEC 2021
+
+-
+
+CONT’D
+
+-
+
+Major partnership with
+Polygon Studios
+Omar Rahim joins Earth 2 as
+Strategic Advisor
+
+JAN 2022
+
+-
+
+Expansion on Game Activity
+feed data
+Live Game Activity integrated
+into the website header
+
+FEB 2022
+
+FEB 2022
+
+CONT’D
+
+-
+
+-
+
+ear th2.io
+
+Introduction of E-ther
+heatmap
+Progressive release of Locked
+Countries over Q1
+
+Custom referral codes for T1
+property owners
+7.5% discount/refund for T1
+custom referral codes
+
+FEB 2022
+CONT’D
+
+CONT’D
+
+Progress update on Resources
+First winners of Egg Hunt 2022
+announced
+Market Place update for bot
+protection
+
+Holobuilding update
+Landing Page update
+
+FEB 2022
+
+CONT’D
+
+Map / Tile / Grid optimisation
+update
+Updated mobile-friendly
+layout
+Tier 1 distinguishable from Tier
+2 properties as brighter colour
+
+-
+
+CONT’D
+
+CONT’D
+
+-
+
+-
+
+DEC 2021
+
+DEC 2021
+
+CONT’D
+
+MAR 2022
+
+-
+
+-
+
+Essence record update to
+Transaction page
+
+JAN 2022
+
+CONT’D
+
+- Introduction of Holobuildings
+
+DEC 2021
+
+CONT’D
+
+-
+
+CONT’D
+
+Bazaar UI Update
+3D Mentar Model Grid Display
+Holobuilding Vertex Increase
+Support
+
+-
+
+DEC 2021
+
+JAN 2022
+
+Introduction of Tier 3 Jewels
+Release of T3 Jewel recipes
+Over $1.3M in fiat worth of
+Jewels sold to date in P2P trading
+
+Alphabetic filter for Jewel
+Slotting
+EPL Management for Projects /
+Megacities
+Heatmap Upgrade
+
+CONT’D
+
+Introduction of Jewel Crafting
+to the Resource section
+Added Jewel Shards
+Introduction of Tier 2 Jewels
+Introduction of Jewel Qualities
+
+SEP 2021
+
+CONT’D
+
+NOV 2021
+
+NOV 2021
+
+-
+
+SEP 2021
+
+OCT 2021
+
+CONT’D
+
+-
+
+Draft of the Earth 2 Web3
+Documen
+
+T IM E L IN E
+MAR 2022
+
+-
+
+Various optimisations
+implemented to the Bazaar
+Earth 2 VLOG #2 ECOSIM - First
+Phase 2 Building & Tech
+Introduction
+
+-
+
+-
+
+-
+
+-
+
+-
+
+-
+
+NOV 2022
+
+Videov - Deep- dive game
+mechanics on Civilians
+E-ther and Essence
+decimalisation
+
+Weekly Countdowns for
+Mentar Giveaways
+New Country releases for
+previously locked countries!
+
+-
+
+First round of E2PRV validations
+begin for Gold, Oil, Coal,
+Limestone and Iron
+Resolution to 2021 pending
+Egg Hunt winner and
+runners-up
+
+Earth 2 turns 2
+
+Updates to U2U HB Trading
+Feature - V1.1
+Limited Edition HBs
+Resell Holobuildings.
+Sell Limited Edition
+Holobuildings.
+
+-
+
+Introduction to Civilian
+sustenance system
+Introduction to the Raid
+Commander targeting system
+and Civilian XPs
+
+SEP 2022
+
+-
+
+OVER $19M USD processed by
+Earth 2
+
+-
+
+ear th2.io
+
+-
+
+Gifting Update - displaying on
+Player properties
+New Jewel utility for Raiding
+and Cydroids
+
+Introduction to User-to-User
+Holobuilding and Blueprint
+trading
+
+SEP 2022
+CONT’D
+
+-
+
+Over 50 % of E2PRV processed
+and 20 Million Essence
+awarded to Players
+
+DEC 2022
+
+DEC 2022
+
+CONT’D
+
+-
+
+CONT’D
+
+NOV 2022
+
+NOV 2022
+
+CONT’D
+
+MAY 2022
+
+AUG 2022
+
+CONT’D
+
+Shareable URLs for HB listings
+HB Profile Gallery for Designers
+Royalties for eligible original HB
+designers
+
+-
+
+Updates to Country Statistics
+page
+Fractions of Essence
+Game Activity and Transaction
+history updated to dark theme
+
+NOV 2022
+
+CONT’D
+
+-
+
+-
+
+CONT’D
+
+NOV 2022
+
+-
+
+Strategic Partnership with
+R/GA announced
+
+JUL 2022
+
+-
+
+Property Flags for individual
+properties
+Resource Heatmaps, Resource
+details on Property Card and
+Property Info page
+
+CONT’D
+
+-
+
+Introduction of Earth 2 Player
+Resource Validation (E2PRV)
+system
+
+-
+
+MAY 2022
+
+CONT’D
+
+JUL 2022
+
+-
+
+Notification Hub 2
+Further Essence Generation
+updates as part of prepartion to
+list Essence as a Token
+Holobuilding security update
+Copy Prevention
+
+MAY 2022
+
+Earth 2 passes 100 Million tile
+sales
+First Edition Civilians Officially
+Live on Earth 2!
+
+MAY 2022
+
+CONT’D
+
+Bidding Hub 2 major update
+Player to Player Bidding
+New Leaderboards
+EPL flagging/removal function
+Celebrating Earth Day Essence rewards for Active
+
+JUN 2022
+
+-
+
+APR 2022
+
+APR 2022
+
+CONT’D
+
+-
+
+Video - E2V1 3D Earth 2 Engine
+Tech Demo
+Announced strategic partnership with Ready Player Me
+
+T IM E L IN E
+FEB 2023
+
+MAR 2023
+
+-
+
+Introduction to Cydroid rarities
+and Property Trading protocols
+Footage of Raiding inside E2V1
+updates and improvements to
+raiding
+
+-
+
+Raiding & Cydroid Update +
+Green Light on Stage 2
+
+MAR 2023
+
+-
+
+Cydroid Raiding release, first
+iteration of the Raiding Game
+Engine
+
+-
+
+-
+
+Civilians offiicially Live
+
+-
+
+CONT’D
+
+-
+
+Supercharged E-ther for Earth
+2 day
+
+APR 2023
+
+Earth 2’s First sustenance
+system for Civilians
+Introduction to the Civilian XPs
+and Raid Commander
+targeting system
+
+CONT’D
+
+-
+
+Crypto payments/deposits via
+RocketFuel
+Stripe Payment option added
+to Earth 2
+
+-
+
+AUG 2023
+
+CONT’D
+
+-
+
+AUG 2023
+
+Profile page update Resources Overview
+Optional O.U. Campaign for
+Wood, Water and Sand
+
+-
+
+AUG 2023
+
+CONT’D
+
+-
+
+APR 2023
+
+JUL 2023
+
+Jewel UI Update - new
+interface, Icons + bulk slotting
+Red Energy for New T1
+purchases ends
+
+SEP 2023
+
+Raiding, Cydroids & Civilians
+High Level Summary
+
+MAY 2023
+
+-
+
+Video – EcoSim game
+mechanics breakdown
+
+P2P Civilian Trading LIVE on the
+Bazaar
+
+E2PRV reopens starting with
+silver/copper
+E-ther transactions added to
+transaction page
+
+JUL 2023
+
+CONT’D
+
+-
+
+-
+
+-
+
+JUN 2023
+
+-
+
+CONT’D
+
+JUN 2023
+
+Updates to the Jewel Slotting
+Interface
+The Weaver, Prospecting
+Cydroid and Resources game
+mechanics
+
+-
+
+Video - Flying inside Earth 2’s
+3D World - E2V1
+
+-
+
+CONT’D
+
+CONT’D
+
+APR 2023
+
+Introduction of Red Energy’ &
+the First RBA Reward
+
+JUN 2023
+
+-
+
+-
+
+APR 2023
+
+CONT’D
+
+DEC 2022
+
+JAN 2023
+
+AUG 2023
+
+CONT’D
+
+P2P Cydroid Trading LIVE on
+the Bazaar
+
+-
+
+ear th2.io
+
+Cydroid Management feature
+released
+Cydroid Management update
+& Cydroid Slotting
+
+Property page update - new
+Jewel Boost overview for
+Resources
+Update to Jewel Bazaar Dark theme
+
+CONT’D
+
+-
+
+Introduction to Brilliant Jewel
+COPY Effect
+Reduced Essence rejection
+rate for E2PRV claims
+
+T IM E L IN E
+SEP 2023
+
+-
+
+DEC 2023
+
+Relaxing footage of E2V1
+
+https://youtu.be/7FvXiYYFnGM
+
+-
+
+-
+
+All Resources confirmed with
+25/32 still open to claim via
+E2PRV
+
+-
+
+FEB 2024
+
+-
+
+DEC 2023
+
+Official Earth 2 Skin Store
+release
+Introducing Kyung, Earth 2’s
+first avatar
+
+-
+
+-
+
+Premiere Video- the beauty of
+E2V1 in-engine (4K) earth2.io
+
+JAN 2023
+
+CONT’D
+
+Skin Gifting feature LIVE
+
+-
+
+Released Motorway Marauder
+skin to E2 Skin Store
+https://youtu.be/DnT4PlHRLNA
+
+CONT’D
+
+-
+
+The Power of Essence article
+detailing fluctuating power of
+Essence in E2 Metaverse
+
+FEB 2024
+
+FEB 2024
+
+CONT’D
+
+Released Limited Edition
+Cupid’s Cleaner and CUPID
+XOX skins to E2 Skin Store
+https://youtu.be/0U1uXgJ89EA
+
+-
+
+Eventide - Earth 2 Skin
+Development Progress viideo
+https://www.youtube.com/watch?v=
+Ug0SRN_C4sw
+
+MAR 2024
+
+-
+
+Released Yellow Energy
+Content Contribution system
+Yellow Energy XP system
+
+MAR 2024
+
+CONT’D
+
+-
+
+T3 Territory Governance system
+is LIVE
+Pilot governance system
+Automate Territory Release
+Boosted E-ther Pools
+
+JAN 2023
+
+-
+
+Major retroactive air drop of
+Essence related to EDC in 2021
+
+E2V1 Pre-Alpha invitation to
+Earth 2 players
+https://youtu.be/HYTMZsea9zQ
+
+-
+
+CONT’D
+
+MAR 2024
+
+-
+
+Settings page overhaul
+Earth 2 Skins blueprint system
+details revealed
+
+FEB 2024
+
+CONT’D
+
+-
+
+CONT’D
+
+JAN 2024
+
+CONT’D
+
+Abort Raid Feature
+Updates to Raiding
+
+CONT’D
+
+DEC 2023
+
+CONT’D
+
+DEC 2023
+
+-
+
+-
+
+DEC 2023
+
+CONT’D
+
+NOV 2023
+
+CONT’D
+
+Earth 2 turns 3
+
+Updates to Jewel Bazaar - Full
+transition to dark theme
+Jewels Bulk Buy & New
+Marketplace Filter
+
+-
+
+NOV 2023
+
+NOV 2023
+
+CONT’D
+
+MAR 2024
+
+CONT’D
+
+Released Anubis skin to E2 Skin
+Store
+https://www.youtube.com/watch?v=8
+5MqdwC9LuE
+
+-
+
+Released Khephera skin to E2
+kin Store
+https://www.youtube.com/watch?v=Z
+Ytk3w4Td8k
+
+ear th2.io
+
+CONT’D
+
+-
+
+Announced collaborative
+partnership with MetaGravity
+
+T IM E L IN E
+
+-
+
+Major EcoSim release of
+Resource Frequence
+confirmation, OU Generation
+and more
+
+-
+
+Essence ERC-20 Utility Token
+Launch
+
+Attended Game Developers
+Conference, San Francisco
+Showcasing interactive build of
+E2V1 to the public for the very
+first time
+
+-
+
+CONT’D
+
+Over $15,000 worth of Land
+gifted to 200 lucky winners of
+the giveaway competition.
+
+-
+
+Q3 2024
+
+Q2 2024
+
+-
+
+MAR 2024
+
+CONT’D
+
+CONT’D
+
+Q2 2024
+
+-
+
+MAR 2024
+
+MAR 2024
+
+Q2 2024
+
+Initial E2V1 Pre-Alpha closed
+testing
+
+-
+
+ear th2.io
+
+E2V1 Pre-Alpha possibly with
+early multiplayer support
+
+Earth 2 Whitepaper Release
+
+Q3 2024
+
+-
+
+Broadcasting Device Crafting
+
+DISCLAIMER
+
+PLEASE READ THIS DISCLAIMER SECTION CAREFULLY. IF YOU ARE IN ANY DOUBT AS TO THE ACTION YOU SHOULD TAKE, YOU
+SHOULD CONSULT YOUR LEGAL, FINANCIAL, TAX, OR OTHER PROFESSIONAL ADVISOR(S) CONCERNING THE ESSENCE TOKEN AND
+THE EARTH 2 PLATFORM.
+
+THE ESSENCE TOKEN IS NOT INTENDED TO CONSTITUTE A DIGITAL CURRENCY, COMMODITY, SECURITY, FINANCIAL INSTRUMENT
+OR ANY OTHER FORM OF INVESTMENT IN ANY JURISDICTION. THIS WHITE PAPER, DOES NOT CONSTITUTE A PROSPECTUS OR
+OFFERING DOCUMENT OF ANY SORT AND IS NOT A SOLICITATION FOR INVESTMENT AND DOES NOT CONSTITUTE AN OFFER OF
+SECURITIES TO THE PUBLIC OR A COLLECTIVE INVESTMENT SCHEME IN ANY JURISDICTION.
+
+This Earth 2 White Paper is for information purposes only. We do not guarantee the accuracy of or the conclusions reached in this
+White Paper, and this White Paper is provided “as is” and may be altered or updated at any time by Earth 2.
+
+In particular, the “Roadmap” as set out in the text of the White Paper is subject to change, which means that Earth 2 is not bound
+by any representations to the future performance and the returns of Earth 2. The actual results and the performance of Earth 2
+may differ materially from those set out in the Earth 2 White Paper.
+
+This White Paper does not make and expressly disclaims all representations and warranties, express, implied, statutory or
+otherwise, whatsoever, including, but not limited to: (i) warranties of merchantability, fitness for a particular purpose, suitability,
+usage, title or non-infringement; (ii) that the contents of this White Paper are free from error; and (iii) that such contents will not
+infringe third-party rights.
+
+In no event will Earth 2 or its affiliates be liable to any person or entity for any damages, losses, liabilities, costs or expenses of
+any kind, whether direct or indirect, consequential, compensatory, incidental, actual, exemplary, punitive or special for the use
+of, reference to, or reliance on this White Paper or any of the content contained herein, including, without limitation, any loss of
+business, revenues, profits, data, use, goodwill or other intangible losses.
+
+Please refer to our website for terms & conditions
+If you are unfamiliar with White Paper disclaimers, we urge you to check White Papers for some of the largest tokens world wide.
+
+28
+
+
