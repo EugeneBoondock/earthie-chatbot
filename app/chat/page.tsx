@@ -63,7 +63,7 @@ export default function ChatPage() {
                 localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify([INITIAL_MESSAGE]));
             }
         }
-    }, []); // Empty dependency array ensures this runs only once on mount
+    }, []); // Empty dependency array: runs only once on mount
 
     // Save messages to localStorage whenever they change
     useEffect(() => {
@@ -74,19 +74,22 @@ export default function ChatPage() {
                 console.error("Failed to save chat history to localStorage:", error);
             }
         }
-    }, [messages]); // Run this effect whenever the messages array changes
+    }, [messages]); // Dependency: run when messages change
 
     // Auto-scroll to bottom
     useEffect(() => {
-        if (scrollAreaRef.current) {
-            const viewport = scrollAreaRef.current.querySelector<HTMLDivElement>('[data-radix-scroll-area-viewport]');
-            if (viewport) {
-                requestAnimationFrame(() => {
-                   viewport.scrollTop = viewport.scrollHeight;
-                });
-            }
-        }
-    }, [messages, isLoading]); // Run on new messages or when loading state changes
+      if (scrollAreaRef.current) {
+          // Target the viewport element within the ScrollArea component
+          const viewport = scrollAreaRef.current.querySelector<HTMLDivElement>('div[data-radix-scroll-area-viewport]');
+          if (viewport) {
+              // Use requestAnimationFrame for smoother scrolling after render
+              requestAnimationFrame(() => {
+                 viewport.scrollTop = viewport.scrollHeight;
+              });
+          }
+      }
+    // Dependencies: messages array and loading state. Both affect scroll height.
+    }, [messages, isLoading]);
 
     // --- Event Handlers ---
 
@@ -98,15 +101,15 @@ export default function ChatPage() {
 
        const newUserMessage: Message = { role: "user", content: userInput };
        const updatedMessages = [...messages, newUserMessage];
-       setMessages(updatedMessages);
+       setMessages(updatedMessages); // Optimistic UI update
        setInputValue("");
        setIsLoading(true);
 
        try {
-           const response = await fetch("/api/chat", { // Make sure this API endpoint is correct
+           const response = await fetch("/api/chat", { // Ensure this API endpoint is correct
                method: "POST",
                headers: { "Content-Type": "application/json" },
-               body: JSON.stringify({ messages: updatedMessages }),
+               body: JSON.stringify({ messages: updatedMessages }), // Send history including new message
            });
 
            if (!response.ok) {
@@ -116,12 +119,12 @@ export default function ChatPage() {
            }
 
            const data = await response.json();
-           // Ensure the API returns data in the expected format { response: "..." }
            if (typeof data.response !== 'string') {
-              throw new Error("Invalid response format from API.");
+              console.error("Invalid response format from API:", data);
+              throw new Error("Received invalid response format from server.");
            }
            const assistantMessage: Message = { role: "assistant", content: data.response };
-           setMessages(prev => [...prev, assistantMessage]);
+           setMessages(prev => [...prev, assistantMessage]); // Add assistant's response
 
        } catch (error) {
            console.error("Chat error:", error);
@@ -130,7 +133,6 @@ export default function ChatPage() {
                role: "assistant",
                content: errorMessageContent
            };
-           // Add error message to the chat, ensuring not to overwrite history if submit fails
            setMessages(prev => [...prev, errorMessage]);
        } finally {
            setIsLoading(false);
@@ -139,21 +141,23 @@ export default function ChatPage() {
 
     // Handle clearing the chat history
     const handleClearChat = () => {
-        setMessages([INITIAL_MESSAGE]); // Reset state to only initial message
+        setMessages([INITIAL_MESSAGE]); // Reset state
         if (typeof window !== "undefined") {
             localStorage.removeItem(LOCAL_STORAGE_KEY); // Remove old history
-            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify([INITIAL_MESSAGE])); // Store initial state
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify([INITIAL_MESSAGE])); // Store initial state back
         }
         console.log("Chat history cleared.");
     };
 
     // --- Render JSX ---
     return (
-        <div className="flex flex-col h-full bg-transparent">
+        // Use Grid layout: top row flexible (1fr), bottom row auto height.
+        // h-full relies on parent having height. overflow-hidden prevents this div scrolling.
+        <div className="grid grid-rows-[1fr_auto] h-full bg-transparent overflow-hidden">
 
-            {/* Scrollable Chat Area */}
-            <ScrollArea className="flex-1 overflow-y-auto min-h-0" ref={scrollAreaRef}>
-                {/* Add padding to prevent content hiding behind input area */}
+            {/* Scrollable Chat Area: Assigned to first row (1fr), handles its own scroll */}
+            <ScrollArea className="overflow-y-auto min-h-0" ref={scrollAreaRef}>
+                {/* Add padding at the bottom to avoid overlap */}
                 <div className="space-y-4 p-4 md:p-6 pb-4">
                     {messages.map((msg, index) => (
                         <div key={index} className={`flex items-end space-x-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -174,19 +178,18 @@ export default function ChatPage() {
                                 {msg.role === 'assistant' ? (
                                     <ReactMarkdown
                                         remarkPlugins={[remarkGfm]}
-                                        components={{
+                                        components={{ /* ... markdown components ... */
                                             a: ({ node, ...props }) => <a {...props} className="text-[#50E3C1] hover:underline" target="_blank" rel="noopener noreferrer" />,
                                             ul: ({ node, ordered, ...props }) => <ul {...props} className="list-disc list-inside pl-4 my-2" />,
                                             ol: ({ node, ordered, ...props }) => <ol {...props} className="list-decimal list-inside pl-4 my-2" />,
                                             li: ({ node, ordered, ...props }) => <li {...props} className="mb-1" />,
                                             pre: ({ node, ...props }) => <pre {...props} className="bg-gray-800 p-2 rounded-md my-2 overflow-x-auto text-sm" />,
                                             code: ({ node, inline, className, children, ...props }) => {
-                                                // Basic code styling, enhance further if needed
-                                                return !inline ? ( <code className={`block whitespace-pre overflow-x-auto ${className}`} {...props}> {children} </code> )
-                                                              : ( <code className={`bg-gray-600 px-1 py-0.5 rounded text-sm ${className}`} {...props}> {children} </code> )
+                                                return !inline ? ( <code className={`block whitespace-pre overflow-x-auto ${className || ''}`} {...props}> {children} </code> )
+                                                              : ( <code className={`bg-gray-600 px-1 py-0.5 rounded text-sm ${className || ''}`} {...props}> {children} </code> )
                                             },
                                             p: ({node, ...props}) => <p {...props} className="mb-2 last:mb-0" />
-                                        }}
+                                         }}
                                     >
                                         {msg.content}
                                     </ReactMarkdown>
@@ -209,37 +212,36 @@ export default function ChatPage() {
                 </div>
             </ScrollArea>
 
-            {/* Bottom Input Area Container - Add relative positioning */}
-            <div className="relative px-4 pb-4 pt-8 border-t border-gray-700 bg-gray-800/90 backdrop-blur-sm shrink-0"> {/* Added pt-8 for space */}
+            {/* Bottom Input Area: Assigned to second row (auto), uses flex-col inside */}
+            <div className="px-4 pt-2 pb-3 border-t border-gray-700 bg-gray-800/90 backdrop-blur-sm flex flex-col items-center">
 
-                 {/* Clear Chat Button - Positioned absolutely, centered near the top */}
-                 {messages.length > 1 && ( // Only show if there's history beyond the initial message
-                    <div className="absolute top-1 left-1/2 transform -translate-x-1/2 w-full flex justify-center"> {/* Centering container */}
-                        <Button
-                            variant="link"
-                            className="text-xs text-gray-400 hover:text-gray-300 h-auto p-0" // Styling
-                            onClick={handleClearChat}
-                            title="Clear Chat History"
-                            disabled={isLoading} // Disable while bot is responding
-                        >
-                            Clear Chat
-                        </Button>
-                    </div>
+                 {/* Clear Chat Button: Placed before form, centered by parent items-center */}
+                 {messages.length > 1 && ( // Only show if history exists
+                    <Button
+                        variant="link"
+                        // Make slightly more visible and add margin
+                        className="text-xs text-gray-300 hover:text-gray-100 h-auto p-0 mb-1"
+                        onClick={handleClearChat}
+                        title="Clear Chat History"
+                        disabled={isLoading}
+                    >
+                        Clear Chat
+                    </Button>
                  )}
 
-                {/* Input Form - Max width and centered */}
+                {/* Input Form */}
                 <form onSubmit={handleSubmit} className="flex items-center space-x-3 max-w-4xl mx-auto w-full">
                     <Input
                         value={inputValue}
                         onChange={(e) => setInputValue(e.target.value)}
                         placeholder="Ask Earthie anything..."
                         className="flex-grow bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-[#50E3C1] focus:border-[#50E3C1] rounded-md"
-                        disabled={isLoading} // Disable input while bot is responding
+                        disabled={isLoading}
                         aria-label="Chat message input"
                     />
                     <Button
                         type="submit"
-                        disabled={isLoading || !inputValue.trim()} // Disable if loading or input is empty/whitespace
+                        disabled={isLoading || !inputValue.trim()}
                         className="bg-[#50E3C1] hover:bg-[#40c0a0] text-gray-900 font-semibold rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
                         aria-label="Send chat message"
                     >

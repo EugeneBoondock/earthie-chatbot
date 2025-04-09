@@ -30,7 +30,7 @@ export default function Home() {
           </div>
           <div className="flex-shrink-0">
             <Image
-              src="/images/earthie_logo.png"
+              src="/images/earthie_cover.png"
               alt="Earthie Hero Image"
               width={300}
               height={300}

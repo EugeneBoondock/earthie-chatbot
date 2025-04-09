@@ -2,8 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Add these rules */
+html,
+body,
+#__next /* Target Next.js root div if necessary */ {
+  height: 100%;
+  margin: 0; /* Reset default margins */
+  padding: 0; /* Reset default padding */
+}
+
+/* Ensure body itself doesn't scroll when child handles it */
 body {
   font-family: Arial, Helvetica, sans-serif;
+  overflow: hidden; /* Prevent body scroll */
 }
 
 @layer utilities {
