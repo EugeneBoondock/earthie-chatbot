@@ -22,7 +22,7 @@ export default function Home() {
                 </Button>
               </Link>
               <Link href="/radio" passHref>
-                <Button size="lg" variant="outline" className="text-white border-gray-600 hover:bg-gray-700 hover:text-white rounded-md w-full sm:w-auto px-8">
+                <Button size="lg" variant="outline" className="bg-[#343547] text-white border-gray-600 hover:bg-gray-700 hover:text-white rounded-md w-full sm:w-auto px-8">
                   Listen to Radio
                 </Button>
               </Link>
@@ -62,7 +62,7 @@ export default function Home() {
                 Get instant answers to all your Earth2 questions from property management to gameplay strategies.
               </p>
               <Link href="/chat" passHref className="mt-auto pt-4">
-                <Button variant="outline" className="text-[#50E3C1] border-[#50E3C1] hover:bg-[#50E3C1]/10 hover:text-[#50E3C1]">
+                <Button variant="outline" className="bg-[#343547] text-[#50E3C1] border-[#50E3C1] hover:bg-[#50E3C1]/10 hover:text-[#50E3C1]">
                   Start Chatting <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
@@ -76,7 +76,7 @@ export default function Home() {
                 Listen to podcasts and updates about the latest developments in the Earth2 universe.
               </p>
               <Link href="/radio" passHref className="mt-auto pt-4">
-                <Button variant="outline" className="text-[#50E3C1] border-[#50E3C1] hover:bg-[#50E3C1]/10 hover:text-[#50E3C1]">
+                <Button variant="outline" className="bg-[#343547] text-[#50E3C1] border-[#50E3C1] hover:bg-[#50E3C1]/10 hover:text-[#50E3C1]">
                   Listen Now <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
@@ -90,7 +90,7 @@ export default function Home() {
                 Submit and share your Earth2 scripts to enhance the community experience.
               </p>
               <Link href="/dev-tools" passHref className="mt-auto pt-4">
-                <Button variant="outline" className="text-[#50E3C1] border-[#50E3C1] hover:bg-[#50E3C1]/10 hover:text-[#50E3C1]">
+                <Button variant="outline" className="bg-[#343547] text-[#50E3C1] border-[#50E3C1] hover:bg-[#50E3C1]/10 hover:text-[#50E3C1]">
                   Explore Tools <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
