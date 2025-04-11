@@ -11,7 +11,7 @@ const navItems = [
   { name: "Home", path: "/" },
   { name: "Radio", path: "/radio" },
   { name: "Chat", path: "/chat" },
-  { name: "Dev Tools", path: "/dev-tools" },
+  { name: "Dev Tools", path: "/script-tools" },
   { name: "Thoughts", path: "/thoughts" },
 ]
 
@@ -83,4 +83,3 @@ export default function Navbar() {
     </nav>
   )
 }
-

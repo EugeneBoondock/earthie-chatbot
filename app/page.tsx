@@ -89,7 +89,7 @@ export default function Home() {
               <p className="text-center text-gray-300">
                 Submit and share your Earth2 scripts to enhance the community experience.
               </p>
-              <Link href="/dev-tools" passHref className="mt-auto pt-4">
+              <Link href="/script-tools" passHref className="mt-auto pt-4">
                 <Button variant="outline" className="bg-[#343547] text-[#50E3C1] border-[#50E3C1] hover:bg-[#50E3C1]/10 hover:text-[#50E3C1]">
                   Explore Tools <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
@@ -123,4 +123,3 @@ export default function Home() {
     </>
   )
 }
-
