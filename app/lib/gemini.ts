@@ -33,6 +33,7 @@ const KNOWLEDGE_FILE_NAMES = [
   // "image.png",
   // "image.png",
   "Earth2_final.txt",
+  "earth2_all_articles.txt",
   "Jewels.txt",
   "megacityList.txt",
   "Earth_2_Official_Whitepaper_Release.txt",
