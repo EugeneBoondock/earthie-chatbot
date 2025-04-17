@@ -12,6 +12,7 @@ export default function PWAInstallButton() {
       setDeferredPrompt(e);
       setShowButton(true);
     };
+    console.log("Event listener added");
     window.addEventListener("beforeinstallprompt", handler as EventListener);
     return () => window.removeEventListener("beforeinstallprompt", handler as EventListener);
   }, []);
