@@ -8,14 +8,14 @@
   "theme_color": "#50E3C1",
   "icons": [
     {
-      "src": "/images/earthie_logo_192.jpg",
+      "src": "/images/earthie_logo_192.png",
       "sizes": "192x192",
-      "type": "image/jpg"
+      "type": "image/png"
     },
     {
       "src": "/images/earthie_cover_512.png",
       "sizes": "512x512",
-      "type": "image/jpg"
+      "type": "image/png"
     }
   ]
 } 
