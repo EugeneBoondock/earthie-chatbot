@@ -9,6 +9,7 @@ import Footer from "@/components/footer"
 import TopographicBackground from "@/components/TopographicBackground"
 import Head from "next/head"
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister"
+import PWAInstallButton from "@/components/PWAInstallButton"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -60,6 +61,7 @@ export default function RootLayout({
             </div>
           </ThemeProvider>
           <ServiceWorkerRegister />
+          <PWAInstallButton />
         </body>
       </html>
     </>
