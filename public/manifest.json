@@ -1,0 +1,16 @@
+{
+  "name": "Earthie Chatbot",
+  "short_name": "Earthie",
+  "description": "Your Earth2 AI Companion. Chat, listen, and explore Earth2.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#18181b",
+  "theme_color": "#50E3C1",
+  "icons": [
+    {
+      "src": "/images/earthie_logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+} 
