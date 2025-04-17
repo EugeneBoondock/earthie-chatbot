@@ -7,6 +7,7 @@ export default function PWAInstallButton() {
 
   useEffect(() => {
     const handler = (e: Event) => {
+      console.log("beforeinstallprompt event fired");
       e.preventDefault();
       setDeferredPrompt(e);
       setShowButton(true);
