@@ -23,7 +23,7 @@ if (!API_KEY) {
 // *** IMPORTANT: Use a model optimized for File API ***
 // gemini-1.5-flash-latest or gemini-1.5-pro-latest are recommended.
 // The original 'gemini-2.0-flash' might not work as expected with this File API approach.
-const MODEL_NAME = "gemini-2.0-flash";
+const MODEL_NAME = "gemini-2.5-flash-preview-04-17";
 const KNOWLEDGE_FILES_DIR = path.join(process.cwd(), 'app/knowledge'); // Directory containing your files
 
 // List your knowledge files here (relative to KNOWLEDGE_FILES_DIR)
