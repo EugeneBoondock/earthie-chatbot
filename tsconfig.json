@@ -1,8 +1,11 @@
 {
   "compilerOptions": {
+    // --- Add this line ---
+    "baseUrl": ".",
+    // --------------------
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
-    "target": "ES6",
+    "target": "ES6", // Consider changing to "esnext" if compatible with your project
     "skipLibCheck": true,
     "strict": true,
     "noEmit": true,
@@ -19,7 +22,7 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"] // This should now work correctly with baseUrl defined
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

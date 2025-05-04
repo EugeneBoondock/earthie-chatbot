@@ -1,10 +1,13 @@
+// components/Navbar.js or .tsx
 "use client"
 
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { Menu, X } from "lucide-react"
-import { useState, useEffect } from "react"
+import { useState } from "react" // Only keep useState for mobile menu toggle
+import { usePriceContext } from "@/contexts/PriceContext"; // Import the custom hook
+import { format } from 'date-fns'; // For formatting dates if needed elsewhere
 
 const navItems = [
   { name: "Home", path: "/" },
@@ -15,137 +18,28 @@ const navItems = [
   { name: "Thoughts", path: "/thoughts" },
 ]
 
-// --- Configuration ---
-const cryptoId = 'earth-2-essence';
-const updateInterval = 60000; // 60 seconds
+// --- Configuration Constants (can be removed if not needed outside context) ---
 const cryptoSymbol = 'E2E';
 const cryptoLink = 'https://www.coingecko.com/en/coins/earth-2-essence';
-const localStorageKey = 'selectedFiatCurrency';
-const defaultCurrency = 'usd'; // Fallback currency
-
-// List of common fiat currency codes (lowercase) expected to be supported by CoinGecko
-const commonFiatCodes = [
-  'aed', 'ars', 'aud', 'bdt', 'bhd', 'bmd', 'brl', 'cad', 'chf', 'clp', 'cny',
-  'czk', 'dkk', 'eur', 'gbp', 'hkd', 'huf', 'idr', 'ils', 'inr', 'jpy', 'krw',
-  'kwd', 'lkr', 'mmk', 'mxn', 'myr', 'ngn', 'nok', 'nzd', 'php', 'pkr', 'pln',
-  'rub', 'sar', 'sek', 'sgd', 'thb', 'try', 'twd', 'uah', 'usd', 'vef', 'vnd',
-  'zar', 'xdr'
-].sort(); // Keep it sorted for consistent display order
 
 export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
 
-  // --- State Variables ---
-  const [selectedCurrency, setSelectedCurrency] = useState<string>(defaultCurrency);
-  const [cryptoPrice, setCryptoPrice] = useState<string | null>(null);
-  const [cryptoChange, setCryptoChange] = useState<number | null>(null);
-  const [isLoadingPrice, setIsLoadingPrice] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isInitialising, setIsInitialising] = useState(true);
-  // State will now hold ONLY the supported FIAT currencies
-  const [supportedFiatCurrencies, setSupportedFiatCurrencies] = useState<string[]>([defaultCurrency]);
-  const [isLoadingCurrencies, setIsLoadingCurrencies] = useState(true);
+  // --- Consume Price Context ---
+  const {
+    selectedCurrency,
+    setSelectedCurrencyAndUpdate, // Use the update function from context
+    currentPrice,
+    price24hChange,
+    supportedFiatCurrencies,
+    isLoadingCurrencies,
+    isLoadingPrice,
+    isInitialising,
+    priceError,
+  } = usePriceContext();
 
-  // --- Effect 1: Fetch Supported Currencies List & Filter for Fiat ---
-  useEffect(() => {
-    const fetchAndFilterCurrencies = async () => {
-      setIsLoadingCurrencies(true);
-      try {
-        const response = await fetch('https://api.coingecko.com/api/v3/simple/supported_vs_currencies');
-        if (!response.ok) {
-            console.error(`Failed to fetch supported currencies, status: ${response.status}`);
-            throw new Error('Failed to fetch supported currencies');
-        }
-        const allSupportedVs = await response.json();
-
-        if (Array.isArray(allSupportedVs) && allSupportedVs.length > 0 && allSupportedVs.every(item => typeof item === 'string')) {
-          // Filter the list from CoinGecko against our known fiat codes
-          const filteredFiat = allSupportedVs
-            .filter(currency => commonFiatCodes.includes(currency.toLowerCase()))
-            .sort(); // Sort the final list
-
-          if (filteredFiat.length > 0) {
-            setSupportedFiatCurrencies(filteredFiat);
-            // Ensure default is included if somehow missed (shouldn't happen if list is good)
-            if (!filteredFiat.includes(defaultCurrency)) {
-                setSupportedFiatCurrencies([defaultCurrency, ...filteredFiat].sort());
-            }
-          } else {
-            console.warn("No common fiat currencies found in CoinGecko's supported list. Using default.");
-            setSupportedFiatCurrencies([defaultCurrency]);
-          }
-        } else {
-           console.warn("Received unexpected data format for supported currencies, using default.");
-           setSupportedFiatCurrencies([defaultCurrency]);
-        }
-      } catch (err) {
-        console.error("Error fetching/filtering supported currencies:", err);
-        setSupportedFiatCurrencies([defaultCurrency]); // Fallback on error
-      } finally {
-        setIsLoadingCurrencies(false);
-      }
-    };
-    fetchAndFilterCurrencies();
-  }, []); // Fetch only once on mount
-
-  // --- Effect 2: Initialize Selected Currency ---
-  useEffect(() => {
-    if (isLoadingCurrencies) {
-        return; // Wait for the fiat list
-    }
-
-    let currencyToSet = defaultCurrency;
-    const storedCurrency = localStorage.getItem(localStorageKey);
-
-    // Check if stored currency is in our *filtered* fiat list
-    if (storedCurrency && supportedFiatCurrencies.includes(storedCurrency)) {
-      currencyToSet = storedCurrency;
-      setSelectedCurrency(currencyToSet);
-      setIsInitialising(false);
-      return;
-    }
-
-    // Fetch Geo IP only if no valid stored *fiat* currency
-    const fetchGeoCurrency = async () => {
-        try {
-            const ipApiResponse = await fetch('https://ipapi.co/json/');
-            if (!ipApiResponse.ok) throw new Error('ipapi.co fetch failed');
-            const ipApiData = await ipApiResponse.json();
-
-            if (ipApiData && ipApiData.currency) {
-                const detectedCurrency = ipApiData.currency.toLowerCase();
-                // Check if detected currency is in our *filtered* fiat list
-                if (supportedFiatCurrencies.includes(detectedCurrency)) {
-                    currencyToSet = detectedCurrency;
-                } else {
-                    currencyToSet = defaultCurrency;
-                }
-            } else {
-                 currencyToSet = defaultCurrency;
-            }
-        } catch (geoError) {
-            console.warn("Could not fetch geolocation currency:", geoError);
-            currencyToSet = defaultCurrency;
-        } finally {
-             setSelectedCurrency(currencyToSet);
-             setIsInitialising(false);
-        }
-    };
-
-    fetchGeoCurrency();
-
-  }, [isLoadingCurrencies, supportedFiatCurrencies]); // Depend on the *filtered* list now
-
-
-  // --- Handle Currency Change ---
-  const handleCurrencyChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const newCurrency = event.target.value;
-    setSelectedCurrency(newCurrency);
-    localStorage.setItem(localStorageKey, newCurrency);
-  };
-
-  // --- Format Percentage Change ---
+  // --- Format Percentage Change (Remains the same, uses context data now) ---
   const formatPercentage = (change: number | null): React.ReactNode => {
     if (change === null || change === undefined) return <span className="ml-1.5"></span>;
     const formattedChange = change.toFixed(2);
@@ -160,62 +54,37 @@ export default function Navbar() {
     );
   };
 
-  // --- Effect 3: Fetch Crypto Price & Change Data ---
-   useEffect(() => {
-    if (isInitialising) {
-        return; // Wait
-    }
-    let isMounted = true;
-    const fetchCryptoData = async () => {
-        setIsLoadingPrice(true);
-        setError(null);
-        const apiUrl = `https://api.coingecko.com/api/v3/simple/price?ids=${cryptoId}&vs_currencies=${selectedCurrency}&include_24hr_change=true`;
-        try {
-            const response = await fetch(apiUrl);
-            if (!response.ok) {
-                let errorMsg = `API error! status: ${response.status}`;
-                try { const errorData = await response.json(); if (errorData?.error) { errorMsg = `API Error: ${errorData.error}`; } } catch (e) { /* Ignore */ }
-                throw new Error(errorMsg);
-            }
-            const data = await response.json();
-            if (!isMounted) return;
-            if (data && data[cryptoId]) {
-                const priceData = data[cryptoId];
-                const price = priceData[selectedCurrency];
-                const change24h = priceData[`${selectedCurrency}_24h_change`];
-                if (price !== undefined) {
-                    const formattedPrice = price.toLocaleString(undefined, { style: 'currency', currency: selectedCurrency.toUpperCase(), minimumFractionDigits: 2, maximumFractionDigits: 6 });
-                    setCryptoPrice(formattedPrice);
-                } else { setCryptoPrice('N/A'); }
-                if (change24h !== undefined) { setCryptoChange(change24h); } else { setCryptoChange(null); }
-            } else { setError('Invalid data format'); setCryptoPrice(null); setCryptoChange(null); }
-        } catch (err) {
-             if (!isMounted) return;
-            console.error(`Could not fetch crypto data for ${selectedCurrency}:`, err);
-            setError(err instanceof Error ? err.message : 'Fetch failed');
-            setCryptoPrice(null); setCryptoChange(null);
-        } finally { if (isMounted) { setIsLoadingPrice(false); } }
-    };
-    fetchCryptoData();
-    const intervalId = setInterval(fetchCryptoData, updateInterval);
-    return () => { isMounted = false; clearInterval(intervalId); };
- }, [selectedCurrency, isInitialising, cryptoId]);
+  // --- Handle Currency Change (Calls context function) ---
+  const handleCurrencyChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedCurrencyAndUpdate(event.target.value);
+  };
 
-
-  // --- Ticker Display Content Component ---
+  // --- Ticker Display Content Component (Uses context data) ---
   const TickerContent = () => {
-      if (isInitialising || isLoadingPrice) { return <span className="text-sm text-gray-400 animate-pulse">Loading...</span>; }
-      if (error) { return <span className="text-sm text-negative font-medium" title={error}>Error</span>; }
-      if (!cryptoPrice) { return <span className="text-sm text-gray-400">N/A</span>; }
+      // Use the most comprehensive loading state: isInitialising means list or initial selection is pending
+      if (isInitialising || isLoadingPrice) {
+        return <span className="text-sm text-gray-400 animate-pulse">Loading...</span>;
+      }
+      if (priceError) {
+        // Show error, maybe title has more detail
+        return <span className="text-sm text-negative font-medium" title={priceError}>Error</span>;
+      }
+      // Format the current price from context
+      const formattedPrice = currentPrice?.toLocaleString(undefined, {
+          style: 'currency',
+          currency: selectedCurrency.toUpperCase(),
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 6
+      }) ?? 'N/A'; // Display N/A if price is null
+
       return (
           <div className="text-sm text-gray-200 flex items-center whitespace-nowrap">
               <span className="font-medium">{cryptoSymbol}:</span>
-              <span className="font-semibold text-earthie-mint ml-1">{cryptoPrice}</span>
-              {formatPercentage(cryptoChange)}
+              <span className="font-semibold text-earthie-mint ml-1">{formattedPrice}</span>
+              {formatPercentage(price24hChange)}
           </div>
       );
   };
-
 
   // --- JSX Structure ---
   return (
@@ -244,19 +113,19 @@ export default function Navbar() {
               {navItems.map((item) => ( <Link key={item.path} href={item.path} className={`text-sm font-medium transition-colors hover:text-earthie-mint ${ pathname === item.path ? "text-earthie-mint border-b-2 border-earthie-mint" : "text-gray-300" }`}> {item.name} </Link> ))}
             </div>
 
-            {/* Currency Selector (Desktop) */}
+            {/* Currency Selector (Desktop) - Uses context data */}
+            {/* Show selector only when fully initialised */}
             {!isInitialising && !isLoadingCurrencies && (
                 <div className="hidden md:block">
-                    {/* REMOVED appearance-none, added padding-right */}
                     <select
                         id="currency-select-desktop"
-                        value={selectedCurrency}
-                        onChange={handleCurrencyChange}
-                        className="bg-gray-700 border border-gray-600 text-white text-xs rounded p-1 pr-5 focus:ring-earthie-mint focus:border-earthie-mint cursor-pointer"
+                        value={selectedCurrency} // From context
+                        onChange={handleCurrencyChange} // Calls context update
+                        className="bg-gray-700 border border-gray-600 text-white text-xs rounded p-1 pr-5 focus:ring-earthie-mint focus:border-earthie-mint cursor-pointer" // Removed appearance-none
                         aria-label="Select Fiat Currency"
                         title="Select Fiat Currency"
                     >
-                        {/* Map over the FILTERED supportedFiatCurrencies state */}
+                        {/* Map over supportedFiatCurrencies from context */}
                         {supportedFiatCurrencies.map(currency => (
                             <option key={currency} value={currency}>
                                 {currency.toUpperCase()}
@@ -265,8 +134,8 @@ export default function Navbar() {
                     </select>
                 </div>
             )}
-             {/* Optional: Loading indicator (condition remains the same) */}
-             {(isLoadingCurrencies || (isInitialising && supportedFiatCurrencies.length <= 1)) && (
+             {/* Loading indicator */}
+             {(isLoadingCurrencies || isInitialising) && (
                  <div className="hidden md:block text-xs text-gray-400 animate-pulse">...</div>
              )}
 
@@ -276,38 +145,30 @@ export default function Navbar() {
             </div>
         </div>
 
-      </div> {/* End of container */}
+      </div>
 
-      {/* Mobile Menu Dropdown */}
+      {/* Mobile Menu Dropdown - Uses context data */}
       {isMobileMenuOpen && (
          <div className="absolute right-0 top-full w-2/3 bg-[#303240] border-t border-l border-gray-700 md:hidden shadow-lg max-h-[calc(100vh-4rem)] overflow-y-auto rounded-bl-lg z-40">
             <div className="flex flex-col space-y-1 p-4">
-              {/* Mobile Navigation Items */}
+              {/* Nav items */}
               {navItems.map((item) => ( <Link key={item.path} href={item.path} onClick={() => setIsMobileMenuOpen(false)} className={`block px-3 py-2 rounded-md text-base font-medium ${ pathname === item.path ? 'bg-earthie-mint text-gray-900' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }`}> {item.name} </Link> ))}
-              {/* Divider */}
               <hr className="border-gray-600 my-2" />
-              {/* Currency Selector (Mobile) */}
+              {/* Mobile Currency Selector */}
               {!isInitialising && !isLoadingCurrencies && (
                   <div className="px-3 py-2">
                       <label htmlFor="currency-select-mobile" className="block text-sm font-medium text-gray-400 mb-1">Currency:</label>
-                       {/* REMOVED appearance-none, added padding-right */}
                       <select
                           id="currency-select-mobile"
-                          value={selectedCurrency}
-                          onChange={(e) => {handleCurrencyChange(e); setIsMobileMenuOpen(false);}}
-                          className="w-full bg-gray-700 border border-gray-600 text-white text-sm rounded p-1.5 pr-6 focus:ring-earthie-mint focus:border-earthie-mint cursor-pointer"
+                          value={selectedCurrency} // From context
+                          onChange={(e) => {handleCurrencyChange(e); setIsMobileMenuOpen(false);}} // Calls context update & closes menu
+                          className="w-full bg-gray-700 border border-gray-600 text-white text-sm rounded p-1.5 pr-6 focus:ring-earthie-mint focus:border-earthie-mint cursor-pointer" // Removed appearance-none
                           aria-label="Select Fiat Currency"
                       >
-                         {/* Map over the FILTERED supportedFiatCurrencies state */}
-                         {supportedFiatCurrencies.map(currency => (
-                              <option key={currency} value={currency}>
-                                  {currency.toUpperCase()}
-                              </option>
-                          ))}
+                         {supportedFiatCurrencies.map(currency => ( <option key={currency} value={currency}> {currency.toUpperCase()} </option> ))}
                       </select>
                   </div>
                )}
-               {/* Loading indicator */}
                {(isLoadingCurrencies || isInitialising) && (
                    <div className="px-3 py-2 text-sm text-gray-400 animate-pulse">Loading currencies...</div>
                )}

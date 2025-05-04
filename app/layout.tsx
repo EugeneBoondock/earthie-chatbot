@@ -10,6 +10,8 @@ import TopographicBackground from "@/components/TopographicBackground"
 import Head from "next/head"
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister"
 import PWAInstallButton from "@/components/PWAInstallButton"
+import { Analytics } from "@vercel/analytics/react"
+import { PriceProvider } from "../contexts/PriceContext"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -51,13 +53,15 @@ export default function RootLayout({
             <TopographicBackground />
             {/* Grid container: takes full screen height */}
             <div className="grid grid-rows-[auto_1fr_auto] min-h-screen relative z-0">
-              <Navbar />
-               {/* Main content area: Add h-full HERE */}
-              <main className="relative z-10 h-full overflow-y-auto"> {/* Added h-full */}
-                {/* Children (like ChatPage) can now use h-full effectively */}
-                {children}
-              </main>
-              <Footer />
+              <PriceProvider>
+                <Navbar />
+                {/* Main content area: Add h-full HERE */}
+                <main className="relative z-10 h-full overflow-y-auto"> {/* Added h-full */}
+                  {/* Children (like ChatPage) can now use h-full effectively */}
+                  {children}
+                </main>
+                <Footer />
+              </PriceProvider>
             </div>
           </ThemeProvider>
           <ServiceWorkerRegister />
