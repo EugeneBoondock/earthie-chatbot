@@ -1,7 +1,7 @@
 // app/page.tsx or wherever your Home component is
 "use client";
 
-import { useState, useEffect } from "react"; // Removed useMemo as it wasn't explicitly needed here
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import Link from "next/link";
@@ -79,12 +79,20 @@ export default function Home() {
         </div>
       </section>
 
-      {/* --- Currency Info Alert --- */}
-      <section className="container mx-auto px-4 pb-10 md:pb-12 lg:pb-16 -mt-6 md:-mt-8">
-        <Alert className="max-w-6xl mx-auto bg-blue-900/50 border-blue-700 text-blue-200 backdrop-blur-sm">
-          <Info className="h-4 w-4 text-blue-300" />
-          <AlertTitle className="text-blue-200 font-semibold">Local Currency Available!</AlertTitle>
+      {/* --- Info Alerts Section --- */}
+      <section className="container mx-auto px-4 pb-10 md:pb-12 lg:pb-16 -mt-6 md:-mt-8 space-y-4">
+        {/* Currency Info Alert */}
+        <Alert className="max-w-6xl mx-auto bg-emerald-900/50 border-emerald-700 text-emerald-200 backdrop-blur-sm">
+          <Info className="h-4 w-4 text-emerald-300" />
+          <AlertTitle className="text-emerald-200 font-semibold">Local Currency Available!</AlertTitle>
           <AlertDescription> Did you know? You can view the Essence price in the navbar ticker in your local currency. Use the dropdown menu next to the navigation links! </AlertDescription>
+        </Alert>
+
+        {/* Calculator Info Alert - NEW */}
+        <Alert className="max-w-6xl mx-auto bg-emerald-900/50 border-emerald-700 text-emerald-200 backdrop-blur-sm">
+          <Calculator className="h-4 w-4 text-emerald-300" />
+          <AlertTitle className="text-emerald-200 font-semibold">Quick Essence Calculator</AlertTitle>
+          <AlertDescription> Need to quickly check the value of your Essence? Click the <Calculator className="inline-block h-4 w-4 mx-1" /> icon in the bottom-right corner to open the calculator! </AlertDescription>
         </Alert>
       </section>
 
