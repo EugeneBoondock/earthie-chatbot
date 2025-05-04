@@ -12,6 +12,7 @@ const navItems = [
   { name: "Radio", path: "/radio" },
   { name: "Chat", path: "/chat" },
   { name: "Dev Tools", path: "/script-tools" },
+  { name: "Raid Helper", path: "/raid-helper" },
   { name: "Thoughts", path: "/thoughts" },
 ]
 
