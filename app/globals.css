@@ -18,8 +18,6 @@
 
   /* Apply base styles like variables */
   :root {
-    /* Copy ALL your variables from BOTH files here */
-    /* Make sure there are no conflicts or duplicates */
     --background: 0 0% 100%;
     --foreground: 0 0% 3.9%;
     --card: 0 0% 100%;
@@ -34,7 +32,7 @@
     --muted-foreground: 0 0% 45.1%;
     --accent: 0 0% 96.1%;
     --accent-foreground: 0 0% 9%;
-    --destructive: 0 84.2% 60.2%;
+    --destructive: 0 84.2% 60.2%; /* Keep original destructive red (used elsewhere) */
     --destructive-foreground: 0 0% 98%;
     --border: 0 0% 89.8%;
     --input: 0 0% 89.8%;
@@ -45,14 +43,21 @@
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
-    --sidebar-background: 0 0% 98%; /* Example from styles/globals.css */
-    --sidebar-foreground: 240 5.3% 26.1%; /* Example from styles/globals.css */
-    /* ... include ALL other necessary variables ... */
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    /* --- Colors for Ticker (Light Mode) --- */
+    --color-positive: 139 53% 53%;       /* Example: Green */
+    /* --- UPDATED RED (from image) --- */
+    --color-negative: 358 100% 68%;      /* HSL for the bright red #FF5A5F */
+    --color-neutral: 240 4% 46%;         /* Example: Gray */
+    /* Text colors derived */
+    --color-positive-text: hsl(var(--color-positive));
+    --color-negative-text: hsl(var(--color-negative)); /* Uses the new bright red */
+    --color-neutral-text: hsl(var(--color-neutral));
   }
 
   .dark {
-    /* Copy ALL your DARK mode variables from BOTH files here */
-    /* Make sure there are no conflicts or duplicates */
     --background: 0 0% 3.9%;
     --foreground: 0 0% 98%;
     --card: 0 0% 3.9%;
@@ -67,26 +72,33 @@
     --muted-foreground: 0 0% 63.9%;
     --accent: 0 0% 14.9%;
     --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%; /* Example from styles/globals.css */
+    --destructive: 0 62.8% 30.6%; /* Keep original dark destructive red */
     --destructive-foreground: 0 0% 98%;
     --border: 0 0% 14.9%;
     --input: 0 0% 14.9%;
     --ring: 0 0% 83.1%;
-    --chart-1: 220 70% 50%; /* Example from styles/globals.css */
-    --chart-2: 160 60% 45%; /* Example from styles/globals.css */
-    /* ... include ALL other necessary dark variables ... */
-    --sidebar-background: 240 5.9% 10%; /* Example from styles/globals.css */
-    /* ... */
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --sidebar-background: 240 5.9% 10%;
+
+    /* --- Dark Theme Colors for Ticker --- */
+    --color-positive: 142.1 70.6% 45.3%; /* Example: Brighter Green */
+     /* --- UPDATED RED (using same bright red for dark mode) --- */
+    --color-negative: 358 100% 68%;      /* Using the same HSL #FF5A5F for dark mode */
+    --color-neutral: 240 5% 65%;         /* Example: Lighter Gray */
+    /* Text colors derived */
+    --color-positive-text: hsl(var(--color-positive));
+    --color-negative-text: hsl(var(--color-negative)); /* Uses the new bright red */
+    --color-neutral-text: hsl(var(--color-neutral));
   }
 
-  /* Other base styles from both files */
+  /* Other base styles */
   * {
     @apply border-border;
   }
   body {
     @apply bg-background text-foreground;
-    font-family: Arial, Helvetica, sans-serif; /* Set font here */
-     /* Do NOT add overflow: hidden here unless absolutely sure */
+    font-family: Arial, Helvetica, sans-serif;
   }
 }
 
@@ -102,18 +114,58 @@
   width: 10px;
   height: 10px;
 }
-
 ::-webkit-scrollbar-track {
-  background: #2f2e3d; /* Consider using CSS variables here too */
+  background: #2f2e3d; /* Consider using CSS variables for theme consistency */
 }
-
 ::-webkit-scrollbar-thumb {
-  background: #50e2c0; /* Consider using CSS variables here too */
+  background: #50e2c0; /* Consider using CSS variables for theme consistency */
   border-radius: 5px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
-  background: #3bc0a0; /* Consider using CSS variables here too */
+  background: #3bc0a0; /* Consider using CSS variables for theme consistency */
 }
 
-/* Remove any other custom classes like topographic-bg if not needed */
+
+/* --- MARQUEE AND TEXT COLOR STYLES --- */
+.marquee-container {
+  overflow: hidden;
+  white-space: nowrap;
+  box-sizing: border-box;
+  position: relative;
+  width: 190px; /* Adjust if needed based on content length */
+}
+
+@media (min-width: 768px) {
+  .marquee-container {
+    width: 230px; /* Adjust if needed based on content length */
+  }
+}
+
+.marquee-content {
+  display: inline-block;
+  padding-left: 100%;
+  animation: marquee 15s linear infinite; /* Adjust speed (seconds) */
+  will-change: transform;
+}
+
+/* Optional: Pause on hover */
+/* .marquee-container:hover .marquee-content {
+  animation-play-state: paused;
+} */
+
+@keyframes marquee {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-100%); }
+}
+
+/* Text color utilities using CSS Variables */
+.text-positive {
+  color: var(--color-positive-text);
+}
+.text-negative { /* This will now use the bright red defined above */
+  color: var(--color-negative-text);
+}
+.text-neutral {
+  color: var(--color-neutral-text);
+}
+/* --- END OF MARQUEE AND TEXT COLOR STYLES --- */
