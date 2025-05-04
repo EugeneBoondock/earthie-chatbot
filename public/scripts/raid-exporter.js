@@ -5,7 +5,7 @@
 // @description  Exports Earth2 raid notification history, property, and owner data to a CSV file for use with the Earthie.world Raid Helper.
 // @match        https://app.earth2.io/*
 // @grant        none
-// @author       Your Name / Earthie.world
+// @author       EugeneBoondock / Earthie.world
 // ==/UserScript==
 
 (async () => {
