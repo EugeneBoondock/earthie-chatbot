@@ -6,7 +6,7 @@ import { parseISO, format } from 'date-fns'; // Ensure date-fns is installed
 
 // --- Constants ---
 const cryptoId = 'earth-2-essence';
-const updateInterval = 60000; // 60 seconds
+const updateInterval = 120000; // 120 seconds
 const localStorageKey = 'selectedFiatCurrency';
 const defaultCurrency = 'usd';
 
