@@ -11,7 +11,8 @@ import {
   Newspaper,       // Icon for E2Pedia
   LogOut,          // Icon for Logout
   Menu,            // Icon for Toggle Open
-  X                // Icon for Toggle Close
+  X,               // Icon for Toggle Close
+  MessageSquare    // Icon for My Lobbyist
 } from 'lucide-react';
 import { cn } from '@/lib/utils'; // For conditional class names
 
@@ -38,6 +39,7 @@ export default function Sidebar({ className }: SidebarProps) {
   const navItems = [
     { href: '/hub', label: 'Hub Home', icon: LayoutDashboard },
     { href: '/hub/profile', label: 'My Profile', icon: UserCircle },
+    { href: '/hub/lobbyist', label: 'My Lobbyist', icon: MessageSquare },
     { href: '/hub/e2pedia', label: 'E2Pedia', icon: Newspaper },
     // Add other Hub-specific links here
   ];
@@ -50,7 +52,7 @@ export default function Sidebar({ className }: SidebarProps) {
         size="icon"
         onClick={toggleSidebar}
         className={cn(
-          "fixed top-18 left-4 z-50 text-white bg-gray-800/70 hover:bg-gray-700/90 backdrop-blur-sm rounded-full",
+          "fixed top-18 left-4 z-50 flex items-center justify-center text-white bg-gray-800/70 hover:bg-gray-700/90 backdrop-blur-sm rounded-full",
           "lg:top-4",
         )}
         aria-label={isOpen ? "Close sidebar" : "Open sidebar"}

@@ -20,12 +20,12 @@ export default function HubPage() {
       borderColor: "border-indigo-400/30"
     },
     {
-      title: "Firesales",
-      description: "Track potential property firesales and opportunities",
-      icon: <BarChart3 className="h-8 w-8 text-earthie-mint" />,
-      link: "/hub/firesales",
-      gradient: "from-emerald-900/50 to-teal-900/50",
-      borderColor: "border-emerald-400/30"
+      title: "My Lobbyist",
+      description: "Join the community, share posts, comment, and react in the Earth2 social hub.",
+      icon: <Building className="h-8 w-8 text-earthie-mint" />,
+      link: "/hub/lobbyist",
+      gradient: "from-indigo-900/50 to-purple-900/50",
+      borderColor: "border-indigo-400/30"
     }
   ];
 
