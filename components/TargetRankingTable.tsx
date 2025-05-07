@@ -12,9 +12,6 @@ interface RankedTarget {
     description: string;
     ownerUsername: string;
     location: string;
-    tier: number;
-    class: number | string;
-    tileCount: number;
     totalRaids: number;
     totalWins: number;
     totalLosses: number;
@@ -61,14 +58,14 @@ export function TargetRankingTable({
                 <div className="overflow-x-auto">
                     <Table className="min-w-full">
                          {/* TableHeader remains the same */}
-                         <TableHeader> <TableRow className="border-b border-border/50 hover:bg-muted/50"> <TableHead className="w-[200px] py-2 px-3">Target Property</TableHead> <TableHead className="py-2 px-3">Owner</TableHead> <TableHead className="py-2 px-3">Location</TableHead> <TableHead className="text-center py-2 px-3">Tier</TableHead> <TableHead className="text-center py-2 px-3">Class</TableHead> <TableHead className="text-right py-2 px-3">Tiles</TableHead> <TableHead className="text-right py-2 px-3">Raids (W/L)</TableHead> <TableHead className="text-right py-2 px-3">Win Rate</TableHead> <TableHead className="text-right py-2 px-3">Total E-ther</TableHead> <TableHead className="text-right py-2 px-3">Avg E/Win</TableHead> <TableHead className="text-right py-2 px-3">Avg E/Raid</TableHead> <TableHead className="text-right py-2 px-3">Avg Droids/Win</TableHead> <TableHead className="py-2 px-3">Last Raided</TableHead> </TableRow> </TableHeader>
+                         <TableHeader><TableRow className="border-b border-border/50 hover:bg-muted/50"><TableHead className="w-[200px] py-2 px-3">Target Property</TableHead><TableHead className="py-2 px-3">Owner</TableHead><TableHead className="py-2 px-3">Location</TableHead><TableHead className="text-right py-2 px-3">Raids (W/L)</TableHead><TableHead className="text-right py-2 px-3">Win Rate</TableHead><TableHead className="text-right py-2 px-3">Total E-ther</TableHead><TableHead className="text-right py-2 px-3">Avg E/Win</TableHead><TableHead className="text-right py-2 px-3">Avg E/Raid</TableHead><TableHead className="text-right py-2 px-3">Avg Droids/Win</TableHead><TableHead className="py-2 px-3">Last Raided</TableHead></TableRow></TableHeader>
                         <TableBody>
                             {(!data || data.length === 0) && (
-                                <TableRow><TableCell colSpan={13} className="text-center py-4">No matching targets found.</TableCell></TableRow>
+                                <TableRow><TableCell colSpan={10} className="text-center py-4">No matching targets found.</TableCell></TableRow>
                             )}
                             {data && data.map((target) => (
                                 // TableRow logic remains the same
-                                <TableRow key={target.id} className="text-xs border-b border-border/30 hover:bg-muted/50"> <TableCell className="font-medium py-2 px-3">{target.description || target.id}</TableCell> <TableCell className="py-2 px-3">{target.ownerUsername || 'N/A'}</TableCell> <TableCell className="py-2 px-3 text-muted-foreground">{target.location || 'N/A'}</TableCell> <TableCell className="text-center py-2 px-3">T{target.tier}</TableCell> <TableCell className="text-center py-2 px-3">C{target.class}</TableCell> <TableCell className="text-right py-2 px-3">{target.tileCount}</TableCell> <TableCell className="text-right py-2 px-3">{target.totalRaids} (<span className="text-green-500">{target.totalWins}</span>/<span className="text-red-500">{target.totalLosses}</span>)</TableCell> <TableCell className="text-right py-2 px-3">{formatPercentage(target.overallWinRate)}</TableCell> <TableCell className="text-right py-2 px-3 font-semibold text-yellow-500">{formatEther(target.totalEtherYield)}</TableCell> <TableCell className="text-right py-2 px-3">{formatEther(target.avgEtherPerWin)}</TableCell> <TableCell className="text-right py-2 px-3">{formatEther(target.avgEtherPerRaid)}</TableCell> <TableCell className="text-right py-2 px-3">{target.avgCydroidsSentOnWins.toFixed(1)}</TableCell> <TableCell className="py-2 px-3 text-muted-foreground whitespace-nowrap">{formatDate(target.lastRaidTimestamp)}</TableCell> </TableRow>
+                                <TableRow key={target.id} className="text-xs border-b border-border/30 hover:bg-muted/50"><TableCell className="font-medium py-2 px-3">{target.description || target.id}</TableCell><TableCell className="py-2 px-3">{target.ownerUsername || 'N/A'}</TableCell><TableCell className="py-2 px-3 text-muted-foreground">{target.location || 'N/A'}</TableCell><TableCell className="text-right py-2 px-3">{target.totalRaids} (<span className="text-green-500">{target.totalWins}</span>/<span className="text-red-500">{target.totalLosses}</span>)</TableCell><TableCell className="text-right py-2 px-3">{formatPercentage(target.overallWinRate)}</TableCell><TableCell className="text-right py-2 px-3 font-semibold text-yellow-500">{formatEther(target.totalEtherYield)}</TableCell><TableCell className="text-right py-2 px-3">{formatEther(target.avgEtherPerWin)}</TableCell><TableCell className="text-right py-2 px-3">{formatEther(target.avgEtherPerRaid)}</TableCell><TableCell className="text-right py-2 px-3">{target.avgCydroidsSentOnWins.toFixed(1)}</TableCell><TableCell className="py-2 px-3 text-muted-foreground whitespace-nowrap">{formatDate(target.lastRaidTimestamp)}</TableCell></TableRow>
                             ))}
                         </TableBody>
                     </Table>

@@ -204,6 +204,19 @@ const PreviewPropertySummaryAccordion = ({ summaries }: { summaries: Record<stri
 
 // --- Main Preview Component --- 
 export default function RaidHelperPreview() {
+    // --- Bulletproof client-side guard: never render if real data exists ---
+    if (typeof window !== 'undefined') {
+        try {
+            const stored = window.localStorage.getItem('raidHelperRaidData');
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    // Real data exists, never render preview
+                    return null;
+                }
+            }
+        } catch {}
+    }
 
     // --- Sample Data Processing --- 
     const sampleOverallSummary = useMemo<OverallSummary | null>(() => {

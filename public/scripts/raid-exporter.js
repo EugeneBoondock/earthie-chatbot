@@ -262,61 +262,76 @@
     const csvDataRows = [];
 
     for (const n of allNotifications) {
-        try {
-            const sourcePropId = n.data?.homeLandfield?.id;
-            const targetPropId = n.data?.enemyLandfield?.id;
-            const ownerId = n.data?.victim?.id;
+         try {
+             const sourcePropId = n.data?.homeLandfield?.id;
+             const targetPropId = n.data?.enemyLandfield?.id;
+             const ownerId = n.data?.victim?.id;
 
-            if (!sourcePropId || !targetPropId || !ownerId) {
-                console.warn(`[Raid Exporter] Skipping notification ${n.id} due to missing essential IDs.`);
-                continue;
-            }
+             if (!sourcePropId || !targetPropId || !ownerId) {
+                 console.warn(`[Raid Exporter] Skipping notification ${n.id} due to missing essential IDs.`);
+                 continue;
+             }
 
-            // Await the promises (will return resolved data/null immediately if already settled)
-            const sourcePropData = await propertyCache.get(sourcePropId);
-            const targetPropData = await propertyCache.get(targetPropId);
-            const ownerData = await userCache.get(ownerId);
+             const sourcePropData = sourcePropId ? await propertyCache.get(sourcePropId) : null;
+             const targetPropData = targetPropId ? await propertyCache.get(targetPropId) : null;
+             const ownerData = ownerId ? await userCache.get(ownerId) : null;
 
-            // Use fetched data if available, otherwise fallback to notification data
-            const sourceDesc = sourcePropData?.attributes?.description ?? n.data?.homeLandfield?.description ?? 'N/A';
-            const sourceLoc = sourcePropData?.attributes?.location ?? n.data?.homeLandfield?.location ?? 'N/A';
-            const sourceTiles = sourcePropData?.attributes?.tileCount ?? n.data?.homeLandfield?.tile_count ?? 0;
-            const sourceTier = sourcePropData?.attributes?.landfieldTier ?? n.data?.homeLandfield?.landfield_tier ?? 0;
-            const sourceClass = sourcePropData?.attributes?.tileClass ?? n.data?.homeLandfield?.tile_class ?? '-';
+             // Source Property Data (should be correct as per your previous tests)
+             const sourceDesc = sourcePropData?.attributes?.description ?? n.data?.homeLandfield?.description ?? 'N/A';
+             const sourceLoc = sourcePropData?.attributes?.location ?? n.data?.homeLandfield?.location ?? 'N/A';
+             const sourceTiles = sourcePropData?.attributes?.tileCount ?? n.data?.homeLandfield?.tile_count ?? 0;
+             const sourceTier = sourcePropData?.attributes?.landfieldTier ?? n.data?.homeLandfield?.landfield_tier ?? 0;
+             const sourceClass = sourcePropData?.attributes?.tileClass ?? n.data?.homeLandfield?.tile_class ?? '-';
 
-            const targetDesc = targetPropData?.attributes?.description ?? n.data?.enemyLandfield?.description ?? 'N/A';
-            const targetLoc = targetPropData?.attributes?.location ?? n.data?.enemyLandfield?.location ?? 'N/A';
-            const targetTiles = targetPropData?.attributes?.tileCount ?? n.data?.enemyLandfield?.tile_count ?? 0;
-            const targetTier = targetPropData?.attributes?.landfieldTier ?? n.data?.enemyLandfield?.landfield_tier ?? 0;
-            const targetClass = targetPropData?.attributes?.tileClass ?? n.data?.enemyLandfield?.tile_class ?? '-';
+             // --- TARGET PROPERTY DATA - REVISED FALLBACK LOGIC ---
+             const targetDesc = targetPropData?.attributes?.description ?? n.data?.enemyLandfield?.description ?? 'N/A';
+             const targetLoc = targetPropData?.attributes?.location ?? n.data?.enemyLandfield?.location ?? 'N/A';
+             const targetOwnerUsername = ownerData?.attributes?.username ?? n.data?.victim?.username ?? 'N/A';
 
-            const ownerUsername = ownerData?.attributes?.username ?? n.data?.victim?.username ?? 'N/A';
+             // Prefer data from fetched property details (targetPropData.attributes)
+             // Fallback to notification data (n.data.enemyLandfield) checking common key variations
+             let targetTilesValue = targetPropData?.attributes?.tileCount ??
+                                   n.data?.enemyLandfield?.tileCount ??      // Check for camelCase
+                                   n.data?.enemyLandfield?.tile_count ??     // Check for snake_case
+                                   0;
+             let targetTierValue = targetPropData?.attributes?.landfieldTier ??
+                                  n.data?.enemyLandfield?.landfieldTier ??   // Check for camelCase
+                                  n.data?.enemyLandfield?.tier ??            // Check for simpler 'tier'
+                                  n.data?.enemyLandfield?.landfield_tier ??  // Check for snake_case
+                                  0;
+             let targetClassValue = targetPropData?.attributes?.tileClass ??
+                                   n.data?.enemyLandfield?.tileClass ??     // Check for camelCase
+                                   n.data?.enemyLandfield?.tile_class ??    // Check for snake_case
+                                   n.data?.enemyLandfield?.class ??         // Check for simpler 'class'
+                                   '-';
 
-            csvDataRows.push({
-                notification_id: n.id,
-                event_type: n.event_type,
-                timestamp: n.created,
-                ether_amount: n.data?.etherAmount ?? 0,
-                cydroids_sent: n.data?.cydroidsSent ?? 0,
-                source_property_id: sourcePropId,
-                source_property_desc: sourceDesc,
-                source_location: sourceLoc,
-                source_tile_count: sourceTiles,
-                source_tier: sourceTier,
-                source_class: sourceClass,
-                target_property_id: targetPropId,
-                target_property_desc: targetDesc,
-                target_location: targetLoc,
-                target_owner_id: ownerId,
-                target_owner_username: ownerUsername,
-                target_tile_count: targetTiles,
-                target_tier: targetTier,
-                target_class: targetClass,
-            });
-        } catch (combineError) {
-            console.error(`[Raid Exporter] Error processing notification ${n.id}: ${combineError.message}. Skipping row.`);
-        }
+
+             csvDataRows.push({
+                 notification_id: n.id,
+                 event_type: n.event_type,
+                 timestamp: n.created,
+                 ether_amount: n.data?.etherAmount ?? 0,
+                 cydroids_sent: n.data?.cydroidsSent ?? 0,
+                 source_property_id: sourcePropId,
+                 source_property_desc: sourceDesc,
+                 source_location: sourceLoc,
+                 source_tile_count: sourceTiles,
+                 source_tier: sourceTier,
+                 source_class: sourceClass,
+                 target_property_id: targetPropId,
+                 target_property_desc: targetDesc,
+                 target_location: targetLoc,
+                 target_owner_id: ownerId,
+                 target_owner_username: targetOwnerUsername,
+                 target_tile_count: targetTilesValue,    // Use revised value
+                 target_tier: targetTierValue,        // Use revised value
+                 target_class: targetClassValue,       // Use revised value
+             });
+         } catch (resolveError) {
+              console.error(`[Raid Exporter] Error resolving details for notification ${n.id}: ${resolveError.message}. Skipping row.`);
+         }
     }
+
 
     // 7. Convert to CSV and Download
     if (csvDataRows.length > 0) {

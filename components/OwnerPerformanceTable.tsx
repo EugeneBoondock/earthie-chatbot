@@ -56,14 +56,23 @@ export function OwnerPerformanceTable({
                 <div className="overflow-x-auto">
                     <Table className="min-w-full">
                          {/* TableHeader remains the same */}
-                         <TableHeader> <TableRow className="border-b border-border/50 hover:bg-muted/50"> <TableHead className="w-[200px] py-2 px-3">Owner Username</TableHead> <TableHead className="text-right py-2 px-3">Raids Against (W/L)</TableHead> <TableHead className="text-right py-2 px-3">Your Win Rate</TableHead> <TableHead className="text-right py-2 px-3">Total E-ther From</TableHead> <TableHead className="text-right py-2 px-3">Avg E/Win Against</TableHead> <TableHead className="text-right py-2 px-3">Unique Props Raided</TableHead> <TableHead className="py-2 px-3">Last Raid Against</TableHead> </TableRow> </TableHeader>
+                         <TableHeader>
+  <TableRow className="border-b border-border/50 hover:bg-muted/50">
+    <TableHead className="w-[200px] py-2 px-3">Owner Username</TableHead>
+    <TableHead className="text-right py-2 px-3">Raids Against (W/L)</TableHead>
+    <TableHead className="text-right py-2 px-3">Your Win Rate</TableHead>
+    <TableHead className="text-right py-2 px-3">Total E-ther From</TableHead>
+    <TableHead className="text-right py-2 px-3">Avg E/Win Against</TableHead>
+    <TableHead className="text-right py-2 px-3">Unique Props Raided</TableHead>
+    <TableHead className="py-2 px-3">Last Raid Against</TableHead>
+  </TableRow>
+</TableHeader>
                         <TableBody>
                              {(!data || data.length === 0) && (
                                 <TableRow><TableCell colSpan={7} className="text-center py-4">No matching owners found.</TableCell></TableRow>
                             )}
                             {data && data.map((owner) => (
-                                // TableRow logic remains the same
-                                <TableRow key={owner.ownerId} className="text-xs border-b border-border/30 hover:bg-muted/50"> <TableCell className="font-medium py-2 px-3">{owner.ownerUsername || owner.ownerId}</TableCell> <TableCell className="text-right py-2 px-3"> {owner.totalRaidsAgainst} (<span className="text-green-500">{owner.winsAgainst}</span>/<span className="text-red-500">{owner.lossesAgainst}</span>) </TableCell> <TableCell className="text-right py-2 px-3">{formatPercentage(owner.winRateAgainst)}</TableCell> <TableCell className="text-right py-2 px-3 font-semibold text-yellow-500">{formatEther(owner.totalEtherFromOwner)}</TableCell> <TableCell className="text-right py-2 px-3">{formatEther(owner.avgEtherPerWinAgainst)}</TableCell> <TableCell className="text-right py-2 px-3">{owner.uniqueTargetProperties}</TableCell> <TableCell className="py-2 px-3 text-muted-foreground whitespace-nowrap">{formatDate(owner.lastRaidAgainstTimestamp)}</TableCell> </TableRow>
+                                <TableRow key={owner.ownerId} className="text-xs border-b border-border/30 hover:bg-muted/50"><TableCell className="font-medium py-2 px-3">{owner.ownerUsername || owner.ownerId}</TableCell><TableCell className="text-right py-2 px-3"> {owner.totalRaidsAgainst} (<span className="text-green-500">{owner.winsAgainst}</span>/<span className="text-red-500">{owner.lossesAgainst}</span>) </TableCell><TableCell className="text-right py-2 px-3">{formatPercentage(owner.winRateAgainst)}</TableCell><TableCell className="text-right py-2 px-3 font-semibold text-yellow-500">{formatEther(owner.totalEtherFromOwner)}</TableCell><TableCell className="text-right py-2 px-3">{formatEther(owner.avgEtherPerWinAgainst)}</TableCell><TableCell className="text-right py-2 px-3">{owner.uniqueTargetProperties}</TableCell><TableCell className="py-2 px-3 text-muted-foreground whitespace-nowrap">{formatDate(owner.lastRaidAgainstTimestamp)}</TableCell></TableRow>
                             ))}
                         </TableBody>
                     </Table>

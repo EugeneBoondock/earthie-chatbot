@@ -8,6 +8,14 @@ import { Menu, X } from "lucide-react"
 import { useState } from "react" // Only keep useState for mobile menu toggle
 import { usePriceContext } from "@/contexts/PriceContext"; // Import the custom hook
 import { format } from 'date-fns'; // For formatting dates if needed elsewhere
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+} from "@/components/ui/navigation-menu"
 
 const navItems = [
   { name: "Home", path: "/" },
@@ -15,7 +23,6 @@ const navItems = [
   { name: "Chat", path: "/chat" },
   { name: "Dev Tools", path: "/script-tools" },
   { name: "Raid Helper", path: "/raid-helper" },
-  { name: "Thoughts", path: "/thoughts" },
 ]
 
 // --- Configuration Constants (can be removed if not needed outside context) ---
@@ -89,28 +96,62 @@ export default function Navbar() {
   // --- JSX Structure ---
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-gray-700 bg-[#383A4B]/90 backdrop-blur-md">
-      <div className="container mx-auto px-4 flex h-16 items-center justify-between relative">
+      <div className="container mx-auto px-4 flex h-16 items-center justify-between flex-wrap min-w-0">
 
         {/* Left side: Logo and Name */}
-        <div className="flex items-center gap-2 z-30">
+        <div className="flex items-center gap-2 z-30 min-w-[56px]">
           <Link href="/" className="flex items-center gap-2">
             <div className="relative w-10 h-10 overflow-hidden rounded-full"> <Image src="/images/earthie_logo.png" alt="Earthie Logo" width={40} height={40} className="object-cover rounded-full"/> </div>
             <span className="font-bold text-xl hidden md:inline-block text-white">Earthie</span>
           </Link>
         </div>
 
-        {/* Center: Absolutely Positioned CLICKABLE Ticker */}
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20">
-             <a href={cryptoLink} target="_blank" rel="noopener noreferrer" className="block cursor-pointer" aria-label={`View ${cryptoSymbol} price on CoinGecko`}>
-                <div className="marquee-container"> <div className="marquee-content"> <TickerContent /> </div> </div>
-             </a>
+        {/* Center: Ticker - always perfectly centered */}
+        <div className="flex-1 flex justify-center min-w-0 overflow-hidden ml-4 md:ml-0">
+          <a href={cryptoLink} target="_blank" rel="noopener noreferrer" className="block cursor-pointer w-full max-w-xs" aria-label={`View ${cryptoSymbol} price on CoinGecko`}>
+            <div className="marquee-container"><div className="marquee-content"><TickerContent /></div></div>
+          </a>
         </div>
+
+        {/* Right: placeholder for perfect centering on mobile */}
+        <div className="min-w-[56px] block md:hidden" aria-hidden="true"></div>
 
         {/* Right side: Contains Desktop Nav, Currency Selector, Mobile Menu Button */}
         <div className="flex items-center gap-4 z-30">
              {/* Desktop Navigation Items */}
             <div className="hidden md:flex items-center space-x-4 lg:space-x-6">
               {navItems.map((item) => ( <Link key={item.path} href={item.path} className={`text-sm font-medium transition-colors hover:text-earthie-mint ${ pathname === item.path ? "text-earthie-mint border-b-2 border-earthie-mint" : "text-gray-300" }`}> {item.name} </Link> ))}
+
+              {/* Profile Menu */}
+              <NavigationMenu>
+                <NavigationMenuList>
+                  <NavigationMenuItem>
+                    <NavigationMenuTrigger className="text-sm font-medium text-gray-300 hover:text-earthie-mint">
+                      Profile
+                    </NavigationMenuTrigger>
+                    <NavigationMenuContent>
+                      <div className="w-48 p-2">
+                        <NavigationMenuLink asChild>
+                          <Link
+                            href="/auth/login"
+                            className="block px-4 py-2 text-sm text-gray-300 hover:text-earthie-mint hover:bg-gray-700 rounded-md"
+                          >
+                            Login
+                          </Link>
+                        </NavigationMenuLink>
+                        <NavigationMenuLink asChild>
+                          <Link
+                            href="/auth/signup"
+                            className="block px-4 py-2 text-sm text-gray-300 hover:text-earthie-mint hover:bg-gray-700 rounded-md"
+                          >
+                            Sign Up
+                          </Link>
+                        </NavigationMenuLink>
+                      </div>
+                    </NavigationMenuContent>
+                  </NavigationMenuItem>
+                </NavigationMenuList>
+              </NavigationMenu>
             </div>
 
             {/* Currency Selector (Desktop) - Uses context data */}
@@ -153,7 +194,25 @@ export default function Navbar() {
             <div className="flex flex-col space-y-1 p-4">
               {/* Nav items */}
               {navItems.map((item) => ( <Link key={item.path} href={item.path} onClick={() => setIsMobileMenuOpen(false)} className={`block px-3 py-2 rounded-md text-base font-medium ${ pathname === item.path ? 'bg-earthie-mint text-gray-900' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }`}> {item.name} </Link> ))}
+              
               <hr className="border-gray-600 my-2" />
+
+              {/* Profile related links for mobile */} 
+              {/* TODO: Conditionally render based on session state later */}
+              {/* For now, showing Login/Sign Up, assuming user is not logged in, or showing all for testing */}
+              
+              <Link href="/hub/profile" onClick={() => setIsMobileMenuOpen(false)} className={`block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white`}>
+                My Profile (Hub)
+              </Link>
+              <Link href="/auth/login" onClick={() => setIsMobileMenuOpen(false)} className={`block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white`}>
+                Login
+              </Link>
+              <Link href="/auth/signup" onClick={() => setIsMobileMenuOpen(false)} className={`block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white`}>
+                Sign Up
+              </Link>
+              
+              <hr className="border-gray-600 my-2" />
+
               {/* Mobile Currency Selector */}
               {!isInitialising && !isLoadingCurrencies && (
                   <div className="px-3 py-2">
@@ -162,7 +221,7 @@ export default function Navbar() {
                           id="currency-select-mobile"
                           value={selectedCurrency} // From context
                           onChange={(e) => {handleCurrencyChange(e); setIsMobileMenuOpen(false);}} // Calls context update & closes menu
-                          className="w-full bg-gray-700 border border-gray-600 text-white text-sm rounded p-1.5 pr-6 focus:ring-earthie-mint focus:border-earthie-mint cursor-pointer" // Removed appearance-none
+                          className="w-full bg-gray-700 border border-gray-600 text-white text-sm rounded p-1.5 pr-6 focus:ring-earthie-mint focus:border-earthie-mint cursor-pointer"
                           aria-label="Select Fiat Currency"
                       >
                          {supportedFiatCurrencies.map(currency => ( <option key={currency} value={currency}> {currency.toUpperCase()} </option> ))}
