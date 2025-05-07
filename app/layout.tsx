@@ -11,7 +11,13 @@ import Head from "next/head"
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister"
 import PWAInstallButton from "@/components/PWAInstallButton"
 import { Analytics } from "@vercel/analytics/react"
-import { PriceProvider } from "../contexts/PriceContext"
+import { PriceProvider } from "@/contexts/PriceContext"
+
+// Imports for server-side Supabase and conditional layout
+import { cookies } from 'next/headers';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import { Database } from '@/lib/database.types';
+import ConditionalLayoutRenderer from '@/components/ConditionalLayoutRenderer';
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -33,11 +39,41 @@ export const metadata: Metadata = {
     generator: 'EugeneBoondock'
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const cookieStorePromise = cookies();
+
+  const supabase = createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get: async (name: string) => {
+          const store = await cookieStorePromise;
+          return store.get(name)?.value;
+        },
+        set: async (name: string, value: string, options: CookieOptions) => {
+          const store = await cookieStorePromise;
+          store.set(name, value, options);
+        },
+        remove: async (name: string, options: CookieOptions) => {
+          const store = await cookieStorePromise;
+          const deleteOptions = {
+            ...options,
+            expires: new Date(0),
+            maxAge: 0
+          };
+          store.set(name, '', deleteOptions);
+        },
+      }
+    }
+  );
+
+  const { data: { session } } = await supabase.auth.getSession();
+
   return (
     <>
       <Head>
@@ -53,13 +89,12 @@ export default function RootLayout({
             <TopographicBackground />
             {/* Grid container: takes full screen height */}
             <div className="grid grid-rows-[auto_1fr_auto] min-h-screen relative z-0">
+              {/* PriceProvider wraps Navbar, ConditionalLayoutRenderer, and Footer */}
               <PriceProvider>
                 <Navbar />
-                {/* Main content area: Add h-full HERE */}
-                <main className="relative z-10 h-full overflow-y-auto"> {/* Added h-full */}
-                  {/* Children (like ChatPage) can now use h-full effectively */}
-                  {children}
-                </main>
+                <ConditionalLayoutRenderer initialSession={session}>
+                  {children} {/* This children is the page content */}
+                </ConditionalLayoutRenderer>
                 <Footer />
               </PriceProvider>
             </div>

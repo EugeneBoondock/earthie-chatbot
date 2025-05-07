@@ -1,11 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { usePriceContext } from '@/contexts/PriceContext';
 // Assuming these are imported from your UI library, e.g., @/components/ui/card
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"; 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Loader2, AlertCircle, MapPin, Maximize, Building, Zap, Tag, Landmark, CheckCircle, XCircle, Gem, ShieldCheck, User, Globe, ArrowUpRight } from 'lucide-react';
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, CartesianGrid, XAxis, YAxis, Bar } from 'recharts';
 
 // --- Interfaces for Earth2 API responses ---
 interface E2UserInfo {
@@ -42,8 +45,14 @@ interface E2PropertyAttribute {
   claimedEssenceBalance?: string;
   hasMentar?: boolean;
   hasHolobuilding?: boolean;
+  hasHoloBuilding?: boolean;
   activeResourceClaimsCount?: number;
   lastEdited?: string;
+  isFeatured?: boolean;
+  landfieldTierUpgraded?: boolean;
+  purchasedForEssence?: boolean;
+  promisedEssenceBalance?: string;
+  purchasedAt?: string;
 }
 
 interface E2Property {
@@ -78,13 +87,131 @@ export default function ProfilePage() {
   
   const [userInfo, setUserInfo] = useState<E2UserInfo | null>(null);
   const [properties, setProperties] = useState<E2Property[]>([]);
+  const [allPropertiesForAnalytics, setAllPropertiesForAnalytics] = useState<E2Property[]>([]);
   const [propertiesMeta, setPropertiesMeta] = useState<E2PropertiesResponse['meta'] | null>(null);
   const [propertiesCurrentPage, setPropertiesCurrentPage] = useState(1);
 
   const [loading, setLoading] = useState(false);
   const [linkingLoading, setLinkingLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(false);
+  const [isAnalyticsLoading, setIsAnalyticsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // --- Access Price Context for selected currency ---
+  const { selectedCurrency } = usePriceContext();
+
+  // --- State for Exchange Rate ---
+  const [exchangeRate, setExchangeRate] = useState<number | null>(null);
+  const [isRateLoading, setIsRateLoading] = useState<boolean>(false);
+
+  // --- Fetch Exchange Rate ---
+  useEffect(() => {
+    const appId = process.env.NEXT_PUBLIC_OPEN_EXCHANGE_RATES_APP_ID; // Use new App ID
+
+    const fetchRate = async () => {
+      if (!selectedCurrency) return;
+      // Check for the new App ID
+      if (!appId) {
+        console.error("[ProfilePage] Open Exchange Rates App ID missing in .env.local (NEXT_PUBLIC_OPEN_EXCHANGE_RATES_APP_ID)");
+        setError(prev => prev ? `${prev}\nOpen Exchange Rates App ID missing` : 'Open Exchange Rates App ID missing');
+        setExchangeRate(null);
+        setIsRateLoading(false);
+        return;
+      }
+
+      if (selectedCurrency.toUpperCase() === 'USD') {
+        setExchangeRate(1); // USD to USD is always 1
+        setIsRateLoading(false);
+        return;
+      }
+
+      setIsRateLoading(true);
+      setExchangeRate(null); 
+      try {
+        // Using Open Exchange Rates /latest.json endpoint
+        const apiUrl = `https://openexchangerates.org/api/latest.json?app_id=${appId}`;
+        console.log(`[ProfilePage] Fetching latest rates from Open Exchange Rates`);
+        const response = await fetch(apiUrl);
+        
+        if (!response.ok) {
+            const errorBody = await response.text(); // OER often returns plain text or specific JSON errors
+            let errorMessage = `Failed to fetch OER data (${response.status})`;
+            try {
+                const errorJson = JSON.parse(errorBody);
+                // Use error structure from OER docs if known (e.g., error.description)
+                errorMessage = errorJson?.description || errorJson?.message || errorMessage;
+            } catch (e) { /* Ignore parsing error if body wasn't JSON */ }
+            throw new Error(errorMessage);
+        }
+
+        const data = await response.json();
+        
+        // OER response structure: { base: "USD", rates: { "EUR": 0.9..., "GBP": 0.8... } }
+        if (data && data.rates) {
+          // Ensure the base is USD (as expected by our logic)
+          if (data.base !== 'USD') {
+              console.warn(`[ProfilePage] OER base currency is ${data.base}, not USD. Conversion might be incorrect if logic assumes USD base.`);
+              // Potentially add logic here to handle non-USD base if necessary
+          }
+          
+          const rate = data.rates[selectedCurrency.toUpperCase()];
+          if (typeof rate === 'number') {
+             setExchangeRate(rate); // This is the rate: 1 USD = X SelectedCurrency
+             console.log(`[ProfilePage] Fetched OER rate USD to ${selectedCurrency}: ${rate}`);
+          } else {
+            throw new Error(`Rate for ${selectedCurrency.toUpperCase()} not found in OER response`);
+          }
+        } else {
+           const errorInfo = data?.description || 'Invalid data received from OER';
+           throw new Error(errorInfo);
+        }
+      } catch (err: any) {
+        console.error("[ProfilePage] Error fetching OER exchange rate:", err);
+        setError(prev => prev ? `${prev}\nOER Rate Fetch Error: ${err.message}` : `OER Rate Fetch Error: ${err.message}`);
+        setExchangeRate(null); 
+      } finally {
+        setIsRateLoading(false);
+      }
+    };
+
+    fetchRate();
+  }, [selectedCurrency]);
+
+  // --- Calculate Conversion Rate (No longer needed) ---
+  // const conversionRate = useMemo(() => { ... }, [currentPrice, usdPrice]);
+
+  // --- Updated formatCurrency helper ---
+  const formatCurrency = (value: number | string | undefined | null, options?: Intl.NumberFormatOptions) => {
+    // Ensure value is a number
+    let numericValue: number;
+    if (value === undefined || value === null) return 'N/A';
+    if (typeof value === 'string') {
+      numericValue = parseFloat(value);
+    } else {
+      numericValue = value;
+    }
+    if (isNaN(numericValue)) return 'Invalid Value'; 
+
+    // Use fetched exchange rate for conversion
+    const rate = exchangeRate; // Use state directly
+    const isLoading = isRateLoading;
+    const currencyCode = selectedCurrency.toUpperCase();
+
+    if (isLoading && currencyCode !== 'USD') {
+        return <Loader2 className="h-4 w-4 animate-spin inline-block" />; // Show loader while rate is fetching
+    }
+
+    const displayValue = rate !== null ? numericValue * rate : numericValue;
+    const displayCurrencyCode = rate !== null ? currencyCode : 'USD'; // Fallback to USD if rate is null
+
+    return displayValue.toLocaleString(undefined, {
+        style: 'currency',
+        currency: displayCurrencyCode,
+        minimumFractionDigits: options?.minimumFractionDigits ?? 2,
+        maximumFractionDigits: options?.maximumFractionDigits ?? 2,
+        ...options
+    });
+  };
 
   // Fetch linked E2 User ID on mount
   useEffect(() => {
@@ -116,45 +243,144 @@ export default function ProfilePage() {
   // Fetch E2 data when linkedE2UserId changes and is valid
   useEffect(() => {
     if (linkedE2UserId) {
-      fetchE2Data(linkedE2UserId, 1); // Fetch first page initially
+      setProperties([]);
+      setAllPropertiesForAnalytics([]);
+      setPropertiesCurrentPage(1);
+      setUserInfo(null);
+      setError(null);
+
+      fetchE2Data(linkedE2UserId, 1);
+      fetchAllPropertiesForAnalytics(linkedE2UserId);
     }
   }, [linkedE2UserId]); // Re-run if linkedE2UserId changes
 
   const fetchE2Data = async (userId: string, page: number = 1) => {
     if (!userId) return;
-    setDataLoading(true);
-    setError(null);
-    setUserInfo(null); // Clear previous user info
-    if (page === 1) setProperties([]); // Clear properties only if fetching first page
+    // If fetching page 1, set loading state for the whole data section
+    if (page === 1 && !userInfo) {
+        setDataLoading(true);
+        setError(null);
+        // setUserInfo(null); // Moved to useEffect for linkedE2UserId
+        // setProperties([]); // Moved to useEffect for linkedE2UserId
+    }
 
     try {
-      // Fetch User Info
-      const userInfoRes = await fetch(`https://app.earth2.io/api/v2/user_info/${userId}`);
-      if (!userInfoRes.ok) throw new Error(`Failed to fetch E2 user info (status: ${userInfoRes.status})`);
-      const userInfoData: E2UserInfo = await userInfoRes.json();
-      setUserInfo(userInfoData);
+      // Fetch User Info (only on initial load/user change, if not already loaded)
+      if (page === 1 && !userInfo) {
+          const userInfoRes = await fetch(`https://app.earth2.io/api/v2/user_info/${userId}`);
+          if (!userInfoRes.ok) throw new Error(`Failed to fetch E2 user info (status: ${userInfoRes.status})`);
+          const userInfoData: E2UserInfo = await userInfoRes.json();
+          setUserInfo(userInfoData);
+      }
 
-      // Fetch Properties (paginated)
-      const propertiesRes = await fetch(`https://r.earth2.io/landfields?page=${page}&perPage=12&userId=${userId}`);
-      if (!propertiesRes.ok) throw new Error(`Failed to fetch E2 properties (status: ${propertiesRes.status})`);
+      // Fetch Properties via internal API route for paginated display
+      const propertiesUrl = new URL('/api/e2/properties', window.location.origin);
+      propertiesUrl.searchParams.set('page', String(page)); 
+      propertiesUrl.searchParams.set('perPage', '12'); 
+      propertiesUrl.searchParams.set('userId', userId);
+      
+      console.log(`[Profile Page Display] Fetching properties (page ${page}, perPage 12) via: ${propertiesUrl.toString()}`);
+      const propertiesRes = await fetch(propertiesUrl.toString());
+      
+      if (!propertiesRes.ok) {
+         const errorData = await propertiesRes.json();
+         throw new Error(errorData.error || `Failed to fetch E2 properties for display (status: ${propertiesRes.status})`);
+      }
       const propertiesData: E2PropertiesResponse = await propertiesRes.json();
       
-      if (page === 1) {
-        setProperties(propertiesData.data || []);
-      } else {
-        setProperties(prev => [...prev, ...(propertiesData.data || [])]);
-      }
-      setPropertiesMeta(propertiesData.meta || null);
+      // Replace the properties list when fetching a specific page via user action
+      setProperties(propertiesData.data || []); 
+      setPropertiesMeta(propertiesData.meta || null); 
       setPropertiesCurrentPage(page);
 
     } catch (err: any) {
-      console.error('Error fetching E2 data:', err);
-      setError(err.message || 'Failed to fetch data from Earth2 APIs.');
-      setUserInfo(null);
-      setProperties([]);
-      setPropertiesMeta(null);
+      console.error('Error fetching E2 data for display:', err);
+      setError(err.message || 'Failed to fetch data for display from Earth2 APIs via internal proxy.');
     } finally {
-      setDataLoading(false);
+       if (page === 1) {
+           setDataLoading(false); // Turn off main loading for display section
+       }
+    }
+  };
+
+  const fetchAllPropertiesForAnalytics = async (userId: string) => {
+    if (!userId) return;
+    setIsAnalyticsLoading(true);
+    setAllPropertiesForAnalytics([]); 
+    let currentPage = 1; // Keep track for logging/debugging
+    let fetchedAll = false;
+    const accumulatedProps: E2Property[] = [];
+    let totalCountFromMeta: number | undefined = undefined;
+    let nextUrlFromProxy: string | undefined = undefined; // Use this to determine if there's more
+
+    console.log(`[Analytics] Starting fetch for all properties of user ${userId}`);
+
+    do {
+      try {
+        const proxyUrl = new URL('/api/e2/properties', window.location.origin);
+        proxyUrl.searchParams.set('page', String(currentPage));
+        proxyUrl.searchParams.set('perPage', '60'); // Fetch smaller chunks (like observed URL) via proxy
+        proxyUrl.searchParams.set('userId', userId);
+
+        console.log(`[Analytics] Fetching page ${currentPage} via proxy (perPage 60): ${proxyUrl.toString()}`);
+        const proxyRes = await fetch(proxyUrl.toString());
+
+        if (!proxyRes.ok) {
+          const errorData = await proxyRes.json();
+          throw new Error(errorData.error || `Proxy API failed for analytics (page ${currentPage}, status: ${proxyRes.status})`);
+        }
+        
+        // Expecting the proxy to return the exact structure from E2 API
+        const proxyData: E2PropertiesResponse = await proxyRes.json(); 
+        
+        console.log(`[Analytics] Page ${currentPage} Response:`, { 
+            dataLength: proxyData.data?.length ?? 0,
+            meta: proxyData.meta,
+            links: proxyData.links 
+        });
+
+        if (proxyData.data && proxyData.data.length > 0) {
+          accumulatedProps.push(...proxyData.data);
+        }
+
+        if (proxyData.meta?.count !== undefined && totalCountFromMeta === undefined) {
+            totalCountFromMeta = proxyData.meta.count;
+        }
+        
+        // *** Use links.next from the PROXY response to decide if more pages exist ***
+        nextUrlFromProxy = proxyData.links?.next; 
+
+        if (!nextUrlFromProxy) { 
+            fetchedAll = true;
+            console.log(`[Analytics] Loop Decision: Stop - No next link found.`);
+        } else if (totalCountFromMeta !== undefined && accumulatedProps.length >= totalCountFromMeta) { 
+            fetchedAll = true;
+            console.log(`[Analytics] Loop Decision: Stop - Reached or exceeded total count (${accumulatedProps.length}/${totalCountFromMeta}).`);
+        } else if (proxyData.data && proxyData.data.length === 0) {
+            fetchedAll = true;
+             console.log(`[Analytics] Loop Decision: Stop - Fetched page returned 0 properties.`);
+        } else {
+            currentPage++; 
+            console.log(`[Analytics] Loop Decision: Continue - Found next link, incrementing page to ${currentPage}.`);
+        }
+
+      } catch (err: any) {
+        console.error('Error fetching/processing E2 properties page for analytics:', err);
+        // Append errors, but only add unique messages
+        setError(prevError => {
+          const newErrorMessage = `Error fetching analytics page ${currentPage}: ${err.message}`;
+          return prevError ? (prevError.includes(newErrorMessage) ? prevError : `${prevError}\n${newErrorMessage}`) : newErrorMessage;
+        });
+        fetchedAll = true; // Stop fetching on error for this attempt
+      }
+    } while (!fetchedAll);
+
+    setAllPropertiesForAnalytics(accumulatedProps);
+    setIsAnalyticsLoading(false);
+    console.log(`[Analytics] Finished fetching. Total ${accumulatedProps.length} properties gathered for analytics.`);
+    // Optionally compare accumulatedProps.length with totalCountFromMeta here if needed for logging
+    if(totalCountFromMeta !== undefined && accumulatedProps.length !== totalCountFromMeta){
+        console.warn(`[Analytics] Mismatch: Meta count was ${totalCountFromMeta}, but fetched ${accumulatedProps.length}`);
     }
   };
 
@@ -190,6 +416,186 @@ export default function ProfilePage() {
   };
   
   const isLoading = linkingLoading || dataLoading;
+
+  // --- States for analytics data (derived from allPropertiesForAnalytics) ---
+  const [tileClassCounts, setTileClassCounts] = useState<Record<string, number>>({});
+  const [countryCounts, setCountryCounts] = useState<Record<string, number>>({});
+  const [tierCounts, setTierCounts] = useState<Record<string, number>>({});
+  const [featureCounts, setFeatureCounts] = useState<{ mentars: number; holobuildings: number; featured: number; activeClaims: number; tierUpgraded: number; purchasedForEssence: number; forSale: number; notForSale: number; withEPL: number; withoutEPL: number; }>({ mentars: 0, holobuildings: 0, featured: 0, activeClaims: 0, tierUpgraded: 0, purchasedForEssence: 0, forSale: 0, notForSale: 0, withEPL: 0, withoutEPL: 0 });
+  const [valueSummary, setValueSummary] = useState<{ totalCurrentValue: number; totalPurchaseValue: number; countWithValue: number; totalTiles: number; totalClaimedEssence: number; totalPromisedEssence: number; }>({ totalCurrentValue: 0, totalPurchaseValue: 0, countWithValue: 0, totalTiles: 0, totalClaimedEssence: 0, totalPromisedEssence: 0 });
+  const [acquisitionTimelineData, setAcquisitionTimelineData] = useState<{name: string, count: number}[]>([]);
+  const [tileCountDistributionData, setTileCountDistributionData] = useState<{name: string, count: number}[]>([]);
+
+  // --- useEffect to calculate counts when ALL properties for analytics change ---
+  useEffect(() => {
+    if (allPropertiesForAnalytics && allPropertiesForAnalytics.length > 0 && !isAnalyticsLoading) {
+      const newTileClassCounts: Record<string, number> = {};
+      const newCountryCounts: Record<string, number> = {};
+      const newTierCounts: Record<string, number> = {};
+      
+      let mentarC = 0, holobuildingC = 0, featuredC = 0, activeClaimsC = 0, tierUpgradedC = 0, purchasedForEssenceC = 0, forSaleC = 0, notForSaleC = 0, withEPLC = 0, withoutEPLC = 0;
+      let currentValSum = 0, purchaseValSum = 0, propsWithValueCount = 0, tilesSum = 0, claimedEssenceSum = 0, promisedEssenceSum = 0;
+      
+      const acquisitionsByYear: Record<string, number> = {};
+      const TILE_COUNT_BINS = { "1-10": 0, "11-50": 0, "51-100": 0, "101-250": 0, "251-500": 0, "501-750": 0, "751+": 0, "Unknown": 0};
+
+      allPropertiesForAnalytics.forEach(prop => {
+        const attrs = prop.attributes;
+
+        // Tile Class
+        const tileClass = attrs.tileClass;
+        let className = 'Unknown Class';
+        if (typeof tileClass === 'number' || (typeof tileClass === 'string' && String(tileClass).trim() !== '')) {
+            className = `Class ${tileClass}`;
+        } else if (tileClass === null || tileClass === undefined || String(tileClass).trim() === '') {
+            className = 'Unclassified';
+        }
+        newTileClassCounts[className] = (newTileClassCounts[className] || 0) + 1;
+
+        // Country
+        const country = attrs.country?.toUpperCase() || 'Unknown';
+        newCountryCounts[country] = (newCountryCounts[country] || 0) + 1;
+
+        // Landfield Tier
+        const tier = attrs.landfieldTier ? `Tier ${attrs.landfieldTier}` : 'Unknown Tier';
+        newTierCounts[tier] = (newTierCounts[tier] || 0) + 1;
+        
+        // Features
+        if (attrs.hasMentar) mentarC++;
+        if (attrs.hasHolobuilding || attrs.hasHoloBuilding) holobuildingC++; // Combined both
+        if (attrs.isFeatured) featuredC++;
+        if (attrs.activeResourceClaimsCount && attrs.activeResourceClaimsCount > 0) activeClaimsC++;
+        if (attrs.landfieldTierUpgraded) tierUpgradedC++;
+        if (attrs.purchasedForEssence) purchasedForEssenceC++;
+        if (attrs.forSale) forSaleC++; else notForSaleC++;
+        if (attrs.epl && attrs.epl.trim() !== '') withEPLC++; else withoutEPLC++;
+
+        // Value Summary
+        const currentV = parseFloat(String(attrs.currentValue));
+        const purchaseV = attrs.purchaseValue !== undefined && attrs.purchaseValue !== null ? parseFloat(String(attrs.purchaseValue)) : null;
+
+        if (!isNaN(currentV)) {
+            currentValSum += currentV;
+            if (purchaseV !== null && !isNaN(purchaseV)) {
+                purchaseValSum += purchaseV;
+                propsWithValueCount++;
+            }
+        }
+        if (attrs.tileCount) tilesSum += attrs.tileCount;
+        if (attrs.claimedEssenceBalance) claimedEssenceSum += parseFloat(String(attrs.claimedEssenceBalance)) || 0;
+        if (attrs.promisedEssenceBalance) promisedEssenceSum += parseFloat(String(attrs.promisedEssenceBalance)) || 0;
+        
+        // Acquisition Timeline
+        if (attrs.purchasedAt) {
+            try {
+                const year = new Date(attrs.purchasedAt).getFullYear();
+                if (!isNaN(year)) {
+                    acquisitionsByYear[String(year)] = (acquisitionsByYear[String(year)] || 0) + 1;
+                }
+            } catch (e) { /* ignore invalid dates */ }
+        }
+
+        // Tile Count Distribution
+        const tc = attrs.tileCount;
+        if (tc === null || tc === undefined) TILE_COUNT_BINS["Unknown"]++;
+        else if (tc <= 10) TILE_COUNT_BINS["1-10"]++;
+        else if (tc <= 50) TILE_COUNT_BINS["11-50"]++;
+        else if (tc <= 100) TILE_COUNT_BINS["51-100"]++;
+        else if (tc <= 250) TILE_COUNT_BINS["101-250"]++;
+        else if (tc <= 500) TILE_COUNT_BINS["251-500"]++;
+        else if (tc <= 750) TILE_COUNT_BINS["501-750"]++;
+        else TILE_COUNT_BINS["751+"]++;
+
+      });
+
+      setTileClassCounts(newTileClassCounts);
+      setCountryCounts(newCountryCounts);
+      setTierCounts(newTierCounts);
+      setFeatureCounts({ mentars: mentarC, holobuildings: holobuildingC, featured: featuredC, activeClaims: activeClaimsC, tierUpgraded: tierUpgradedC, purchasedForEssence: purchasedForEssenceC, forSale: forSaleC, notForSale: notForSaleC, withEPL: withEPLC, withoutEPL: withoutEPLC });
+      setValueSummary({ totalCurrentValue: currentValSum, totalPurchaseValue: purchaseValSum, countWithValue: propsWithValueCount, totalTiles: tilesSum, totalClaimedEssence: claimedEssenceSum, totalPromisedEssence: promisedEssenceSum });
+      
+      setAcquisitionTimelineData(Object.entries(acquisitionsByYear).map(([year, count]) => ({name: year, count})).sort((a,b) => a.name.localeCompare(b.name)));
+      setTileCountDistributionData(Object.entries(TILE_COUNT_BINS).map(([range, count]) => ({name: range, count})));
+
+    } else if (!isAnalyticsLoading) { // Reset if no data or not loading
+      setTileClassCounts({});
+      setCountryCounts({});
+      setTierCounts({});
+      setFeatureCounts({ mentars: 0, holobuildings: 0, featured: 0, activeClaims: 0, tierUpgraded: 0, purchasedForEssence: 0, forSale: 0, notForSale: 0, withEPL: 0, withoutEPL: 0 });
+      setValueSummary({ totalCurrentValue: 0, totalPurchaseValue: 0, countWithValue: 0, totalTiles: 0, totalClaimedEssence: 0, totalPromisedEssence: 0 });
+      setAcquisitionTimelineData([]);
+      setTileCountDistributionData([]);
+    }
+  }, [allPropertiesForAnalytics, isAnalyticsLoading]);
+
+  // --- Prepare data for Recharts Pie Chart (Tile Class) ---
+  const tileClassPieData = useMemo(() => {
+    return Object.entries(tileClassCounts)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value); // Sort by count descending for chart
+  }, [tileClassCounts]);
+
+  // --- Define colors for pie chart slices ---
+  // Define more colors if you expect more than ~10 classes often
+  const COLORS = [
+      '#34D399', // emerald-400
+      '#60A5FA', // blue-400
+      '#FBBF24', // amber-400
+      '#F87171', // red-400
+      '#A78BFA', // violet-400
+      '#2DD4BF', // teal-400
+      '#FB923C', // orange-400
+      '#EC4899', // pink-400
+      '#8B5CF6', // purple-500  // Note: Added more colors
+      '#14B8A6', // teal-500
+      '#F59E0B', // amber-500
+      '#EF4444', // red-500
+  ];
+
+  const BAR_CHART_COLORS = [
+    '#38BDF8', // sky-400
+    '#A3E635', // lime-400
+    '#FACC15', // yellow-400
+    '#FB923C', // orange-400
+    '#EC4899', // pink-400
+    '#8B5CF6', // violet-500
+  ];
+
+  const countryChartData = useMemo(() => {
+    return Object.entries(countryCounts)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 10); 
+  }, [countryCounts]);
+
+  const tierChartData = useMemo(() => {
+    return Object.entries(tierCounts)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a,b) => { // Custom sort for Tiers (Tier 1, Tier 2, etc., then Unknown)
+        const tierA = parseInt(a.name.replace('Tier ', ''));
+        const tierB = parseInt(b.name.replace('Tier ', ''));
+        if (!isNaN(tierA) && !isNaN(tierB)) return tierA - tierB;
+        if (!isNaN(tierA)) return -1;
+        if (!isNaN(tierB)) return 1;
+        return a.name.localeCompare(b.name);
+      });
+  }, [tierCounts]);
+
+  const forSaleChartData = useMemo(() => {
+    if (featureCounts.forSale === 0 && featureCounts.notForSale === 0) return [];
+    return [
+        { name: 'For Sale', value: featureCounts.forSale },
+        { name: 'Not For Sale', value: featureCounts.notForSale }
+    ];
+  }, [featureCounts]);
+  
+  const eplChartData = useMemo(() => {
+    if (featureCounts.withEPL === 0 && featureCounts.withoutEPL === 0) return [];
+    return [
+        { name: 'With EPL', value: featureCounts.withEPL },
+        { name: 'No EPL', value: featureCounts.withoutEPL }
+    ];
+  }, [featureCounts]);
 
   return (
     <div className="space-y-8">
@@ -280,17 +686,19 @@ export default function ProfilePage() {
           </CardHeader>
           <CardContent className="p-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-4">
             {[ 
-              { label: 'Networth', value: userInfo.userNetworth?.networth, prefix: '$', icon: <Landmark className="w-4 h-4 mr-1.5 text-sky-400"/> },
-              { label: 'Properties', value: userInfo.userLandfieldCount, icon: <Building className="w-4 h-4 mr-1.5 text-sky-400"/> },
-              { label: 'Total Tiles', value: userInfo.userNetworth?.totalTiles, icon: <Maximize className="w-4 h-4 mr-1.5 text-sky-400"/> },
-              { label: 'Country', value: userInfo.countryCode?.toUpperCase(), icon: <MapPin className="w-4 h-4 mr-1.5 text-sky-400"/> },
+              { label: 'Networth', value: userInfo.userNetworth?.networth, isCurrency: true },
+              { label: 'Total Properties', value: propertiesMeta?.count ?? (allPropertiesForAnalytics.length > 0 ? allPropertiesForAnalytics.length : userInfo.userLandfieldCount), isCurrency: false },
+              { label: 'Total Tiles', value: valueSummary.totalTiles > 0 ? valueSummary.totalTiles : userInfo.userNetworth?.totalTiles, isCurrency: false },
+              { label: 'Country', value: userInfo.countryCode?.toUpperCase(), isCurrency: false },
             ].map(stat => stat.value !== undefined && stat.value !== null && (
               <div key={stat.label} className="flex items-center">
-                {stat.icon}
+                <Landmark className="w-4 h-4 mr-1.5 text-sky-400"/>
                 <div>
                     <p className="text-xs text-sky-400/70 uppercase tracking-wider">{stat.label}</p>
                     <p className="text-lg font-semibold text-sky-100">
-                        {stat.prefix}{typeof stat.value === 'number' ? stat.value.toLocaleString(undefined, stat.label === 'Networth' ? {minimumFractionDigits: 2, maximumFractionDigits: 2} : {}) : stat.value}
+                       {stat.isCurrency 
+                          ? formatCurrency(stat.value)
+                          : (typeof stat.value === 'number' ? stat.value.toLocaleString() : stat.value)}
                     </p>
                 </div>
               </div>
@@ -305,10 +713,11 @@ export default function ProfilePage() {
         </Card>
       )}
 
+      {/* Paginated Property Cards Section */}
       {properties.length > 0 && (
-        <div className="space-y-6">
+        <div className="space-y-6 mt-8">
             <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-semibold text-sky-200">Your Earth2 Properties ({propertiesMeta?.count ? propertiesMeta.count.toLocaleString() : properties.length})</h2>
+                <h2 className="text-2xl font-semibold text-sky-200">Your Earth2 Properties ({propertiesMeta?.count ? properties.length.toLocaleString() : '...'} of {propertiesMeta?.count ? propertiesMeta.count.toLocaleString() : 'Many'})</h2>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               {properties.map((prop) => {
@@ -327,18 +736,21 @@ export default function ProfilePage() {
                     <CardContent className="text-sm px-5 pb-4 space-y-2 text-cyan-100/90 flex-grow">
                         <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
                             {[ 
-                                { label: 'Value', value: attr.currentValue, prefix: '$', icon: <Landmark size={14} className="text-sky-400/90"/>, formatOpts: {minimumFractionDigits:2, maximumFractionDigits:2} },
-                                { label: 'Tiles', value: attr.tileCount, icon: <Maximize size={14} className="text-sky-400/90"/> },
-                                { label: 'Tier', value: attr.landfieldTier, icon: <Building size={14} className="text-sky-400/90"/> },
-                                { label: 'Class', value: attr.tileClass, icon: <Tag size={14} className="text-sky-400/90"/> },
-                                { label: 'Price', value: attr.forSale ? attr.price : undefined, prefix: '$', icon: <Tag size={14} className="text-sky-400/90"/> },
-                                { label: 'Purchase Value', value: attr.purchaseValue, prefix: '$', icon: <Tag size={14} className="text-sky-400/90"/> },
-                                { label: 'Trading Value', value: attr.tradingValue, prefix: '$', icon: <Zap size={14} className="text-sky-400/90"/> },
-                                { label: 'Essence', value: attr.claimedEssenceBalance, icon: <Gem size={14} className="text-sky-400/90"/> },
+                                { label: 'Value', value: attr.currentValue, isCurrency: true },
+                                { label: 'Tiles', value: attr.tileCount, isCurrency: false },
+                                { label: 'Tier', value: attr.landfieldTier, isCurrency: false },
+                                { label: 'Class', value: attr.tileClass !== null && attr.tileClass !== undefined ? `Class ${attr.tileClass}` : 'N/A', isCurrency: false },
+                                { label: 'Price', value: attr.forSale ? attr.price : undefined, isCurrency: true },
+                                { label: 'Purchase Value', value: attr.purchaseValue, isCurrency: true, options: { minimumFractionDigits: 2, maximumFractionDigits: 2 } },
+                                { label: 'Trading Value', value: attr.tradingValue, isCurrency: true, options: { minimumFractionDigits: 3, maximumFractionDigits: 3 } },
+                                { label: 'Essence', value: attr.claimedEssenceBalance ? parseFloat(String(attr.claimedEssenceBalance)).toLocaleString(undefined, {maximumFractionDigits:2}) : '0', isCurrency: false },
                             ].map(item => item.value !== undefined && item.value !== null && (
                                 <div key={item.label} className="flex items-center space-x-1.5">
-                                    {item.icon} <span className="text-sky-400/80">{item.label}:</span> 
-                                    <span className="font-medium text-sky-200">{item.prefix}{typeof item.value === 'number' ? item.value.toLocaleString(undefined, item.formatOpts) : item.value}</span>
+                                    <Landmark size={14} className="text-sky-400/90"/>
+                                    <span className="text-sky-400/80">{item.label}:</span> 
+                                    <span className="font-medium text-sky-200">
+                                        {item.isCurrency ? formatCurrency(item.value, item.options) : item.value}
+                                    </span>
                                 </div>
                             ))}
                         </div>
@@ -353,23 +765,372 @@ export default function ProfilePage() {
                 )}
               )}
             </div>
-            {propertiesMeta && propertiesMeta.count > properties.length && (
+            {propertiesMeta && propertiesMeta.count && (propertiesCurrentPage * 12 < propertiesMeta.count) && (
                 <div className="mt-8 text-center">
                     <Button 
                         onClick={() => fetchE2Data(linkedE2UserId!, propertiesCurrentPage + 1)}
-                        disabled={dataLoading} className="bg-sky-600 hover:bg-sky-500 shadow-lg"
+                        disabled={dataLoading} // Disable during display load, not analytics load
+                        className="bg-sky-600 hover:bg-sky-500 shadow-lg"
                     >
                         {dataLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                        Load More Properties (Page {propertiesCurrentPage + 1})
+                        Load Page {propertiesCurrentPage + 1}
                     </Button>
                 </div>
             )}
         </div>
       )}
 
-      {linkedE2UserId && !userInfo && !dataLoading && !error && (
-        <p className="text-center text-lg text-cyan-300/80 py-8">No data found for linked E2 User ID: {linkedE2UserId}. It might be an invalid ID or the APIs are temporarily unavailable.</p>
+      {/* Analytics Section Moved Here - Below Properties */}
+      {isAnalyticsLoading && (
+        <div className="flex flex-col items-center justify-center py-12 text-sky-300 mt-12">
+          <Loader2 className="h-12 w-12 animate-spin text-sky-400 mb-4" />
+          <p className="text-xl">Crunching Full Portfolio Analytics...</p>
+          <p className="text-sm text-sky-400/70">Fetching all your property data. This might take a few moments.</p>
+        </div>
       )}
+
+      {!isAnalyticsLoading && allPropertiesForAnalytics.length > 0 && linkedE2UserId && (
+        <div className="mt-12 space-y-8"> {/* Added top margin and consistent spacing */}
+          <h2 className="text-3xl font-bold text-center text-sky-200 mb-6">Full Portfolio Analytics ({selectedCurrency.toUpperCase()}{isRateLoading ? ' (Loading Rate...)' : ''})</h2>
+          
+          {/* Tile Class Stats Section */}
+          <Card className="border-emerald-400/30 bg-gradient-to-br from-earthie-dark/80 to-earthie-dark-light/70 shadow-lg">
+              <CardHeader>
+                  <CardTitle className="flex items-center text-emerald-300">
+                      <Tag className="h-5 w-5 mr-2" /> Tile Class Distribution
+                  </CardTitle>
+                  <CardDescription className="text-gray-400">
+                      Based on your total of {allPropertiesForAnalytics.length} properties.
+                  </CardDescription>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                  {/* Column 1: Text Counts */}
+                  <div>
+                      {Object.keys(tileClassCounts).length > 0 ? (
+                          <div className="space-y-2">
+                              {Object.entries(tileClassCounts)
+                                .sort(([nameA], [nameB]) => nameA.localeCompare(nameB))
+                                .map(([className, count]) => (
+                                  <div key={className} className="flex justify-between items-center text-sm">
+                                      <span className="text-gray-300">{className}:</span>
+                                      <span className="font-semibold text-white">{count}</span>
+                                  </div>
+                              ))}
+                          </div>
+                      ) : (
+                          <p className="text-gray-500 text-sm">No property data for tile classes.</p>
+                      )}
+                  </div>
+                  
+                  {/* Column 2: Pie Chart */}
+                  <div className="h-64 md:h-80"> 
+                      {tileClassPieData.length > 0 ? (
+                          <ResponsiveContainer width="100%" height="100%">
+                              <PieChart>
+                                <>
+                                  <Pie
+                                      data={tileClassPieData}
+                                      cx="50%"
+                                      cy="50%"
+                                      labelLine={false}
+                                      outerRadius="80%"
+                                      innerRadius="40%"
+                                      fill="#8884d8"
+                                      dataKey="value"
+                                      stroke="#374151"
+                                  >
+                                      {tileClassPieData.map((entry, index) => (
+                                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                      ))}
+                                  </Pie>
+                                  <Tooltip 
+                                      contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }}
+                                      itemStyle={{ color: '#d1d5db' }}
+                                  />
+                                </>
+                              </PieChart>
+                          </ResponsiveContainer>
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-gray-500 text-sm">
+                            No data for tile class chart.
+                        </div>
+                      )}
+                  </div>
+              </CardContent>
+          </Card>
+
+          {/* Enhanced Analytics Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+            {/* Value Summary Card (Enhanced) */}
+            <Card className="border-sky-400/30 bg-gradient-to-br from-earthie-dark/80 to-earthie-dark-light/70 shadow-lg lg:col-span-2"> {/* Full width on large screens */}
+              <CardHeader>
+                <CardTitle className="flex items-center text-sky-300">
+                  <Landmark className="h-5 w-5 mr-2" /> Full Portfolio Overview
+                </CardTitle>
+                <CardDescription className="text-gray-400">
+                   Financial summary of your {allPropertiesForAnalytics.length} properties in {selectedCurrency.toUpperCase()}.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4 text-sm">
+                <div>
+                  <h4 className="font-semibold text-sky-200 mb-1">Financials</h4>
+                  <div className="space-y-1">
+                    <div className="flex justify-between"><span className="text-gray-300">Total Current Value:</span> <span className="font-semibold text-white">{formatCurrency(valueSummary.totalCurrentValue)}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-300">Total Purchase Value:</span> <span className="font-semibold text-white">{formatCurrency(valueSummary.totalPurchaseValue)}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-300">Portfolio Gain/Loss:</span> <span className={`font-semibold ${(valueSummary.totalCurrentValue - valueSummary.totalPurchaseValue) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{formatCurrency(valueSummary.totalCurrentValue - valueSummary.totalPurchaseValue)}</span></div>
+                    {valueSummary.countWithValue > 0 && valueSummary.totalPurchaseValue > 0 && (
+                      <div className="flex justify-between"><span className="text-gray-300">Average ROI:</span> <span className={`font-semibold ${((valueSummary.totalCurrentValue - valueSummary.totalPurchaseValue) / valueSummary.totalPurchaseValue) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{(((valueSummary.totalCurrentValue - valueSummary.totalPurchaseValue) / valueSummary.totalPurchaseValue) * 100).toFixed(2)}%</span></div>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-sky-200 mb-1">Property Stats</h4>
+                  <div className="space-y-1">
+                    <div className="flex justify-between"><span className="text-gray-300">Total Tiles:</span> <span className="font-semibold text-white">{valueSummary.totalTiles.toLocaleString()}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-300">Properties with Mentars:</span> <span className="font-semibold text-white">{featureCounts.mentars}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-300">Properties with Holos:</span> <span className="font-semibold text-white">{featureCounts.holobuildings}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-300">Featured Properties:</span> <span className="font-semibold text-white">{featureCounts.featured}</span></div>
+                  </div>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-sky-200 mb-1">Essence & Activity</h4>
+                  <div className="space-y-1">
+                    <div className="flex justify-between"><span className="text-gray-300">Total Claimed Essence:</span> <span className="font-semibold text-white">{valueSummary.totalClaimedEssence.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-300">Total Promised Essence:</span> <span className="font-semibold text-white">{valueSummary.totalPromisedEssence.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-300">Active Resource Claims:</span> <span className="font-semibold text-white">{featureCounts.activeClaims}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-300">Tier Upgraded Props:</span> <span className="font-semibold text-white">{featureCounts.tierUpgraded}</span></div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Country Distribution Card */}
+            {countryChartData.length > 0 && (
+              <Card className="border-lime-400/30 bg-gradient-to-br from-earthie-dark/80 to-earthie-dark-light/70 shadow-lg">
+                <CardHeader>
+                  <CardTitle className="flex items-center text-lime-300">
+                    <Globe className="h-5 w-5 mr-2" /> Property Distribution by Country
+                  </CardTitle>
+                  <CardDescription className="text-gray-400">Top 10 countries from your {allPropertiesForAnalytics.length} properties.</CardDescription>
+                </CardHeader>
+                <CardContent className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={countryChartData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        outerRadius="80%"
+                        fill="#8884d8"
+                        dataKey="value"
+                        nameKey="name"
+                        label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                        stroke="#374151"
+                      >
+                        {countryChartData.map((entry, index) => (
+                          <Cell key={`cell-country-${index}`} fill={BAR_CHART_COLORS[index % BAR_CHART_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }}
+                        itemStyle={{ color: '#d1d5db' }}
+                      />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Tier Distribution Card */}
+            {tierChartData.length > 0 && (
+              <Card className="border-violet-400/30 bg-gradient-to-br from-earthie-dark/80 to-earthie-dark-light/70 shadow-lg">
+                  <CardHeader>
+                      <CardTitle className="flex items-center text-violet-300">
+                          <Building className="h-5 w-5 mr-2" /> Property Distribution by Tier
+                      </CardTitle>
+                      <CardDescription className="text-gray-400">
+                          From your {allPropertiesForAnalytics.length} properties.
+                      </CardDescription>
+                  </CardHeader>
+                  <CardContent className="h-80">
+                      <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                                data={tierChartData}
+                                cx="50%"
+                                cy="50%"
+                                labelLine={false}
+                                outerRadius="80%"
+                                fill="#8884d8"
+                                dataKey="value"
+                                nameKey="name"
+                                label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                                stroke="#374151"
+                              >
+                                {tierChartData.map((entry, index) => (
+                                  <Cell key={`cell-tier-${index}`} fill={COLORS[index % COLORS.length]} />
+                                ))}
+                              </Pie>
+                              <Tooltip 
+                                  contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }}
+                                  itemStyle={{ color: '#d1d5db' }}
+                              />
+                              <Legend />
+                          </PieChart>
+                      </ResponsiveContainer>
+                  </CardContent>
+              </Card>
+            )}
+
+            {/* Acquisition Timeline Card */}
+            {acquisitionTimelineData.length > 0 && (
+              <Card className="border-amber-400/30 bg-gradient-to-br from-earthie-dark/80 to-earthie-dark-light/70 shadow-lg">
+                <CardHeader>
+                  <CardTitle className="flex items-center text-amber-300">
+                    <Zap className="h-5 w-5 mr-2" /> Property Acquisition Timeline
+                  </CardTitle>
+                  <CardDescription className="text-gray-400">Properties acquired per year.</CardDescription>
+                </CardHeader>
+                <CardContent className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={acquisitionTimelineData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
+                      <XAxis dataKey="name" stroke="#9ca3af" />
+                      <YAxis stroke="#9ca3af" />
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }}
+                        itemStyle={{ color: '#d1d5db' }}
+                        cursor={{fill: 'rgba(107, 114, 128, 0.1)'}}
+                      />
+                      <Legend />
+                      <Bar dataKey="count" name="Properties Acquired" fill="#F59E0B" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Tile Count Distribution Card */}
+            {tileCountDistributionData.length > 0 && (
+              <Card className="border-rose-400/30 bg-gradient-to-br from-earthie-dark/80 to-earthie-dark-light/70 shadow-lg">
+                <CardHeader>
+                  <CardTitle className="flex items-center text-rose-300">
+                    <Maximize className="h-5 w-5 mr-2" /> Tile Count Distribution
+                  </CardTitle>
+                  <CardDescription className="text-gray-400">Distribution of property sizes by tile count.</CardDescription>
+                </CardHeader>
+                <CardContent className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={tileCountDistributionData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
+                      <XAxis dataKey="name" stroke="#9ca3af" />
+                      <YAxis stroke="#9ca3af" allowDecimals={false} />
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }}
+                        itemStyle={{ color: '#d1d5db' }}
+                        cursor={{fill: 'rgba(107, 114, 128, 0.1)'}}
+                      />
+                      <Legend />
+                      <Bar dataKey="count" name="Number of Properties" fill="#F43F5E" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* For Sale Status Card */}
+            {forSaleChartData.length > 0 && (
+                <Card className="border-teal-400/30 bg-gradient-to-br from-earthie-dark/80 to-earthie-dark-light/70 shadow-lg">
+                    <CardHeader>
+                        <CardTitle className="flex items-center text-teal-300">
+                            <CheckCircle className="h-5 w-5 mr-2" /> For Sale Status
+                        </CardTitle>
+                        <CardDescription className="text-gray-400">Breakdown of properties listed for sale.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="h-80">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie
+                                    data={forSaleChartData}
+                                    cx="50%"
+                                    cy="50%"
+                                    labelLine={false}
+                                    outerRadius="80%"
+                                    fill="#8884d8"
+                                    dataKey="value"
+                                    nameKey="name"
+                                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                                    stroke="#374151"
+                                >
+                                    {forSaleChartData.map((entry, index) => (
+                                        <Cell key={`cell-forsale-${index}`} fill={index === 0 ? BAR_CHART_COLORS[1] : BAR_CHART_COLORS[3]} />
+                                    ))}
+                                </Pie>
+                                <Tooltip 
+                                    contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }}
+                                    itemStyle={{ color: '#d1d5db' }}
+                                />
+                                <Legend />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </CardContent>
+                </Card>
+            )}
+            
+            {/* EPL Usage Card */}
+            {eplChartData.length > 0 && (
+                <Card className="border-fuchsia-400/30 bg-gradient-to-br from-earthie-dark/80 to-earthie-dark-light/70 shadow-lg">
+                    <CardHeader>
+                        <CardTitle className="flex items-center text-fuchsia-300">
+                            <Tag className="h-5 w-5 mr-2" /> EPL Usage
+                        </CardTitle>
+                        <CardDescription className="text-gray-400">Properties with and without an EPL.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="h-80">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie
+                                    data={eplChartData}
+                                    cx="50%"
+                                    cy="50%"
+                                    labelLine={false}
+                                    outerRadius="80%"
+                                    fill="#8884d8"
+                                    dataKey="value"
+                                    nameKey="name"
+                                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                                    stroke="#374151"
+                                >
+                                    {eplChartData.map((entry, index) => (
+                                        <Cell key={`cell-epl-${index}`} fill={index === 0 ? BAR_CHART_COLORS[4] : BAR_CHART_COLORS[0]} />
+                                    ))}
+                                </Pie>
+                                <Tooltip 
+                                    contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }}
+                                    itemStyle={{ color: '#d1d5db' }}
+                                />
+                                <Legend />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </CardContent>
+                </Card>
+            )}
+
+          </div>
+        </div>
+      )}
+      
+      {/* Fallback if no analytics data and not loading (and user is linked) */}
+      {!isAnalyticsLoading && allPropertiesForAnalytics.length === 0 && linkedE2UserId && !error && (
+         <div className="flex flex-col items-center justify-center py-12 text-sky-300/70 mt-12">
+          <AlertCircle className="h-10 w-10 text-sky-400/50 mb-3" />
+          <p className="text-lg">No property data found to generate full analytics.</p>
+          <p className="text-sm">Please ensure the linked E2 User ID is correct and has properties.</p>
+        </div>
+      )}
+
     </div>
   );
 } 

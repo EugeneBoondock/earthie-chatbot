@@ -92,10 +92,6 @@
     --color-neutral-text: hsl(var(--color-neutral));
   }
 
-  /* Other base styles */
-  * {
-    @apply border-border;
-  }
   body {
     @apply bg-background text-foreground;
     font-family: Arial, Helvetica, sans-serif;

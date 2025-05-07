@@ -72,14 +72,14 @@ export async function POST(request: Request) {
     const body = await request.json();
     e2_user_id = body.e2_user_id;
 
-    if (!e2_user_id || typeof e2_user_id !== 'string') {
+  if (!e2_user_id || typeof e2_user_id !== 'string') {
       return NextResponse.json({ error: 'Valid e2_user_id (string) is required in JSON body' }, { status: 400 });
-    }
+  }
 
-    const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
-    if (!uuidRegex.test(e2_user_id)) {
-      return NextResponse.json({ error: 'Invalid E2 User ID format. Should be a UUID.' }, { status: 400 });
-    }
+  const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+  if (!uuidRegex.test(e2_user_id)) {
+    return NextResponse.json({ error: 'Invalid E2 User ID format. Should be a UUID.' }, { status: 400 });
+  }
 
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
@@ -120,4 +120,4 @@ export async function POST(request: Request) {
     console.error('Catch block error in POST E2 profile:', error.message);
     return NextResponse.json({ error: error.message || 'Failed to save E2 profile' }, { status: 500 });
   }
-}
+} 

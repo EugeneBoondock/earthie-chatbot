@@ -31,7 +31,7 @@ export default function LoginForm() {
       
       // Login successful, determine where to redirect
       const redirectTo = searchParams.get('redirectTo');
-      const targetPath = redirectTo || '/hub/profile'; // Default to /hub/profile if no redirectTo
+      const targetPath = redirectTo || '/hub'; // Default to /hub if no redirectTo
 
       console.log(`[LoginForm] Login successful. Attempting to redirect to: ${targetPath}`);
       

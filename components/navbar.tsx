@@ -77,14 +77,15 @@ export default function Navbar() {
 
   // --- Format Percentage Change (Remains the same, uses context data now) ---
   const formatPercentage = (change: number | null): React.ReactNode => {
-    if (change === null || change === undefined) return <span className="ml-1.5"></span>;
+    if (change === null || change === undefined) return null; // Return null instead of empty span
     const formattedChange = change.toFixed(2);
     let changeClass = 'text-neutral';
     let prefix = '';
     if (change > 0) { changeClass = 'text-positive'; prefix = '+'; }
     else if (change < 0) { changeClass = 'text-negative'; }
+    // Use smaller font size for percentage on smaller screens if needed
     return (
-      <span className={`ml-1.5 font-medium ${changeClass}`}>
+      <span className={`ml-1 text-xs sm:text-sm font-medium ${changeClass}`}>
         ({prefix}{formattedChange}%)
       </span>
     );
@@ -97,57 +98,53 @@ export default function Navbar() {
 
   // --- Ticker Display Content Component (Uses context data) ---
   const TickerContent = () => {
-      // Use the most comprehensive loading state: isInitialising means list or initial selection is pending
-      if (isInitialising || isLoadingPrice) {
-        return <span className="text-sm text-gray-400 animate-pulse">Loading...</span>;
-      }
-      if (priceError) {
-        // Show error, maybe title has more detail
-        return <span className="text-sm text-negative font-medium" title={priceError}>Error</span>;
-      }
-      // Format the current price from context
-      const formattedPrice = currentPrice?.toLocaleString(undefined, {
-          style: 'currency',
-          currency: selectedCurrency.toUpperCase(),
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 6
-      }) ?? 'N/A'; // Display N/A if price is null
+    if (isInitialising || isLoadingPrice) {
+      return <span className="text-xs sm:text-sm text-gray-400 animate-pulse">Loading Price...</span>;
+    }
+    if (priceError) {
+      return <span className="text-xs sm:text-sm text-negative font-medium truncate" title={priceError}>Price Error</span>;
+    }
+    const formattedPrice = currentPrice?.toLocaleString(undefined, {
+        style: 'currency',
+        currency: selectedCurrency.toUpperCase(),
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 6
+    }) ?? 'N/A';
 
-      return (
-          <div className="text-sm text-gray-200 flex items-center whitespace-nowrap">
-              <span className="font-medium">{cryptoSymbol}:</span>
-              <span className="font-semibold text-earthie-mint ml-1">{formattedPrice}</span>
-              {formatPercentage(price24hChange)}
-          </div>
-      );
+    return (
+        <div className="inline-block whitespace-nowrap py-0.5 animate-[marquee_15s_linear_infinite] text-center">
+            <span className="font-medium mr-1">{cryptoSymbol}:</span>
+            <span className="font-semibold text-earthie-mint">{formattedPrice}</span>
+            {formatPercentage(price24hChange)}
+        </div>
+    );
   };
 
   // --- JSX Structure ---
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-gray-700 bg-[#383A4B]/90 backdrop-blur-md">
-      <div className="container mx-auto px-4 flex h-16 items-center justify-between flex-wrap min-w-0">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex h-16 items-center justify-between flex-wrap min-w-0">
 
         {/* Left side: Logo and Name */}
-        <div className="flex items-center gap-2 z-30 min-w-[56px]">
+        <div className="flex items-center gap-2 z-30 flex-shrink-0">
           <Link href="/" className="flex items-center gap-2">
-            <div className="relative w-10 h-10 overflow-hidden rounded-full"> <Image src="/images/earthie_logo.png" alt="Earthie Logo" width={40} height={40} className="object-cover rounded-full"/> </div>
-            <span className="font-bold text-xl hidden md:inline-block text-white">Earthie</span>
+            <div className="relative w-8 h-8 md:w-10 md:h-10 overflow-hidden rounded-full"> {/* Slightly smaller logo on mobile */} 
+              <Image src="/images/earthie_logo.png" alt="Earthie Logo" width={40} height={40} className="object-cover rounded-full" priority /> 
+            </div>
+            <span className="font-bold text-lg md:text-xl hidden sm:inline-block text-white">Earthie</span>
           </Link>
         </div>
 
-        {/* Center: Ticker - always perfectly centered */}
-        <div className="flex-1 flex justify-center min-w-0 overflow-hidden ml-4 md:ml-0">
-          <a href={cryptoLink} target="_blank" rel="noopener noreferrer" className="block cursor-pointer w-full max-w-xs" aria-label={`View ${cryptoSymbol} price on CoinGecko`}>
-            <div className="marquee-container"><div className="marquee-content"><TickerContent /></div></div>
+        {/* Center: Ticker - Flex item, prevents growing/shrinking, centers content */}
+        <div className="flex flex-initial justify-center items-center min-w-0 max-w-md sm:max-w-lg md:max-w-xl lg:max-w-2xl xl:max-w-3xl px-2 mx-2 overflow-hidden"> {/* Re-added max-width, slightly larger values */}
+          <a href={cryptoLink} target="_blank" rel="noopener noreferrer" className="block cursor-pointer w-full" aria-label={`View ${cryptoSymbol} price on CoinGecko`}> 
+            <TickerContent /> 
           </a>
         </div>
 
-        {/* Right: placeholder for perfect centering on mobile */}
-        <div className="min-w-[56px] block md:hidden" aria-hidden="true"></div>
-
-        {/* Right side: Contains Desktop Nav, Currency Selector, Mobile Menu Button */}
-        <div className="flex items-center gap-4 z-30">
-             {/* Desktop Navigation Items */}
+        {/* Right side: Desktop Nav, Currency, Mobile Toggle - Prevent shrinking */}
+        <div className="flex items-center gap-2 sm:gap-4 z-30 flex-shrink-0">
+             {/* Desktop Navigation Items - Hidden below md */}
             <div className="hidden md:flex items-center space-x-4 lg:space-x-6">
               {navItems.map((item) => ( <Link key={item.path} href={item.path} className={`text-sm font-medium transition-colors hover:text-earthie-mint ${ pathname === item.path ? "text-earthie-mint border-b-2 border-earthie-mint" : "text-gray-300" }`}> {item.name} </Link> ))}
 
@@ -179,22 +176,22 @@ export default function Navbar() {
                           </>
                         ) : (
                           <>
-                            <NavigationMenuLink asChild>
-                              <Link
-                                href="/auth/login"
+                        <NavigationMenuLink asChild>
+                          <Link
+                            href="/auth/login"
                                 className="block px-4 py-2 text-sm text-gray-200 hover:text-earthie-mint hover:bg-gray-700 rounded-md"
-                              >
-                                Login
-                              </Link>
-                            </NavigationMenuLink>
-                            <NavigationMenuLink asChild>
-                              <Link
-                                href="/auth/signup"
+                          >
+                            Login
+                          </Link>
+                        </NavigationMenuLink>
+                        <NavigationMenuLink asChild>
+                          <Link
+                            href="/auth/signup"
                                 className="block px-4 py-2 text-sm text-gray-200 hover:text-earthie-mint hover:bg-gray-700 rounded-md"
-                              >
-                                Sign Up
-                              </Link>
-                            </NavigationMenuLink>
+                          >
+                            Sign Up
+                          </Link>
+                        </NavigationMenuLink>
                           </>
                         )}
                       </div>
@@ -204,8 +201,7 @@ export default function Navbar() {
               </NavigationMenu>
             </div>
 
-            {/* Currency Selector (Desktop) - Uses context data */}
-            {/* Show selector only when fully initialised */}
+            {/* Currency Selector (Desktop) - Hidden below md */}
             {!isInitialising && !isLoadingCurrencies && (
                 <div className="hidden md:block">
                     <select
@@ -225,12 +221,11 @@ export default function Navbar() {
                     </select>
                 </div>
             )}
-             {/* Loading indicator */}
              {(isLoadingCurrencies || isInitialising) && (
                  <div className="hidden md:block text-xs text-gray-400 animate-pulse">...</div>
              )}
 
-            {/* Mobile Menu Button */}
+            {/* Mobile Menu Button - Shown below md */}
             <div className="flex items-center md:hidden">
                 <button className="p-2 text-gray-300 hover:text-white" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} aria-label="Toggle menu" aria-expanded={isMobileMenuOpen} > {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />} </button>
             </div>
@@ -238,9 +233,9 @@ export default function Navbar() {
 
       </div>
 
-      {/* Mobile Menu Dropdown - Uses context data */}
+      {/* Mobile Menu Dropdown */}
       {isMobileMenuOpen && (
-         <div className="absolute right-0 top-full w-2/3 bg-[#303240] border-t border-l border-gray-700 md:hidden shadow-lg max-h-[calc(100vh-4rem)] overflow-y-auto rounded-bl-lg z-40">
+         <div className="absolute right-0 top-full w-full sm:w-2/3 md:hidden bg-[#303240] border-t border-l border-gray-700 shadow-lg max-h-[calc(100vh-4rem)] overflow-y-auto rounded-bl-lg z-40">
             <div className="flex flex-col space-y-1 p-4">
               {/* Nav items */}
               {navItems.map((item) => ( <Link key={item.path} href={item.path} onClick={() => setIsMobileMenuOpen(false)} className={`block px-3 py-2 rounded-md text-base font-medium ${ pathname === item.path ? 'bg-earthie-mint text-gray-900' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }`}> {item.name} </Link> ))}
@@ -250,21 +245,21 @@ export default function Navbar() {
               {/* Profile related links for mobile */} 
               {user ? (
                 <>
-                  <Link href="/hub/profile" onClick={() => setIsMobileMenuOpen(false)} className={`block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white`}>
+              <Link href="/hub/profile" onClick={() => setIsMobileMenuOpen(false)} className={`block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white`}>
                     The Hub
-                  </Link>
+              </Link>
                   <button onClick={handleLogout} className={`block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white`}>
                     Logout
                   </button>
                 </>
               ) : (
                 <>
-                  <Link href="/auth/login" onClick={() => setIsMobileMenuOpen(false)} className={`block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white`}>
-                    Login
-                  </Link>
-                  <Link href="/auth/signup" onClick={() => setIsMobileMenuOpen(false)} className={`block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white`}>
-                    Sign Up
-                  </Link>
+              <Link href="/auth/login" onClick={() => setIsMobileMenuOpen(false)} className={`block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white`}>
+                Login
+              </Link>
+              <Link href="/auth/signup" onClick={() => setIsMobileMenuOpen(false)} className={`block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white`}>
+                Sign Up
+              </Link>
                 </>
               )}
               
@@ -272,21 +267,25 @@ export default function Navbar() {
 
               {/* Mobile Currency Selector */}
               {!isInitialising && !isLoadingCurrencies && (
-                  <div className="px-3 py-2">
-                      <label htmlFor="currency-select-mobile" className="block text-sm font-medium text-gray-400 mb-1">Currency:</label>
-                      <select
-                          id="currency-select-mobile"
-                          value={selectedCurrency} // From context
-                          onChange={(e) => {handleCurrencyChange(e); setIsMobileMenuOpen(false);}} // Calls context update & closes menu
-                          className="w-full bg-gray-700 border border-gray-600 text-white text-sm rounded p-1.5 pr-6 focus:ring-earthie-mint focus:border-earthie-mint cursor-pointer"
-                          aria-label="Select Fiat Currency"
-                      >
-                         {supportedFiatCurrencies.map(currency => ( <option key={currency} value={currency}> {currency.toUpperCase()} </option> ))}
-                      </select>
-                  </div>
-               )}
+                <div className="mt-4">
+                  <label htmlFor="currency-select-mobile" className="text-sm font-medium text-gray-400 mb-1 block">Currency:</label>
+                  <select
+                      id="currency-select-mobile"
+                      value={selectedCurrency}
+                      onChange={(e) => { handleCurrencyChange(e); setIsMobileMenuOpen(false); }}
+                      className="w-full bg-gray-700 border border-gray-600 text-white text-sm rounded p-2 focus:ring-earthie-mint focus:border-earthie-mint"
+                      aria-label="Select Fiat Currency"
+                  >
+                      {supportedFiatCurrencies.map(currency => (
+                          <option key={currency} value={currency}>
+                              {currency.toUpperCase()}
+                          </option>
+                      ))}
+                  </select>
+                </div>
+              )}
                {(isLoadingCurrencies || isInitialising) && (
-                   <div className="px-3 py-2 text-sm text-gray-400 animate-pulse">Loading currencies...</div>
+                   <div className="mt-4 text-sm text-gray-400 animate-pulse">Loading currency...</div>
                )}
             </div>
          </div>
