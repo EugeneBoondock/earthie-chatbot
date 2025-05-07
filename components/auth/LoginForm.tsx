@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase' // Ensure this uses createClientComponentClient or createBrowserClient
+import { useSearchParams } from 'next/navigation'
 import { useRouter } from 'next/navigation'
 
 export default function LoginForm() {
@@ -9,6 +10,7 @@ export default function LoginForm() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const searchParams = useSearchParams()
   const router = useRouter()
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -17,19 +19,34 @@ export default function LoginForm() {
     setLoading(true)
 
     try {
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+      const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
-      if (signInError) throw signInError
+      if (signInError) {
+        // If Supabase returns an error, throw it to be caught by the catch block
+        throw signInError
+      }
+      
+      // Login successful, determine where to redirect
+      const redirectTo = searchParams.get('redirectTo');
+      const targetPath = redirectTo || '/hub/profile'; // Default to /hub/profile if no redirectTo
 
-      router.refresh()
+      console.log(`[LoginForm] Login successful. Attempting to redirect to: ${targetPath}`);
+      
+      // Navigate to the target path
+      router.push(targetPath); 
+
+      // setLoading(false) will be effectively handled by the component unmounting on navigation,
+      // or you could set it here if you want to be explicit, though often unnecessary.
+      // If the navigation is very fast, this might not even visually register.
+      // setLoading(false); // Optional: if you want to ensure it's reset before navigation completes
 
     } catch (error: any) {
-      setError(error.message)
-    } finally {
-      setLoading(false)
+      console.error("[LoginForm] Login error:", error.message);
+      setError(error.message); // Display the error to the user
+      setLoading(false); // Ensure loading is set to false on error
     }
   }
 

@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"; 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Loader2, AlertCircle, MapPin, Maximize, Building, Zap, Tag, Landmark, CheckCircle, XCircle, Gem, ShieldCheck } from 'lucide-react';
+import { Loader2, AlertCircle, MapPin, Maximize, Building, Zap, Tag, Landmark, CheckCircle, XCircle, Gem, ShieldCheck, User, Globe, ArrowUpRight } from 'lucide-react';
 
 // --- Interfaces for Earth2 API responses ---
 interface E2UserInfo {
@@ -193,34 +193,64 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="text-3xl font-bold text-sky-300 mb-6">Your Earth2 Profile</h1>
-      <p className="text-lg text-cyan-200/90 mb-4">
-        Link your Earth2 profile to view your details and properties.
-      </p>
+      {/* Header Section with Glassmorphic Effect */}
+      <div className="relative overflow-hidden rounded-2xl p-8 backdrop-blur-lg bg-gradient-to-br from-sky-900/40 to-blue-900/30 border border-sky-400/30 shadow-xl">
+        <div className="absolute inset-0 bg-gradient-to-br from-sky-500/10 to-blue-500/5 z-0"></div>
+        <div className="absolute -top-24 -right-24 w-64 h-64 bg-earthie-mint/20 rounded-full blur-3xl"></div>
+        <div className="absolute -bottom-32 -left-32 w-80 h-80 bg-sky-400/10 rounded-full blur-3xl"></div>
+        
+        <div className="relative z-10">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-sky-300 to-blue-300 inline-block text-transparent bg-clip-text mb-4">
+            Your Earth2 Profile
+          </h1>
+          <p className="text-lg text-cyan-200/90 max-w-3xl">
+            Connect your Earth2 profile to view your properties, stats, and track your portfolio in one place.
+          </p>
+        </div>
+      </div>
 
-      <Card className="shadow-xl bg-gray-800/40 border-sky-500/30">
-        <CardHeader>
-          <CardTitle>Link Your Earth2 Profile</CardTitle>
-          <CardDescription>Paste your Earth2 profile link or just your User ID to fetch and display your public data.</CardDescription>
-        </CardHeader>
-        <CardContent>
+      {/* Profile Linking Card with Glassmorphic Effect */}
+      <div className="backdrop-blur-md bg-gradient-to-br from-earthie-dark/70 to-earthie-dark-light/60 border border-sky-500/30 rounded-xl shadow-xl overflow-hidden">
+        <div className="p-6 border-b border-sky-500/20 flex items-center">
+          <User className="h-5 w-5 text-sky-400 mr-3" />
+          <div>
+            <h2 className="text-xl font-semibold text-white">Link Your Earth2 Profile</h2>
+            <p className="text-sm text-gray-300">Paste your Earth2 profile link or just your User ID to fetch and display your public data.</p>
+          </div>
+        </div>
+        <div className="p-6">
           <form onSubmit={handleLinkSubmit} className="flex flex-col sm:flex-row gap-3">
-            <Input
-              type="text"
-              placeholder="e.g., https://app.earth2.io/#profile/YOUR_USER_ID"
-              value={e2ProfileInput}
-              onChange={(e) => setE2ProfileInput(e.target.value)}
-              className="flex-grow bg-gray-800/70 border-sky-600/50"
-              disabled={linkingLoading}
-            />
-            <Button type="submit" disabled={isLoading || !e2ProfileInput || e2ProfileInput === linkedE2UserId}>
+            <div className="relative flex-grow">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Globe className="h-5 w-5 text-sky-500/50" />
+              </div>
+              <Input
+                type="text"
+                placeholder="e.g., https://app.earth2.io/#profile/YOUR_USER_ID"
+                value={e2ProfileInput}
+                onChange={(e) => setE2ProfileInput(e.target.value)}
+                className="flex-grow pl-10 bg-earthie-dark-light/50 border-sky-500/30 backdrop-blur-sm focus:border-sky-400/70 focus:ring-1 focus:ring-sky-400/70 transition-all"
+                disabled={linkingLoading}
+              />
+            </div>
+            <Button 
+              type="submit" 
+              disabled={isLoading || !e2ProfileInput || e2ProfileInput === linkedE2UserId}
+              className="bg-sky-600/80 hover:bg-sky-500/90 border border-sky-400/30 transition-all duration-300"
+            >
               {linkingLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               {linkedE2UserId === extractE2UserId(e2ProfileInput) && !dataLoading ? 'Re-fetch Data' : 'Link & Fetch Data'}
+              {!linkingLoading && <ArrowUpRight className="ml-2 h-4 w-4" />}
             </Button>
           </form>
-          {error && !dataLoading && <p className="text-sm text-red-400 mt-3 flex items-center"><AlertCircle className="h-4 w-4 mr-2" />{error}</p>}
-        </CardContent>
-      </Card>
+          {error && !dataLoading && (
+            <div className="mt-4 bg-red-900/20 border border-red-500/30 rounded-lg p-3 flex items-center text-sm text-red-300">
+              <AlertCircle className="h-5 w-5 mr-2 text-red-400" />
+              <p>{error}</p>
+            </div>
+          )}
+        </div>
+      </div>
 
       {dataLoading && !userInfo && (
         <div className="flex flex-col items-center justify-center py-12 text-sky-300">
