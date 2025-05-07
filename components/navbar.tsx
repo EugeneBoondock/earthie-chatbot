@@ -5,7 +5,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { Menu, X } from "lucide-react"
-import { useState } from "react" // Only keep useState for mobile menu toggle
+import { useState, useEffect } from "react" // useEffect imported
 import { usePriceContext } from "@/contexts/PriceContext"; // Import the custom hook
 import { format } from 'date-fns'; // For formatting dates if needed elsewhere
 import {
@@ -16,6 +16,9 @@ import {
   NavigationMenuList,
   NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu"
+import { supabase } from "@/lib/supabase" // Imported Supabase client
+import type { User } from "@supabase/supabase-js" // Imported User type
+import { useRouter } from 'next/navigation' // To redirect after logout
 
 const navItems = [
   { name: "Home", path: "/" },
@@ -32,6 +35,32 @@ const cryptoLink = 'https://www.coingecko.com/en/coins/earth-2-essence';
 export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
+  const router = useRouter(); // Initialize router
+  const [user, setUser] = useState<User | null>(null); // User state
+
+  // --- Supabase Auth Listener ---
+  useEffect(() => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    // Fetch initial session (optional, as onAuthStateChange fires on load)
+    // supabase.auth.getSession().then(({ data: { session } }) => {
+    //   setUser(session?.user ?? null);
+    // });
+
+    return () => {
+      authListener?.subscription?.unsubscribe();
+    };
+  }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    router.push('/'); // Redirect to home after logout
+    // Optionally close mobile menu if open
+    setIsMobileMenuOpen(false);
+  };
 
   // --- Consume Price Context ---
   const {
@@ -130,23 +159,44 @@ export default function Navbar() {
                       Profile
                     </NavigationMenuTrigger>
                     <NavigationMenuContent>
-                      <div className="w-48 p-2">
-                        <NavigationMenuLink asChild>
-                          <Link
-                            href="/auth/login"
-                            className="block px-4 py-2 text-sm text-gray-300 hover:text-earthie-mint hover:bg-gray-700 rounded-md"
-                          >
-                            Login
-                          </Link>
-                        </NavigationMenuLink>
-                        <NavigationMenuLink asChild>
-                          <Link
-                            href="/auth/signup"
-                            className="block px-4 py-2 text-sm text-gray-300 hover:text-earthie-mint hover:bg-gray-700 rounded-md"
-                          >
-                            Sign Up
-                          </Link>
-                        </NavigationMenuLink>
+                      <div className="w-48 p-2 bg-gray-800 border border-gray-700 rounded-md shadow-lg">
+                        {user ? (
+                          <>
+                            <NavigationMenuLink asChild>
+                              <Link
+                                href="/hub/profile"
+                                className="block px-4 py-2 text-sm text-gray-200 hover:text-earthie-mint hover:bg-gray-700 rounded-md"
+                              >
+                                The Hub
+                              </Link>
+                            </NavigationMenuLink>
+                            <button
+                              onClick={handleLogout}
+                              className="block w-full text-left px-4 py-2 text-sm text-gray-200 hover:text-earthie-mint hover:bg-gray-700 rounded-md"
+                            >
+                              Logout
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <NavigationMenuLink asChild>
+                              <Link
+                                href="/auth/login"
+                                className="block px-4 py-2 text-sm text-gray-200 hover:text-earthie-mint hover:bg-gray-700 rounded-md"
+                              >
+                                Login
+                              </Link>
+                            </NavigationMenuLink>
+                            <NavigationMenuLink asChild>
+                              <Link
+                                href="/auth/signup"
+                                className="block px-4 py-2 text-sm text-gray-200 hover:text-earthie-mint hover:bg-gray-700 rounded-md"
+                              >
+                                Sign Up
+                              </Link>
+                            </NavigationMenuLink>
+                          </>
+                        )}
                       </div>
                     </NavigationMenuContent>
                   </NavigationMenuItem>
@@ -198,18 +248,25 @@ export default function Navbar() {
               <hr className="border-gray-600 my-2" />
 
               {/* Profile related links for mobile */} 
-              {/* TODO: Conditionally render based on session state later */}
-              {/* For now, showing Login/Sign Up, assuming user is not logged in, or showing all for testing */}
-              
-              <Link href="/hub/profile" onClick={() => setIsMobileMenuOpen(false)} className={`block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white`}>
-                My Profile (Hub)
-              </Link>
-              <Link href="/auth/login" onClick={() => setIsMobileMenuOpen(false)} className={`block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white`}>
-                Login
-              </Link>
-              <Link href="/auth/signup" onClick={() => setIsMobileMenuOpen(false)} className={`block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white`}>
-                Sign Up
-              </Link>
+              {user ? (
+                <>
+                  <Link href="/hub/profile" onClick={() => setIsMobileMenuOpen(false)} className={`block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white`}>
+                    The Hub
+                  </Link>
+                  <button onClick={handleLogout} className={`block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white`}>
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link href="/auth/login" onClick={() => setIsMobileMenuOpen(false)} className={`block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white`}>
+                    Login
+                  </Link>
+                  <Link href="/auth/signup" onClick={() => setIsMobileMenuOpen(false)} className={`block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white`}>
+                    Sign Up
+                  </Link>
+                </>
+              )}
               
               <hr className="border-gray-600 my-2" />
 
