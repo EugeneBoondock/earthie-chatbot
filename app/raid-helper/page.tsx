@@ -654,15 +654,6 @@ export default function RaidHelperPage() {
                         </div>
                     </CardContent>
                 </Card>
-                {/* --- Preview Section (Sample Data) --- */}
-                {!isLoading && !((raidData && raidData.length > 0) || hasStoredData) && <RaidHelperPreview />}
-{/* If there is no data after upload, show a fallback message instead of preview */}
-{!isLoading && ((raidData && raidData.length === 0) || (hasStoredData && (!raidData || raidData.length === 0))) && (
-  <div className="flex justify-center items-center py-10">
-    <p className="text-muted-foreground text-center">No raid data found. Please upload a valid CSV file to begin analysis.</p>
-  </div>
-)}
-
                 {/* --- Loading Indicator --- */}
                 {isLoading && (
                     <div className="flex justify-center items-center py-10">
@@ -925,8 +916,8 @@ export default function RaidHelperPage() {
                     </Tabs>
                 )}
 
-                {/* --- Preview Component --- */}
-                {!file && !isLoading && !error && <RaidHelperPreview />}
+                {/* --- Preview Component (Single instance with updated condition) --- */}
+                {!file && (!raidData || raidData.length === 0) && !isLoading && !error && <RaidHelperPreview />}
             </div>
         </>
     );
