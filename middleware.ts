@@ -13,9 +13,22 @@ const protectedRoutes = [
 export default async function middleware(req: NextRequest) {
   const res = NextResponse.next()
   
+  // Ensure these environment variables are set in your Vercel project settings
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.error('Supabase URL or Anon Key is missing in environment variables.')
+    // Optionally, you could return a different response or allow access
+    // depending on how critical Supabase is for non-protected routes immediately.
+    // For now, we'll proceed, but client creation will fail if these are missing.
+    // Returning res might be problematic if Supabase client is needed universally.
+    // Consider throwing an error or specific handling if these are truly undefined in prod.
+  }
+
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl!, // Added non-null assertion, ensure they are set in Vercel
+    supabaseAnonKey!, // Added non-null assertion, ensure they are set in Vercel
     {
       cookies: {
         get: (name) => req.cookies.get(name)?.value,
