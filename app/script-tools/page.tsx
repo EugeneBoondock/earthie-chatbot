@@ -91,6 +91,7 @@ export default function DevToolsPage() {
   const [likingStatus, setLikingStatus] = useState<{ [key: string]: boolean }>({}); // Tracks if like RPC is in progress
   const [downloadingStatus, setDownloadingStatus] = useState<{ [key: string]: boolean }>({}); // Tracks if download RPC is in progress
   const [copiedStatus, setCopiedStatus] = useState<{ [key: string]: boolean }>({});
+  const [fetchingFileContent, setFetchingFileContent] = useState<Set<string>>(new Set());
   const [newScript, setNewScript] = useState<NewScriptData>({
     title: "", description: "", author: "", code: "", file: null, support_url: "",
   });
@@ -246,6 +247,55 @@ export default function DevToolsPage() {
   const formatDate = (ds: string | null) => { if (!ds) return "N/A"; try { return new Date(ds).toLocaleDateString("en-US", { year: 'numeric', month: 'short', day: 'numeric' }); } catch (e) { return "Invalid Date"; } }
   const generateFilename = (t: string, ext: string) => { const st = t.replace(/[^a-z0-9]/gi, '_').toLowerCase(); return `${st || 'script'}.${ext}`; }
 
+  // --- NEW HELPERS & EFFECTS FOR FILE PREVIEW -----------------------------------------
+  // Helper to determine if a filename corresponds to a preview-able text file
+  const isTextBasedFile = (filename: string): boolean => {
+    const textExts = ['js', 'jsx', 'ts', 'tsx', 'py', 'sh', 'json', 'css', 'html', 'txt', 'md', 'csv'];
+    const extMatch = filename.split('.').pop()?.toLowerCase();
+    return extMatch ? textExts.includes(extMatch) : false;
+  };
+
+  // Whenever scripts change, fetch the content for any text files that do not yet have `code`
+  useEffect(() => {
+    const fetchMissingCode = async () => {
+      const updatedScriptsPromises = scripts.map(async (script) => {
+        // Skip if code already present, no file_url, or not a text file, or already fetching
+        if (script.code || !script.file_url || !isTextBasedFile(script.file_url) || fetchingFileContent.has(script.id)) {
+          return script;
+        }
+        try {
+          // Mark as fetching to avoid duplicate requests in fast re-renders
+          setFetchingFileContent((prev: Set<string>) => new Set(prev).add(script.id));
+          const resp = await fetch(script.file_url);
+          if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+          const text = await resp.text();
+          return { ...script, code: text } as Script;
+        } catch (err) {
+          console.error(`Failed to fetch file content for script ${script.id}:`, err);
+          return script; // Return unchanged on failure
+        } finally {
+          setFetchingFileContent((prev: Set<string>) => {
+            const next = new Set(prev);
+            next.delete(script.id);
+            return next;
+          });
+        }
+      });
+
+      const updatedScripts = await Promise.all(updatedScriptsPromises);
+      // Only update state if at least one script gained code content
+      const hasChanges = updatedScripts.some((s, idx) => s.code !== scripts[idx].code);
+      if (hasChanges) {
+        setScripts(updatedScripts);
+      }
+    };
+
+    if (scripts.length) {
+      fetchMissingCode();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scripts]);
+  // ------------------------------------------------------------------------------------
 
   // --- Component Return / JSX ---
   return (
@@ -277,9 +327,6 @@ export default function DevToolsPage() {
                                     <pre className="text-sm text-gray-300 whitespace-pre-wrap break-words font-mono pr-10">{script.code}</pre>
                                 </div>
                             )}
-                            {script.file_url && (
-                                <div className="mb-4"> <a href={script.file_url} target="_blank" rel="noopener noreferrer" download className={`inline-flex items-center px-3 py-1 border border-earthie-mint text-earthie-mint text-sm rounded hover:bg-earthie-mint/10 active:bg-earthie-mint/20 transition-colors ${downloadingStatus[script.id] ? 'opacity-50 cursor-wait' : ''}`} onClick={(e) => { if (downloadingStatus[script.id]) { e.preventDefault(); return; } handleDownload(script.id, () => {}); }} aria-disabled={downloadingStatus[script.id]} > <Download className="mr-2 h-4 w-4" /> Download Attached File </a> </div>
-                            )}
                             {script.support_url && (
                                 <div className="mt-2"> <a href={script.support_url} target="_blank" rel="noopener noreferrer nofollow" className="inline-flex items-center text-xs text-earthie-mint hover:underline"> <LinkIcon className="h-4 w-4 mr-1" /> Support the Author </a> </div>
                             )}
@@ -298,7 +345,9 @@ export default function DevToolsPage() {
                                     <Download className="mr-2 h-4 w-4" /> Download Code Snippet
                                 </Button>
                             )}
-                            {!script.code && script.file_url && (<div className="text-sm text-gray-500 italic text-right w-full sm:w-auto"> (File attached)</div>)}
+                            {!script.code && script.file_url && (
+                                <div className="text-sm text-gray-500 italic text-right w-full sm:w-auto">(File attached)</div>
+                            )}
                         </CardFooter>
                     </Card>
                 );
