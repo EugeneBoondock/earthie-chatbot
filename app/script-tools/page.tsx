@@ -36,6 +36,7 @@ type Script = {
   code: string | null;
   likes: number;
   downloads: number;
+  copies: number;
   file_url: string | null;
   support_url: string | null;
 }
@@ -91,6 +92,7 @@ export default function DevToolsPage() {
   const [likingStatus, setLikingStatus] = useState<{ [key: string]: boolean }>({}); // Tracks if like RPC is in progress
   const [downloadingStatus, setDownloadingStatus] = useState<{ [key: string]: boolean }>({}); // Tracks if download RPC is in progress
   const [copiedStatus, setCopiedStatus] = useState<{ [key: string]: boolean }>({});
+  const [copyingStatus, setCopyingStatus] = useState<{ [key: string]: boolean }>({}); // prevent double RPC calls
   const [fetchingFileContent, setFetchingFileContent] = useState<Set<string>>(new Set());
   const [newScript, setNewScript] = useState<NewScriptData>({
     title: "", description: "", author: "", code: "", file: null, support_url: "",
@@ -204,12 +206,31 @@ export default function DevToolsPage() {
    // --- Copy Logic ---
    const handleCopyCode = useCallback((scriptId: string, codeToCopy: string | null) => {
        if (!codeToCopy) return;
-       navigator.clipboard.writeText(codeToCopy).then(() => {
+       if (copyingStatus[scriptId]) return; // prevent duplicate RPCs while one in progress
+
+       navigator.clipboard.writeText(codeToCopy).then(async () => {
+         // Visual feedback
          setCopiedStatus(prev => ({ ...prev, [scriptId]: true }));
          setTimeout(() => { setCopiedStatus(prev => ({ ...prev, [scriptId]: false })); }, 1500);
+
+         // Optimistically update local copies count for immediate UI feedback
+         setScripts(prev => prev.map(s => s.id === scriptId ? { ...s, copies: (s.copies ?? 0) + 1 } : s));
+
+         // Increment copies count in DB
+         try {
+           setCopyingStatus(prev => ({ ...prev, [scriptId]: true }));
+           const { error: rpcError } = await supabase.rpc('increment_copies', { script_id_input: scriptId });
+           if (rpcError) {
+             console.error('Error incrementing copies via RPC:', rpcError);
+           }
+         } catch (err) {
+           console.error('Client-side error during copies increment:', err);
+         } finally {
+           setCopyingStatus(prev => ({ ...prev, [scriptId]: false }));
+         }
        }).catch(err => { console.error('Failed to copy code: ', err); });
-   // No external dependencies needed
-   }, []);
+   // Dependencies
+   }, [copyingStatus, fetchScripts]);
 
   // --- Form Handling & Helpers (Keep inside component or move if preferred) ---
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -339,6 +360,7 @@ export default function DevToolsPage() {
                                 </Button>
                                 <span className="text-sm whitespace-nowrap" title={`${script.likes ?? 0} likes`}>{script.likes ?? 0} likes</span>
                                 <span className="text-sm whitespace-nowrap" title={`${script.downloads ?? 0} downloads`}>{script.downloads ?? 0} downloads</span>
+                                <span className="text-sm whitespace-nowrap" title={`${script.copies ?? 0} copies`}>{script.copies ?? 0} copies</span>
                             </div>
                             {script.code && (
                                 <Button variant="outline" size="sm" className={`text-earthie-mint border-earthie-mint hover:bg-earthie-mint/10 active:bg-earthie-mint/20 w-full sm:w-auto ${downloadingStatus[script.id] ? 'opacity-50 cursor-wait' : ''}`} onClick={(e) => { if (downloadingStatus[script.id]) return; handleDownload(script.id, () => { const blob = new Blob([script.code ?? ''], { type: 'text/plain;charset=utf-8' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = generateFilename(script.title, 'txt'); document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); }); }} disabled={downloadingStatus[script.id]} >
