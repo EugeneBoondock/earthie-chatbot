@@ -26,6 +26,14 @@ export default function HubPage() {
       link: "/hub/lobbyist",
       gradient: "from-indigo-900/50 to-purple-900/50",
       borderColor: "border-indigo-400/30"
+    },
+    {
+      title: "Essence Tracker",
+      description: "Track Essence price, wallet, and analytics",
+      icon: <BarChart3 className="h-8 w-8 text-earthie-mint" />,
+      link: "/hub/essence",
+      gradient: "from-teal-800/50 to-cyan-800/50",
+      borderColor: "border-teal-400/30"
     }
   ];
 

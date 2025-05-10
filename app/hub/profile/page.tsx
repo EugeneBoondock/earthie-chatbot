@@ -9,6 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Loader2, AlertCircle, MapPin, Maximize, Building, Zap, Tag, Landmark, CheckCircle, XCircle, Gem, ShieldCheck, User, Globe, ArrowUpRight, LinkIcon, PlusCircle, Trash2 } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { BarChart, CartesianGrid, XAxis, YAxis, Bar } from 'recharts';
+import { get as idbGet, set as idbSet } from 'idb-keyval';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Progress } from '@/components/ui/progress';
 
 // --- Interfaces for Earth2 API responses ---
 interface E2UserInfo {
@@ -93,6 +96,9 @@ const extractE2UserId = (input: string): string | null => {
   return match ? match[0] : null;
 };
 
+// Helper for IndexedDB cache key
+const getCacheKey = (userId: string) => `e2_properties_${userId}`;
+
 export default function ProfilePage() {
   const [e2ProfileInput, setE2ProfileInput] = useState('');
   const [linkedE2UserId, setLinkedE2UserId] = useState<string | null>(null);
@@ -102,6 +108,7 @@ export default function ProfilePage() {
   const [allPropertiesForAnalytics, setAllPropertiesForAnalytics] = useState<E2Property[]>([]);
   const [propertiesMeta, setPropertiesMeta] = useState<E2PropertiesResponse['meta'] | null>(null);
   const [propertiesCurrentPage, setPropertiesCurrentPage] = useState(1);
+  const [cachedProps, setCachedProps] = useState<E2Property[] | null>(null); // IndexedDB cache
 
   const [loading, setLoading] = useState(false); // General loading, might be redundant if linking/data loading are specific enough
   const [linkingLoading, setLinkingLoading] = useState(false);
@@ -123,6 +130,51 @@ export default function ProfilePage() {
   const [addPropertySuccess, setAddPropertySuccess] = useState<string | null>(null);
   const [trackedProperties, setTrackedProperties] = useState<TrackedProperty[]>([]);
   const [isLoadingTrackedProperties, setIsLoadingTrackedProperties] = useState<boolean>(false);
+
+  // --- NEW: Sort & Filter State ---
+  const [sortOption, setSortOption] = useState<'latest'|'size'>('latest');
+  const [tierFilter, setTierFilter] = useState<number|null>(null); // 1,2,3
+  const [searchQuery, setSearchQuery] = useState<string>('');
+
+  const PER_PAGE_DISPLAY = 12;
+
+  // Compute displayed properties after sort/filter
+  const displayedData = useMemo(() => {
+    const source = cachedProps?.length ? cachedProps : properties;
+    let list = [...source];
+
+    // search
+    if (searchQuery.trim() !== '') {
+      const q = searchQuery.toLowerCase();
+      list = list.filter(p => (p.attributes.description?.toLowerCase().includes(q) || p.attributes.location?.toLowerCase().includes(q)));
+    }
+
+    if (tierFilter !== null) {
+      list = list.filter(p => p.attributes.landfieldTier === tierFilter);
+    }
+    if (sortOption === 'size') {
+      list.sort((a,b) => (b.attributes.tileCount||0) - (a.attributes.tileCount||0));
+    } else { // 'latest'
+      list.sort((a,b) => {
+        // Featured first
+        const featA = a.attributes.isFeatured ? 1 : 0;
+        const featB = b.attributes.isFeatured ? 1 : 0;
+        if (featB - featA !== 0) return featB - featA;
+        const dateA = a.attributes.purchasedAt ? new Date(a.attributes.purchasedAt).getTime() : 0;
+        const dateB = b.attributes.purchasedAt ? new Date(b.attributes.purchasedAt).getTime() : 0;
+        return dateB - dateA;
+      });
+    }
+    return list;
+  }, [properties, cachedProps, sortOption, tierFilter, searchQuery]);
+
+  // total pages after filter
+  const totalFilteredPages = Math.max(1, Math.ceil(displayedData.length / PER_PAGE_DISPLAY));
+
+  const paginatedDisplay = displayedData.slice((propertiesCurrentPage-1)*PER_PAGE_DISPLAY, propertiesCurrentPage*PER_PAGE_DISPLAY);
+
+  // reset page when filters change
+  useEffect(()=>{setPropertiesCurrentPage(1);}, [sortOption, tierFilter, searchQuery]);
 
   // --- Fetch Exchange Rate ---
   useEffect(() => {
@@ -292,8 +344,10 @@ export default function ProfilePage() {
       setUserInfo(null);
       setError(null);
 
-      fetchE2Data(linkedE2UserId, 1);
-      fetchAllPropertiesForAnalytics(linkedE2UserId);
+      // First try to populate from cache (inside fetchAllProperties...), then load first display page.
+      fetchAllPropertiesForAnalytics(linkedE2UserId).finally(() => {
+        fetchE2Data(linkedE2UserId, 1);
+      });
     }
   }, [linkedE2UserId]);
 
@@ -302,6 +356,22 @@ export default function ProfilePage() {
     if (page === 1 && !userInfo) {
         setDataLoading(true);
         setError(null);
+    }
+
+    // If we have cached properties, serve from cache to avoid network
+    if (cachedProps) {
+      const PER_PAGE = 12;
+      const start = (page - 1) * PER_PAGE;
+      const slice = cachedProps.slice(start, start + PER_PAGE);
+      setProperties(slice);
+      setPropertiesMeta({
+        count: cachedProps.length,
+        current_page: page,
+        last_page: Math.ceil(cachedProps.length / PER_PAGE),
+        per_page: PER_PAGE,
+      });
+      setPropertiesCurrentPage(page);
+      return; // Skip network
     }
 
     try {
@@ -326,9 +396,21 @@ export default function ProfilePage() {
       }
       const propertiesData: E2PropertiesResponse = await propertiesRes.json();
       
-      setProperties(propertiesData.data || []); 
-      setPropertiesMeta(propertiesData.meta || null); 
-      setPropertiesCurrentPage(page);
+      setProperties(propertiesData.data || []);
+
+      const fallbackPerPage = 12;
+      const metaFromApi = (propertiesData.meta ?? {}) as Partial<E2PropertiesResponse['meta']>;
+
+      const countVal = (metaFromApi && metaFromApi.count !== undefined) ? metaFromApi.count : (userInfo?.userLandfieldCount ?? propertiesMeta?.count ?? 0);
+      const perPageVal = (metaFromApi && metaFromApi.per_page !== undefined) ? metaFromApi.per_page : fallbackPerPage;
+      const normalizedMeta: E2PropertiesResponse['meta'] = {
+        count: countVal,
+        current_page: page,
+        per_page: perPageVal,
+        last_page: (metaFromApi && metaFromApi.last_page !== undefined) ? metaFromApi.last_page : (countVal ? Math.ceil(countVal / perPageVal) : undefined),
+      };
+
+      setPropertiesMeta(normalizedMeta);
 
     } catch (err: any) {
       console.error('Error fetching E2 data for display:', err);
@@ -344,14 +426,211 @@ export default function ProfilePage() {
     if (!userId) return;
     setIsAnalyticsLoading(true);
     setAllPropertiesForAnalytics([]);
+
+    // --- Determine expected total property count ---
+    let expectedCount: number | undefined = undefined;
+    try {
+      const infoRes = await fetch(`https://app.earth2.io/api/v2/user_info/${userId}`);
+      if (infoRes.ok) {
+        const info: E2UserInfo = await infoRes.json();
+        expectedCount = info.userLandfieldCount ?? info.userNetworth?.totalTiles;
+        console.log(`[Analytics] Expected total properties from user info: ${expectedCount}`);
+      }
+    } catch (err) {
+      console.error('[Analytics] Failed to fetch user info for expected count:', err);
+    }
+
+    // Attempt to load from IndexedDB first
+    try {
+      const cached: E2Property[] | undefined = await idbGet(getCacheKey(userId));
+      if (cached && cached.length > 0) {
+        // If we couldn't get expectedCount, assume cache is good. Otherwise require exact match.
+        if (expectedCount === undefined || cached.length === expectedCount) {
+          console.log('[Cache] Using cached property data from IndexedDB.');
+          setCachedProps(cached);
+          setAllPropertiesForAnalytics(cached);
+          // Prime first page list if not already loaded
+          const PER_PAGE = 12;
+          setProperties(cached.slice(0, PER_PAGE));
+          setPropertiesMeta({
+            count: cached.length,
+            current_page: 1,
+            last_page: Math.ceil(cached.length / PER_PAGE),
+            per_page: PER_PAGE,
+          });
+          setPropertiesCurrentPage(1);
+          setIsAnalyticsLoading(false);
+          return; // Skip network fetching
+        }
+      }
+    } catch (err) {
+      console.error('[Cache] Error accessing IndexedDB:', err);
+    }
+
+    // --- LETTER BASED FETCH STRATEGY FOR LARGE PORTFOLIOS ---
+    if (expectedCount !== undefined && expectedCount > 9900) {
+      const PER_PAGE_LETTERS = 60;
+      const MAX_PAGES_PER_PASS = 166; // 166 * 60 ≈ 10k – Earth2 hard cap per query
+      const letters = 'abcdefghijklmnopqrstuvwxyz0123456789*'.split('');
+
+      const uniqueMap = new Map<string, E2Property>();
+
+      for (const letter of letters) {
+        try {
+          // 1️⃣ First page for this letter to get meta.count
+          const baseUrl = new URL('/api/e2/properties', window.location.origin);
+          baseUrl.searchParams.set('perPage', String(PER_PAGE_LETTERS));
+          baseUrl.searchParams.set('userId', userId);
+          baseUrl.searchParams.set('sort', 'description');
+          baseUrl.searchParams.set('search', letter);
+          baseUrl.searchParams.append('searchTerms[]', 'description');
+
+          const firstUrl = new URL(baseUrl.toString());
+          firstUrl.searchParams.set('page', '1');
+
+          const firstRes = await fetch(firstUrl.toString());
+          if (!firstRes.ok) {
+            continue; // skip on error
+          }
+          const firstData: E2PropertiesResponse = await firstRes.json();
+          if (firstData.data?.length) firstData.data.forEach(p => uniqueMap.set(p.id, p));
+
+          const letterCount = firstData.meta?.count ?? 0;
+          if (letterCount === 0) continue;
+
+          const totalPagesForLetter = Math.ceil(letterCount / PER_PAGE_LETTERS);
+          const pagesToFetchAsc = Math.min(totalPagesForLetter, MAX_PAGES_PER_PASS);
+
+          // Ascending pages 2..pagesToFetchAsc
+          for (let page = 2; page <= pagesToFetchAsc; page++) {
+            const url = new URL(baseUrl.toString());
+            url.searchParams.set('page', String(page));
+            try {
+              const res = await fetch(url.toString());
+              if (!res.ok) break;
+              const data: E2PropertiesResponse = await res.json();
+              if (!data.data?.length) break;
+              data.data.forEach(p => uniqueMap.set(p.id, p));
+            } catch {
+              break;
+            }
+          }
+
+          // Descending pages if > MAX_PAGES_PER_PASS
+          if (totalPagesForLetter > MAX_PAGES_PER_PASS) {
+            let pagesFetchedDesc = 0;
+            for (let page = totalPagesForLetter; page > pagesToFetchAsc && pagesFetchedDesc < MAX_PAGES_PER_PASS; page--) {
+              const url = new URL(baseUrl.toString());
+              url.searchParams.set('page', String(page));
+              try {
+                const res = await fetch(url.toString());
+                if (!res.ok) break;
+                const data: E2PropertiesResponse = await res.json();
+                if (!data.data?.length) break;
+                data.data.forEach(p => uniqueMap.set(p.id, p));
+                pagesFetchedDesc++;
+              } catch {
+                break;
+              }
+            }
+          }
+
+        } catch (err) {
+          console.error('[LetterFetch] error', err);
+        }
+      }
+
+      // Evaluate after letters
+      let combined = Array.from(uniqueMap.values());
+      if (expectedCount !== undefined && combined.length < expectedCount) {
+        // Size based fallback
+        const sizeSorts = ['size', '-size'];
+        for (const sortKey of sizeSorts) {
+          for (let page = 1; page <= MAX_PAGES_PER_PASS; page++) {
+            const url = new URL('/api/e2/properties', window.location.origin);
+            url.searchParams.set('page', String(page));
+            url.searchParams.set('perPage', String(PER_PAGE_LETTERS));
+            url.searchParams.set('userId', userId);
+            url.searchParams.set('sort', sortKey);
+            try {
+              const res = await fetch(url.toString());
+              if (!res.ok) break;
+              const data: E2PropertiesResponse = await res.json();
+              if (!data.data?.length) break;
+              data.data.forEach(p => uniqueMap.set(p.id, p));
+              if (uniqueMap.size >= expectedCount) break;
+            } catch {
+              break;
+            }
+          }
+          if (uniqueMap.size >= (expectedCount ?? 0)) break;
+        }
+        combined = Array.from(uniqueMap.values());
+      }
+
+      // Additional sort-based passes (-current_value/current_value, -current_profit/current_profit, -purchase_date/purchase_date)
+      if (expectedCount !== undefined && combined.length < expectedCount) {
+        const extraSorts = ['-current_value', 'current_value', '-current_profit', 'current_profit', '-purchase_date', 'purchase_date'];
+        for (const sortKey of extraSorts) {
+          for (let page = 1; page <= MAX_PAGES_PER_PASS; page++) {
+            const url = new URL('/api/e2/properties', window.location.origin);
+            url.searchParams.set('page', String(page));
+            url.searchParams.set('perPage', String(PER_PAGE_LETTERS));
+            url.searchParams.set('userId', userId);
+            url.searchParams.set('sort', sortKey);
+            try {
+              const res = await fetch(url.toString());
+              if (!res.ok) break;
+              const data: E2PropertiesResponse = await res.json();
+              if (!data.data?.length) break;
+              data.data.forEach(p => uniqueMap.set(p.id, p));
+              if (uniqueMap.size >= expectedCount) break;
+            } catch { break; }
+          }
+          if (uniqueMap.size >= (expectedCount ?? 0)) break;
+        }
+        combined = Array.from(uniqueMap.values());
+      }
+
+      // Update state/cache and exit
+      setAllPropertiesForAnalytics(combined);
+      setCachedProps(combined);
+      const FIRST_PAGE_SIZE = 12;
+      setProperties(combined.slice(0, FIRST_PAGE_SIZE));
+      setPropertiesMeta({
+        count: combined.length,
+        current_page: 1,
+        last_page: Math.ceil(combined.length / FIRST_PAGE_SIZE),
+        per_page: FIRST_PAGE_SIZE,
+      });
+      setPropertiesCurrentPage(1);
+      await idbSet(getCacheKey(userId), combined);
+      setIsAnalyticsLoading(false);
+      return;
+    }
+
+    /* eslint-disable */
+    // --- LETTER BASED FETCH STRATEGY (disabled for this test) ---
+    if (false) {
+      // Letter-based strategy temporarily disabled.
+      setIsAnalyticsLoading(false);
+      return;
+    }
+    /* eslint-enable */
+
     let currentPage = 1;
     let fetchedAll = false;
     const accumulatedProps: E2Property[] = [];
     let totalCountFromMeta: number | undefined = undefined;
-    const PER_PAGE_FOR_ANALYTICS = 60; // This must match the 'perPage' parameter used in the API call
+    const PER_PAGE_FOR_ANALYTICS = 60; // simple pass perPage
 
     console.log(`[Analytics] Starting fetch for all properties of user ${userId}`);
 
+    let highestAscPageFetched = 0;
+    let failureDetected = false;
+
+    // For smaller portfolios (<9900) just simple ascending loop
+    // --------- ASCENDING LOOP (page 1 -> ...) ---------
     do {
       try {
         const proxyUrl = new URL('/api/e2/properties', window.location.origin);
@@ -416,16 +695,64 @@ export default function ProfilePage() {
         }
 
       } catch (err: any) {
-        console.error('Error fetching/processing E2 properties page for analytics:', err);
+        console.error('Error fetching/processing E2 properties page for analytics (ascending):', err);
         setError(prevError => {
           const newErrorMessage = `Error fetching analytics page ${currentPage}: ${err.message}`;
           return prevError ? (prevError.includes(newErrorMessage) ? prevError : `${prevError}\n${newErrorMessage}`) : newErrorMessage;
         });
-        fetchedAll = true; 
+        failureDetected = true;
+        fetchedAll = true; // stop ascending loop
       }
     } while (!fetchedAll);
 
+    // Record last successful asc page
+    highestAscPageFetched = currentPage - 1;
+
+    // --------- DESCENDING LOOP (last_page -> missing) ---------
+    if (failureDetected && totalCountFromMeta !== undefined) {
+      const lastPage = totalCountFromMeta && totalCountFromMeta > 0 ? Math.ceil(totalCountFromMeta / PER_PAGE_FOR_ANALYTICS) : undefined;
+      if (lastPage) {
+        console.log(`[Analytics] Starting fallback descending fetch from page ${lastPage}.`);
+        let descPage = lastPage;
+        while (descPage > highestAscPageFetched) {
+          try {
+            const proxyUrl = new URL('/api/e2/properties', window.location.origin);
+            proxyUrl.searchParams.set('page', String(descPage));
+            proxyUrl.searchParams.set('perPage', String(PER_PAGE_FOR_ANALYTICS));
+            proxyUrl.searchParams.set('userId', userId);
+
+            console.log(`[Analytics] (DESC) Fetching page ${descPage}`);
+            const proxyRes = await fetch(proxyUrl.toString());
+            if (!proxyRes.ok) throw new Error(`Status ${proxyRes.status}`);
+            const proxyData: E2PropertiesResponse = await proxyRes.json();
+
+            if (proxyData.data && proxyData.data.length > 0) {
+              for (const p of proxyData.data) {
+                if (!accumulatedProps.find(ap => ap.id === p.id)) {
+                  accumulatedProps.push(p);
+                }
+              }
+            }
+          } catch (err) {
+            console.error(`[Analytics] Error fetching descending page ${descPage}:`, err);
+          }
+
+          descPage--;
+        }
+      }
+    }
+
+    // ---- END OF BOTH LOOPS ----
+
     setAllPropertiesForAnalytics(accumulatedProps);
+    setCachedProps(accumulatedProps);
+    // Save to IndexedDB for future use
+    try {
+      await idbSet(getCacheKey(userId), accumulatedProps);
+      console.log('[Cache] Saved properties to IndexedDB.');
+    } catch (err) {
+      console.error('[Cache] Failed to save properties to IndexedDB:', err);
+    }
     setIsAnalyticsLoading(false);
     console.log(`[Analytics] Finished fetching. Total ${accumulatedProps.length} properties gathered for analytics.`);
     if(totalCountFromMeta !== undefined && accumulatedProps.length !== totalCountFromMeta && accumulatedProps.length > 0){ // Added check for > 0 to avoid warning if 0 == 0
@@ -608,12 +935,19 @@ export default function ProfilePage() {
   const COLORS = ['#34D399', '#60A5FA', '#FBBF24', '#F87171', '#A78BFA', '#2DD4BF', '#FB923C', '#EC4899', '#8B5CF6', '#14B8A6', '#F59E0B', '#EF4444'];
   const BAR_CHART_COLORS = ['#38BDF8', '#A3E635', '#FACC15', '#FB923C', '#EC4899', '#8B5CF6'];
 
+  // Country chart by tile count
   const countryChartData = useMemo(() => {
-    return Object.entries(countryCounts)
+    const map = new Map<string, number>();
+    allPropertiesForAnalytics.forEach(p => {
+      const country = p.attributes.country?.toUpperCase() || 'Unknown';
+      const tiles = p.attributes.tileCount || 0;
+      map.set(country, (map.get(country) || 0) + tiles);
+    });
+    return Array.from(map.entries())
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value)
-      .slice(0, 10); 
-  }, [countryCounts]);
+      .slice(0, 10);
+  }, [allPropertiesForAnalytics]);
 
   const tierChartData = useMemo(() => {
     return Object.entries(landfieldTierCounts)
@@ -826,6 +1160,24 @@ export default function ProfilePage() {
     fetchTrackedProperties();
   }, [linkedE2UserId]); // Re-fetch if the linked user changes
 
+  // --- Global Metrics State ---
+  interface GlobalMetrics { [key:string]: number | string; }
+  const [globalMetrics, setGlobalMetrics] = useState<GlobalMetrics|null>(null);
+  const [isMetricsOpen, setIsMetricsOpen] = useState(false);
+  const [isMetricsLoading, setIsMetricsLoading] = useState(false);
+  const fetchGlobalMetrics = async () => {
+    if (globalMetrics || isMetricsLoading) {
+      setIsMetricsOpen(true); return;
+    }
+    setIsMetricsLoading(true);
+    try {
+      // Fetch via internal API route to avoid CORS issues
+      const res = await fetch('/api/e2/metrics');
+      const json = await res.json();
+      setGlobalMetrics(json?.data?.attributes ?? {});
+      setIsMetricsOpen(true);
+    } catch(e){ console.error('Global metrics fetch err',e);} finally{ setIsMetricsLoading(false);} };
+
   return (
     <div className="space-y-8">
       <div className="relative overflow-hidden rounded-2xl p-8 backdrop-blur-lg bg-gradient-to-br from-sky-900/40 to-blue-900/30 border border-sky-400/30 shadow-xl">
@@ -1025,13 +1377,66 @@ export default function ProfilePage() {
             <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-semibold text-sky-200">Your Earth2 Properties ({properties.length.toLocaleString()} of {userInfo?.userLandfieldCount?.toLocaleString() ?? (allPropertiesForAnalytics.length > 0 ? allPropertiesForAnalytics.length.toLocaleString() : '...')})</h2>
             </div>
+            {/* Sort / Filter Bar */}
+            <div className="flex flex-wrap items-center justify-between bg-gray-800/60 backdrop-blur-md mb-4 px-4 py-2 rounded-lg">
+              <div className="flex items-center space-x-2 text-sm text-sky-200">
+                <span>Sort by:</span>
+                <select
+                  value={sortOption}
+                  onChange={e => setSortOption(e.target.value as any)}
+                  className="bg-gray-700 text-sky-200 px-2 py-1 rounded border border-gray-600 focus:outline-none"
+                >
+                  <option value="latest">Purchase Date (Latest)</option>
+                  <option value="size">Size (Tiles)</option>
+                </select>
+              </div>
+              <div className="flex items-center space-x-2 text-sm text-sky-200">
+                <span>Filter tier:</span>
+                <select
+                  value={tierFilter === null ? '' : tierFilter}
+                  onChange={e => {
+                    const v = e.target.value; setTierFilter(v === ''? null : parseInt(v));
+                  }}
+                  className="bg-gray-700 text-sky-200 px-2 py-1 rounded border border-gray-600 focus:outline-none"
+                >
+                  <option value="">All</option>
+                  <option value="1">T1</option>
+                  <option value="2">T2</option>
+                  <option value="3">T3</option>
+                </select>
+              </div>
+              {/* Search */}
+              <form onSubmit={e=>{e.preventDefault();}} className="flex items-center mt-2 md:mt-0">
+                <input
+                  type="text"
+                  placeholder="Search description/location..."
+                  value={searchQuery}
+                  onChange={e=>setSearchQuery(e.target.value)}
+                  className="bg-gray-700 text-sky-200 px-3 py-1 rounded-l border border-gray-600 focus:outline-none w-48"
+                />
+                <button type="submit" className="bg-sky-600 hover:bg-sky-500 px-3 py-1 rounded-r text-white text-sm">Search</button>
+              </form>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {properties.map((prop) => {
+              {paginatedDisplay.map((prop) => {
                 const attrs = prop.attributes;
                 return (
-                  <Card key={prop.id} className="bg-gray-800/60 border-sky-600/40 hover:border-sky-500/70 transition-all duration-300 ease-in-out shadow-lg hover:shadow-sky-500/20 flex flex-col">
+                  <Card key={prop.id} className="bg-gray-800/75 border-sky-600/40 hover:border-sky-500/70 transition-all duration-300 ease-in-out shadow-lg hover:shadow-sky-500/20 flex flex-col">
+                    {/* Image with external link overlay */}
                     {attrs.thumbnail && (
-                      <img src={attrs.thumbnail} alt={attrs.description || 'Property'} className="w-full h-48 object-cover rounded-t-lg" />
+                      <div className="relative">
+                        <img src={attrs.thumbnail} alt={attrs.description || 'Property'} className="w-full h-48 object-cover rounded-t-lg" />
+                        <a
+                          href={`https://app.earth2.io/#propertyInfo/${prop.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="absolute top-2 right-2 bg-gray-900/70 hover:bg-gray-900/90 text-sky-200 p-1 rounded-full"
+                          title="Open on Earth2"
+                        >
+                          <LinkIcon className="w-4 h-4" />
+                        </a>
+                      </div>
                     )}
                     <CardHeader className="pb-3 pt-4 px-5 flex-shrink-0">
                       <CardTitle className="text-lg leading-tight text-sky-200 hover:text-sky-100 transition-colors truncate" title={attrs.description}>{attrs.description || 'Unnamed Property'}</CardTitle>
@@ -1068,17 +1473,62 @@ export default function ProfilePage() {
                 )}
               )}
             </div>
-            {propertiesMeta && userInfo?.userLandfieldCount && propertiesMeta.per_page && propertiesMeta.current_page && (propertiesMeta.current_page < (propertiesMeta.last_page ?? Math.ceil(userInfo.userLandfieldCount / propertiesMeta.per_page))) && (
-                <div className="mt-8 text-center">
-                    <Button 
-                        onClick={() => fetchE2Data(linkedE2UserId!, propertiesCurrentPage + 1)}
-                        disabled={dataLoading} 
-                        className="bg-sky-600 hover:bg-sky-500 shadow-lg"
+            {/* --- Pagination --- */}
+            {totalFilteredPages>1 && (
+              <div className="mt-8 flex justify-center items-center space-x-1 select-none text-sm bg-gray-800/60 backdrop-blur-md px-4 py-2 rounded-lg max-w-fit mx-auto">
+                {/* Prev */}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  disabled={propertiesCurrentPage === 1 || dataLoading}
+                  onClick={() => setPropertiesCurrentPage(propertiesCurrentPage - 1)}
+                  className="text-emerald-400 hover:text-emerald-300"
+                >
+                  &lt;
+                </Button>
+
+                {(() => {
+                  const pages:number[] = [];
+                  const perPageVal = propertiesMeta!.per_page ?? 12;
+                  const total = propertiesMeta!.last_page ?? Math.ceil((propertiesMeta!.count ?? userInfo?.userLandfieldCount ?? 0) / perPageVal);
+                  const current = propertiesCurrentPage;
+                  if (total <= 7) {
+                    for (let i=1;i<=total;i++) pages.push(i);
+                  } else {
+                    pages.push(1);
+                    if (current > 3) pages.push(-1); // ellipsis marker
+                    const start = Math.max(2, current-1);
+                    const end = Math.min(total-1, current+1);
+                    for (let i=start; i<=end; i++) pages.push(i);
+                    if (current < total-2) pages.push(-1);
+                    pages.push(total);
+                  }
+                  return pages.map((p, idx) => p === -1 ? (
+                    <span key={`ellipsis-${idx}`} className="px-1 text-sky-400">…</span>
+                  ) : (
+                    <Button
+                      key={p}
+                      variant={p===current?"default":"ghost"}
+                      disabled={p===current || dataLoading}
+                      onClick={() => setPropertiesCurrentPage(p)}
+                      className={p===current?"bg-sky-600 text-white px-2 py-1":"text-emerald-400 hover:text-emerald-300 px-2 py-1"}
                     >
-                        {dataLoading && propertiesCurrentPage +1 > properties.length/12 ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null} 
-                        Load Page {propertiesCurrentPage + 1}
+                      {p}
                     </Button>
-                </div>
+                  ));
+                })()}
+
+                {/* Next */}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  disabled={propertiesCurrentPage === totalFilteredPages}
+                  onClick={() => setPropertiesCurrentPage(propertiesCurrentPage + 1)}
+                  className="text-emerald-400 hover:text-emerald-300"
+                >
+                  &gt;
+                </Button>
+              </div>
             )}
         </div>
       )}
@@ -1093,7 +1543,12 @@ export default function ProfilePage() {
 
       {!isAnalyticsLoading && allPropertiesForAnalytics.length > 0 && linkedE2UserId && (
         <div className="mt-12 space-y-8">
-          <h2 className="text-3xl font-bold text-center text-sky-200 mb-6">Full Portfolio Analytics</h2>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-3xl font-bold text-sky-200">Full Portfolio Analytics</h2>
+            <Button onClick={fetchGlobalMetrics} className="bg-fuchsia-700/70 hover:bg-fuchsia-600 text-white text-sm px-4 py-2 rounded-lg shadow">
+              {isMetricsLoading ? <Loader2 className="w-4 h-4 animate-spin"/> : 'View Global E2 Metrics'}
+            </Button>
+          </div>
           
           <Card className="border-emerald-400/30 bg-gradient-to-br from-earthie-dark/80 to-earthie-dark-light/70 shadow-lg">
               <CardHeader>
@@ -1214,7 +1669,7 @@ export default function ProfilePage() {
                   <CardTitle className="flex items-center text-lime-300">
                     <Globe className="h-5 w-5 mr-2" /> Property Distribution by Country
                   </CardTitle>
-                  <CardDescription className="text-gray-400">Top 10 countries from your {allPropertiesForAnalytics.length.toLocaleString()} properties.</CardDescription>
+                  <CardDescription className="text-gray-400">Top 10 countries by tiles across your portfolio.</CardDescription>
                 </CardHeader>
                 <CardContent className="h-80">
                   <ResponsiveContainer width="100%" height="100%">
@@ -1302,11 +1757,11 @@ export default function ProfilePage() {
                 <CardContent className="h-80">
                   <ResponsiveContainer width="100%" height="100%">
                     {/* Using ComposedChart for potentially different axes later, but using two Bars for now */}
-                    <BarChart data={acquisitionTimelineData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}> 
+                    <BarChart data={acquisitionTimelineData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}> 
                       <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
                       <XAxis dataKey="name" stroke="#9ca3af" />
-                      <YAxis yAxisId="left" stroke="#F59E0B" orientation="left" tickFormatter={(value) => value.toLocaleString()} />
-                      <YAxis yAxisId="right" stroke="#A3E635" orientation="right" tickFormatter={(value) => value.toLocaleString()} />
+                      <YAxis yAxisId="left" width={60} stroke="#F59E0B" orientation="left" allowDecimals={false} tickFormatter={(value) => value.toLocaleString()} />
+                      <YAxis yAxisId="right" width={70} stroke="#A3E635" orientation="right" allowDecimals={false} tickFormatter={(value) => value.toLocaleString()} />
                       <Tooltip 
                         contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }}
                         itemStyle={{ color: '#d1d5db' }}
@@ -1332,10 +1787,10 @@ export default function ProfilePage() {
                 </CardHeader>
                 <CardContent className="h-80">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={tileCountDistributionData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
+                    <BarChart data={tileCountDistributionData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
                       <XAxis dataKey="name" stroke="#9ca3af" />
-                      <YAxis stroke="#9ca3af" allowDecimals={false} tickFormatter={(value) => value.toLocaleString()} />
+                      <YAxis width={60} stroke="#9ca3af" allowDecimals={false} tickFormatter={(value) => value.toLocaleString()} />
                       <Tooltip 
                         contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }}
                         itemStyle={{ color: '#d1d5db' }}
@@ -1439,6 +1894,67 @@ export default function ProfilePage() {
           <p className="text-sm">Please ensure the linked E2 User ID is correct and has properties.</p>
         </div>
       )}
+
+      {/* Global Metrics Modal */}
+      <Dialog open={isMetricsOpen} onOpenChange={setIsMetricsOpen}>
+        <DialogContent className="max-w-3xl bg-gray-900/90 border-sky-500/40 backdrop-blur-md">
+          <DialogHeader>
+            <DialogTitle className="text-sky-200">Earth2 Global Metrics</DialogTitle>
+          </DialogHeader>
+          {globalMetrics ? (
+            // ---- Helper for number formatting ----
+            (()=>{
+              const formatWithCommas = (val:number)=> val.toLocaleString();
+
+              const entries = Object.entries(globalMetrics).slice(0,12);
+
+              return (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                  {entries.map(([k,v])=> {
+                    const isNumber = typeof v==='number' || !isNaN(Number(v));
+                    const numericVal = isNumber? Number(v): null;
+                    // Detect cap counterpart – e.g. key ending with MINTED => look for MAXSUPPLY or CAP
+                    let maxKey:string|null = null; let maxVal:number|null=null; let percent:number|null=null;
+                    if(isNumber){
+                      if(k.endsWith('MINTED')){
+                        const base = k.slice(0,-'MINTED'.length);
+                        const candidate = `${base}MAXSUPPLY`;
+                        if(globalMetrics[candidate]){
+                          maxKey=candidate; maxVal = Number(globalMetrics[candidate]);
+                        }
+                      } else if(k.endsWith('COUNT')){
+                        // Check for TOTAL key (rare). Example TILESPURCHASED vs ??
+                      }
+                      if(maxVal!==null && maxVal>0){
+                        percent = Math.min(100, (numericVal!*100)/maxVal);
+                      }
+                    }
+                    return (
+                      <Card key={k} className="bg-gray-800/75 border-gray-700 p-4">
+                        <p className="text-xs font-semibold tracking-wide uppercase text-gray-400 mb-1">{k}</p>
+                        <p className="text-2xl font-bold text-sky-100" title={isNumber? numericVal!.toLocaleString(): undefined}>
+                          {isNumber? formatWithCommas(numericVal!): v as any}
+                        </p>
+                        {percent!==null && (
+                          <div className="mt-3">
+                            <Progress value={percent} max={100} className="h-2 bg-gray-700" />
+                            <p className="text-[10px] text-gray-400 mt-1 flex justify-between uppercase">
+                              <span>Progress</span>
+                              <span>{percent.toFixed(1)}%</span>
+                            </p>
+                          </div>
+                        )}
+                      </Card>
+                    );
+                  })}
+                </div>
+              );
+            })()
+          ) : (
+             <div className="flex justify-center items-center py-8"><Loader2 className="h-6 w-6 animate-spin text-sky-400"/></div>
+           )}
+        </DialogContent>
+      </Dialog>
 
     </div>
   );

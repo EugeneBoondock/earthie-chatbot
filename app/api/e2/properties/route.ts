@@ -8,6 +8,10 @@ export async function GET(request: NextRequest) {
   const userId = searchParams.get('userId');
   const page = searchParams.get('page') || '1';
   const perPage = searchParams.get('perPage') || '12';
+  const sort = searchParams.get('sort');
+  const search = searchParams.get('search');
+  const searchTerms = searchParams.getAll('searchTerms[]');
+  const letter = searchParams.get('letter');
 
   if (!userId) {
     return NextResponse.json({ error: 'Missing userId parameter' }, { status: 400 });
@@ -17,6 +21,20 @@ export async function GET(request: NextRequest) {
   fetchUrl.searchParams.set('page', page);
   fetchUrl.searchParams.set('perPage', perPage);
   fetchUrl.searchParams.set('userId', userId);
+  if (sort) {
+    fetchUrl.searchParams.set('sort', sort);
+  }
+  if (search) {
+    fetchUrl.searchParams.set('search', search);
+  }
+  if (searchTerms && searchTerms.length > 0) {
+    for (const term of searchTerms) {
+      fetchUrl.searchParams.append('searchTerms[]', term);
+    }
+  }
+  if (letter) {
+    fetchUrl.searchParams.set('letter', letter);
+  }
 
   try {
     console.log(`[API Route] Fetching E2 properties from: ${fetchUrl.toString()}`);
