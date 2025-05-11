@@ -107,6 +107,31 @@ export default function LobbyistPost({ post, onLike, onComment, onEcho, onShare 
   const [echoCount, setEchoCount] = useState(post.echoCount);
   const [echoLoading, setEchoLoading] = useState(false);
 
+  // Check if user has already reacted to this post
+  useEffect(() => {
+    const checkUserReaction = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+        
+        const { data } = await supabase
+          .from('lobbyist_reactions')
+          .select('reaction_type')
+          .eq('post_id', post.id)
+          .eq('user_id', session.user.id)
+          .single();
+        
+        if (data && data.reaction_type) {
+          setActiveReaction(data.reaction_type as ReactionType);
+        }
+      } catch (error) {
+        // Silent fail - this is just for UI enhancement
+      }
+    };
+    
+    checkUserReaction();
+  }, [post.id]);
+
   // Check if user has echoed this post
   useEffect(() => {
     const checkEchoStatus = async () => {
