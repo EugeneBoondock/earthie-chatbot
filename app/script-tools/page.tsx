@@ -8,6 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Alert, AlertDescription } from "@/components/ui/alert" 
+import { AlertTriangle } from "lucide-react"
 // Ensure all necessary icons are imported
 import { Upload, Check, X, Loader2, Download, Heart, Link as LinkIcon } from "lucide-react"
 
@@ -322,6 +324,12 @@ export default function DevToolsPage() {
   return (
     <div className="container py-8 bg-earthie-dark min-h-screen text-white">
       <h1 className="text-3xl font-bold mb-8 text-center">Earth2 Developer Tools</h1>
+      <Alert className="mb-8 bg-earthie-dark-light/50 backdrop-blur-sm border border-sky-400/20">
+        <AlertTriangle className="h-4 w-4 mr-2 text-yellow-400" />
+        <AlertDescription>
+          Use the scripts below at your own risk. Malicious scripts will be vetted and removed.
+        </AlertDescription>
+      </Alert>
       <Tabs defaultValue="browse" className="w-full">
          <TabsList className="grid w-full grid-cols-2 mb-8 bg-earthie-dark-light">
             <TabsTrigger value="browse" className="data-[state=active]:bg-earthie-mint data-[state=active]:text-earthie-dark text-gray-300 data-[state=inactive]:hover:bg-earthie-dark data-[state=inactive]:hover:text-gray-100"> Browse Scripts </TabsTrigger>
