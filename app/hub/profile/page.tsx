@@ -770,15 +770,45 @@ export default function ProfilePage() {
       return;
     }
 
+    // Check if user already has a linked E2 profile that's different from the current input
+    if (linkedE2UserId && linkedE2UserId !== extractedId) {
+      setError('You already have a linked Earth2 profile. Once linked, the Earth2 user ID cannot be changed.');
+      return;
+    }
+
     setLinkingLoading(true);
     try {
-      // First fetch the E2 user info
+      // First fetch the E2 user info to verify it exists
       const userInfoResponse = await fetch(`https://app.earth2.io/api/v2/user_info/${extractedId}`);
       if (!userInfoResponse.ok) {
         throw new Error('Failed to fetch Earth2 user info');
       }
-      const userInfo: E2UserInfo = await userInfoResponse.json();
-      setUserInfo(userInfo);
+      const userInfoData: E2UserInfo = await userInfoResponse.json();
+      
+      // Only send the POST request if we don't already have this ID linked
+      if (!linkedE2UserId) {
+        // Send to our API to persist the link
+        const linkResponse = await fetch('/api/me/e2profile', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            e2_user_id: extractedId,
+            username: userInfoData.username,
+            customPhoto: userInfoData.customPhoto,
+            picture: userInfoData.picture
+          }),
+        });
+
+        if (!linkResponse.ok) {
+          const errorData = await linkResponse.json();
+          throw new Error(errorData.error || `Failed to link Earth2 profile (status: ${linkResponse.status})`);
+        }
+      }
+      
+      // Update local state
+      setUserInfo(userInfoData);
       setLinkedE2UserId(extractedId);
     } catch (err: any) {
       console.error('Error linking E2 profile:', err);
@@ -1213,12 +1243,13 @@ export default function ProfilePage() {
                 value={e2ProfileInput}
                 onChange={(e) => setE2ProfileInput(e.target.value)}
                 className="flex-grow pl-10 bg-earthie-dark-light/50 border-sky-500/30 backdrop-blur-sm focus:border-sky-400/70 focus:ring-1 focus:ring-sky-400/70 transition-all"
-                disabled={linkingLoading}
+                disabled={linkingLoading || (linkedE2UserId !== null && linkedE2UserId !== extractE2UserId(e2ProfileInput))}
+                readOnly={linkedE2UserId !== null}
               />
             </div>
             <Button 
               type="submit" 
-              disabled={isOverallLoading || !e2ProfileInput || (linkedE2UserId === extractE2UserId(e2ProfileInput) && !dataLoading && !isAnalyticsLoading)}
+              disabled={isOverallLoading || !e2ProfileInput || (linkedE2UserId === extractE2UserId(e2ProfileInput) && !dataLoading && !isAnalyticsLoading) || (linkedE2UserId !== null && linkedE2UserId !== extractE2UserId(e2ProfileInput))}
               className="bg-sky-600/80 hover:bg-sky-500/90 border border-sky-400/30 transition-all duration-300"
             >
               {linkingLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
@@ -1226,6 +1257,12 @@ export default function ProfilePage() {
               {!linkingLoading && <ArrowUpRight className="ml-2 h-4 w-4" />}
             </Button>
           </form>
+          {linkedE2UserId && (
+            <p className="mt-2 text-sm text-amber-300 flex items-center">
+              <AlertCircle className="h-4 w-4 mr-1" />
+              <span>Note: Once an Earth2 profile is linked, the user ID cannot be changed.</span>
+            </p>
+          )}
           {error && !dataLoading && (
             <div className="mt-4 bg-red-900/20 border border-red-500/30 rounded-lg p-3 flex items-center text-sm text-red-300">
               <AlertCircle className="h-5 w-5 mr-2 text-red-400" />

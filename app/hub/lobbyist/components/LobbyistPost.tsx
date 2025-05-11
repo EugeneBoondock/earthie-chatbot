@@ -402,7 +402,7 @@ export default function LobbyistPost({ post, onLike, onComment, onEcho, onShare 
             <div className="flex items-center text-xs text-gray-400 mt-0.5 flex-wrap gap-2">
               <span className="flex items-center">
                 <Calendar size={12} className="mr-1 flex-shrink-0" />
-                {formatDate(post.createdAt)}
+              {formatDate(post.createdAt)}
               </span>
               {post.postType && (
                 <Badge className="bg-sky-900/30 text-sky-300 border-sky-500/30 text-[10px] h-5 px-1.5">
@@ -560,7 +560,7 @@ export default function LobbyistPost({ post, onLike, onComment, onEcho, onShare 
         </div>
         
         {/* Comments section - collapsed by default */}
-        {showComments && (
+         {showComments && (
           <div className="w-full pt-2 border-t border-sky-400/10">
             {/* New comment input */}
             <div className="flex items-start space-x-2 mb-2">

@@ -129,7 +129,7 @@ export default function Navbar() {
         <div className="flex items-center gap-2 z-30 flex-shrink-0 min-w-[40px] sm:min-w-[120px]">
           <Link href="/" className="flex items-center gap-2">
             <div className="relative w-8 h-8 md:w-10 md:h-10 overflow-hidden rounded-full">
-              <Image src="/images/earthie_logo.png" alt="Earthie Logo" width={40} height={40} className="object-cover rounded-full" priority />
+              <Image src="/images/earthie_logo.png" alt="Earthie Logo" width={40} height={40} className="object-cover rounded-full" priority /> 
             </div>
             <span className="font-bold text-lg md:text-xl hidden sm:inline-block text-white">Earthie</span>
           </Link>
@@ -143,8 +143,8 @@ export default function Navbar() {
                rel="noopener noreferrer" 
                className="block w-full text-center text-xs md:text-sm hover:text-earthie-mint transition-colors" 
                aria-label={`View ${cryptoSymbol} price on CoinGecko`}>
-              <TickerContent />
-            </a>
+            <TickerContent /> 
+          </a>
           </div>
         </div>
 

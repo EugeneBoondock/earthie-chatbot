@@ -93,7 +93,7 @@ export default function DevToolsPage() {
   const [locallyLikedScripts, setLocallyLikedScripts] = useState<Set<string>>(new Set()); // State for local liked status
   const [likingStatus, setLikingStatus] = useState<{ [key: string]: boolean }>({}); // Tracks if like RPC is in progress
   const [downloadingStatus, setDownloadingStatus] = useState<{ [key: string]: boolean }>({}); // Tracks if download RPC is in progress
-  const [copiedStatus, setCopiedStatus] = useState<{ [key: string]: boolean }>({});
+  const [copiedStatus, setCopiedStatus] = useState<{ [key: string]: boolean }>({}); // Tracks if copy RPC is in progress
   const [copyingStatus, setCopyingStatus] = useState<{ [key: string]: boolean }>({}); // prevent double RPC calls
   const [fetchingFileContent, setFetchingFileContent] = useState<Set<string>>(new Set());
   const [newScript, setNewScript] = useState<NewScriptData>({
@@ -249,6 +249,35 @@ export default function DevToolsPage() {
     if (!newScript.title || !newScript.description || (!newScript.code && !newScript.file)) { setSubmitStatus("error"); setSubmitError("Fill Title, Description & Code/File."); return; }
     if (newScript.code && newScript.file) { setSubmitStatus("error"); setSubmitError("Provide Code OR File, not both."); return; }
     try {
+      // Run LLM code review via server endpoint
+      const codeToReview = newScript.code || ''
+      const res = await fetch('/api/gemini-review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: codeToReview }),
+      })
+      if (!res.ok) {
+        const errData = await res.json()
+        setSubmitStatus('error')
+        setSubmitError(errData.error || 'Review endpoint error')
+        return
+      }
+      const reviewData = await res.json()
+      if (reviewData.error) {
+        setSubmitStatus('error')
+        setSubmitError(reviewData.error)
+        return
+      }
+      if (!reviewData.approved) {
+        setSubmitStatus('error')
+        setSubmitError(`Review failed: ${reviewData.comment}`)
+        return
+      }
+      if (reviewData.requiresHuman) {
+        setSubmitStatus('error')
+        setSubmitError(`Requires human review: ${reviewData.comment}`)
+        return
+      }
       let fileUrl: string | null = null;
       if (newScript.file) {
         const file = newScript.file; const uniqueFileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`; const filePath = `public/${uniqueFileName}`;
@@ -256,7 +285,14 @@ export default function DevToolsPage() {
         if (uploadError) { throw new Error(`Storage Upload Failed: ${uploadError.message || JSON.stringify(uploadError)}`); }
         const { data: urlData } = supabase.storage.from(SCRIPT_FILES_BUCKET).getPublicUrl(filePath); fileUrl = urlData?.publicUrl ?? null;
       }
-      const scriptToInsert = { title: newScript.title, description: newScript.description, author: newScript.author || 'Anonymous', code: newScript.code || null, file_url: fileUrl, support_url: newScript.support_url || null, };
+      const scriptToInsert = {
+        title: `${newScript.title} [${reviewData.badge}]`,
+        description: newScript.description,
+        author: newScript.author || 'Anonymous',
+        code: newScript.code || null,
+        file_url: fileUrl,
+        support_url: newScript.support_url || null,
+      };
       const tableNameForInsert = "Earthie_scripts";
       const { data: insertedData, error: insertError } = await supabase.from(tableNameForInsert).insert([scriptToInsert]).select();
       if (insertError) { throw new Error(`Database Insert Failed: ${insertError.message || JSON.stringify(insertError)}`); }
@@ -273,7 +309,7 @@ export default function DevToolsPage() {
   // --- NEW HELPERS & EFFECTS FOR FILE PREVIEW -----------------------------------------
   // Helper to determine if a filename corresponds to a preview-able text file
   const isTextBasedFile = (filename: string): boolean => {
-    const textExts = ['js', 'jsx', 'ts', 'tsx', 'py', 'sh', 'json', 'css', 'html', 'txt', 'md', 'csv'];
+    const textExts = ['js', 'jsx', 'ts', 'tsx', 'py', 'sh', '.json', 'css', 'html', 'txt', 'md', 'csv'];
     const extMatch = filename.split('.').pop()?.toLowerCase();
     return extMatch ? textExts.includes(extMatch) : false;
   };
@@ -342,13 +378,27 @@ export default function DevToolsPage() {
            {!isLoading && !error && scripts.length === 0 && ( <p className="text-center text-gray-400 py-10">No scripts found.</p> )}
 
           {!isLoading && !error && scripts.map((script) => {
-                // *** Use the helper function from outside, passing state ***
                 const likedLocally = isLocallyLiked(script.id, locallyLikedScripts);
-                // console.log(`Rendering ${script.id}, likedLocally: ${likedLocally}`); // Debug log
+
+                // Parse review badge from title
+                const badgeRegex = /\[Reviewed by (.+?)\]$/;
+                const match = badgeRegex.exec(script.title);
+                const badgeText = match?.[1];
+                const displayTitle = match ? script.title.slice(0, match.index).trim() : script.title;
 
                 return (
                     <Card key={script.id} className="bg-earthie-dark-light border-earthie-dark-light overflow-hidden">
-                        <CardHeader> <CardTitle>{script.title}</CardTitle> {script.description && (<CardDescription className="text-gray-300 pt-1">{script.description}</CardDescription>)} </CardHeader>
+                        <CardHeader>
+                            <div className="flex items-center space-x-2">
+                                <CardTitle>{displayTitle}</CardTitle>
+                                {badgeText && (
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded bg-earthie-mint text-earthie-dark text-xs font-medium">
+                                        {badgeText}
+                                    </span>
+                                )}
+                            </div>
+                            {script.description && (<CardDescription className="text-gray-300 pt-1">{script.description}</CardDescription>)}
+                        </CardHeader>
                         <CardContent>
                             {script.code && (
                                 <div className="relative group bg-earthie-dark p-4 rounded-md overflow-x-auto mb-4 max-h-96">

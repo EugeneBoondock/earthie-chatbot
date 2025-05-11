@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import LobbyistPost from './components/LobbyistPost';
 import CreatePostModal from './components/CreatePostModal';
 import PostSkeleton from './components/PostSkeleton';
+import DiscoverPeopleModal from './components/DiscoverPeopleModal';
 import { 
   MessageSquare, 
   Users, 
@@ -67,6 +68,7 @@ export default function LobbyistPage() {
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState('feed');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isDiscoverPeopleOpen, setIsDiscoverPeopleOpen] = useState(false);
   const [activeSubLobby, setActiveSubLobby] = useState<string | null>(
     searchParams?.get('lobby') || null
   );
@@ -399,7 +401,12 @@ export default function LobbyistPage() {
                   <Users className="h-10 w-10 text-sky-400/50 mx-auto mb-3" />
                   <h3 className="text-xl font-medium text-white mb-2">No followed posts yet</h3>
                   <p className="text-gray-300 mb-4">Follow other lobbyists to see their posts here.</p>
-                  <Button className="bg-sky-600 hover:bg-sky-700">Discover People</Button>
+                  <Button 
+                    onClick={() => setIsDiscoverPeopleOpen(true)}
+                    className="bg-sky-600 hover:bg-sky-700"
+                  >
+                    Discover People
+                  </Button>
                 </div>
               )}
               
@@ -447,6 +454,12 @@ export default function LobbyistPage() {
         onClose={() => setIsCreateModalOpen(false)}
         onCreatePost={handlePostCreated}
         user={userProfile}
+      />
+
+      {/* Discover People Modal */}
+      <DiscoverPeopleModal
+        isOpen={isDiscoverPeopleOpen}
+        onClose={() => setIsDiscoverPeopleOpen(false)}
       />
     </div>
   );

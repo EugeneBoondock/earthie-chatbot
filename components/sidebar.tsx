@@ -77,7 +77,7 @@ export default function Sidebar({ className }: SidebarProps) {
         )}
       >
         <div className="flex justify-between items-center p-4 border-b border-gray-700/50">
-          <h2 className="text-2xl font-semibold">Earthie Hub</h2>
+            <h2 className="text-2xl font-semibold">Earthie Hub</h2>
         </div>
         <nav className="flex-grow p-4 overflow-y-auto">
           <ul className="space-y-2">
