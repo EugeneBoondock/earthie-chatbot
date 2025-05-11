@@ -33,6 +33,34 @@ import { Input } from '@/components/ui/input';
 import { supabase } from '@/lib/supabase';
 import type { User } from '@supabase/supabase-js';
 
+interface Reaction {
+  reaction_type: string;
+  post_id: string;
+}
+
+interface PostData {
+  id: string;
+  title: string;
+  content: string;
+  post_type: string;
+  created_at: string;
+  tags: string[];
+  image_url: string | null;
+  user_id: string;
+  is_private: boolean;
+  followers_only: boolean;
+  sub_lobby: string | null;
+  user: {
+    id: string;
+    email: string;
+  };
+  e2_profile: {
+    e2_user_id: string;
+  } | null;
+  reactions: { reaction_type: string }[];
+  comments: { count: number }[];
+}
+
 // This page will be enhanced with actual components that we'll create next
 export default function LobbyistPage() {
   const router = useRouter();
@@ -47,13 +75,36 @@ export default function LobbyistPage() {
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<any | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
+
+  // Get initial session and set up auth listener
   useEffect(() => {
+    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
+      if (session?.user) {
+        setUser(session.user);
+        // Immediately try to get profile from Supabase
+        supabase
+          .from('profiles')
+          .select('username, avatar_url')
+          .eq('id', session.user.id)
+          .single()
+          .then(({ data }) => {
+            if (data) {
+              setUserProfile({
+                id: session.user.id,
+                username: data.username,
+                avatar: data.avatar_url
+              });
+            }
+          });
+      }
     });
+
+    // Set up auth listener
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
     });
+
     return () => listener?.subscription?.unsubscribe();
   }, []);
 
@@ -65,9 +116,11 @@ export default function LobbyistPage() {
         try {
           const { fetchUserProfile } = await import('./profileUtils');
           const profile = await fetchUserProfile(user.id);
-          setUserProfile(profile);
+          if (profile) {
+            setUserProfile(profile);
+          }
         } catch (e) {
-          setUserProfile(null);
+          console.error('Error loading profile:', e);
         } finally {
           setProfileLoading(false);
         }
@@ -83,44 +136,73 @@ export default function LobbyistPage() {
   const [loadingPosts, setLoadingPosts] = useState(false);
   const [postsError, setPostsError] = useState<string | null>(null);
 
-  // Fetch posts from API
+  // Fetch posts from Supabase
+  const fetchPosts = async () => {
+    setLoadingPosts(true);
+    setPostsError(null);
+    try {
+      const { data: posts, error } = await supabase
+        .from('lobbyist_posts')
+        .select(`
+          *,
+          profiles!inner(id, username, avatar_url),
+          reactions:lobbyist_reactions(post_id, reaction_type),
+          comments:lobbyist_comments(count),
+          echoes:lobbyist_echoes!original_post_id(count)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Transform the data
+      const transformedPosts = posts.map(post => {
+        const postReactions = post.reactions || [];
+        const commentCount = post.comments?.[0]?.count || 0;
+        const echoCount = post.echoes?.[0]?.count || 0;
+
+        return {
+          id: post.id,
+          title: post.title,
+          content: post.content,
+          postType: post.post_type,
+          createdAt: post.created_at,
+          tags: post.tags || [],
+          images: [post.image_url].filter(Boolean) as string[],
+          user: {
+            id: post.user_id,
+            name: post.profiles?.username || 'Earth2 Profile Required',
+            avatar: post.profiles?.avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${post.profiles?.username || 'anonymous'}`,
+            hasProfile: !!post.profiles?.username
+          },
+          reactions: {
+            hyped: postReactions.filter((r: Reaction) => r.reaction_type === 'hyped').length,
+            smart: postReactions.filter((r: Reaction) => r.reaction_type === 'smart').length,
+            love: postReactions.filter((r: Reaction) => r.reaction_type === 'love').length,
+            watching: postReactions.filter((r: Reaction) => r.reaction_type === 'watching').length
+          },
+          commentCount,
+          echoCount
+        };
+      });
+
+      setPosts(transformedPosts);
+    } catch (e: any) {
+      console.error('Error fetching posts:', e);
+      setPostsError(e.message || 'Failed to load posts');
+    } finally {
+      setLoadingPosts(false);
+    }
+  };
+
+  // Fetch posts when component mounts or activeSubLobby changes
   useEffect(() => {
-    const fetchPosts = async () => {
-      setLoadingPosts(true);
-      setPostsError(null);
-      try {
-        let url = '/api/lobbyist/posts';
-        if (activeSubLobby) {
-          url += `?subLobby=${encodeURIComponent(activeSubLobby)}`;
-        }
-        const res = await fetch(url);
-        if (!res.ok) throw new Error('Failed to load posts');
-        const data = await res.json();
-        setPosts(data.posts || []);
-      } catch (e: any) {
-        setPostsError(e.message || 'Unknown error');
-      } finally {
-        setLoadingPosts(false);
-      }
-    };
     fetchPosts();
   }, [activeSubLobby]);
 
-  // Refresh posts after creating a post
-  const handlePostCreated = () => {
+  // Update handlePostCreated to use the same fetching logic
+  const handlePostCreated = async () => {
     setIsCreateModalOpen(false);
-    // Re-fetch posts
-    setLoadingPosts(true);
-    setPostsError(null);
-    let url = '/api/lobbyist/posts';
-    if (activeSubLobby) {
-      url += `?subLobby=${encodeURIComponent(activeSubLobby)}`;
-    }
-    fetch(url)
-      .then(res => res.json())
-      .then(data => setPosts(data.posts || []))
-      .catch(() => setPostsError('Failed to refresh posts'))
-      .finally(() => setLoadingPosts(false));
+    await fetchPosts();
   };
 
   // Mock sub-lobbies data
@@ -299,10 +381,11 @@ export default function LobbyistPage() {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onCreatePost={handlePostCreated}
-        // Import the profile util at the top
-// import { fetchUserProfile } from './profileUtils';
-
-user={userProfile ? { id: userProfile.id, name: userProfile.username, avatar: userProfile.avatar } : null}
+        user={userProfile ? {
+          id: userProfile.id,
+          name: userProfile.username,
+          avatar: userProfile.avatar
+        } : null}
       />
     </div>
   );

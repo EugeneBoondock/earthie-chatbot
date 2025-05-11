@@ -46,18 +46,98 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    const { data, error } = await supabase
+    // Get both the E2 profile and user profile
+    const { data: e2Profile, error: e2Error } = await supabase
       .from('user_e2_profiles')
       .select('e2_user_id')
       .eq('user_id', session.user.id)
       .single();
 
-    if (error && error.code !== 'PGRST116') { // PGRST116: no rows found, which is acceptable
-      console.error('Error fetching E2 profile (GET):', error);
-      throw error;
+    if (e2Error && e2Error.code !== 'PGRST116') { // PGRST116: no rows found, which is acceptable
+      console.error('Error fetching E2 profile (GET):', e2Error);
+      throw e2Error;
     }
 
-    return NextResponse.json({ e2_user_id: data?.e2_user_id || null });
+    // Also get the user profile
+    const { data: userProfile, error: profileError } = await supabase
+      .from('profiles')
+      .select('username, avatar_url')
+      .eq('id', session.user.id)
+      .single();
+
+    if (profileError && profileError.code !== 'PGRST116') {
+      console.error('Error fetching user profile (GET):', profileError);
+      throw profileError;
+    }
+
+    // If we have an E2 user ID, fetch the latest info from Earth2
+    let e2UserInfo = null;
+    if (e2Profile?.e2_user_id) {
+      try {
+        const e2Response = await fetch(`https://app.earth2.io/api/v2/user_info/${e2Profile.e2_user_id}`);
+        if (e2Response.ok) {
+          e2UserInfo = await e2Response.json();
+          
+          // Update the profile with the latest username and avatar URL
+          const imageUrl = e2UserInfo.customPhoto || e2UserInfo.picture;
+          let avatar_url = null;
+
+          try {
+            // Fetch the image
+            const imageResponse = await fetch(imageUrl);
+            if (!imageResponse.ok) throw new Error('Failed to fetch image');
+            const imageBuffer = await imageResponse.arrayBuffer();
+
+            // Generate a unique filename
+            const fileExt = imageUrl.split('.').pop()?.split('?')[0] || 'png';
+            const fileName = `avatars/${e2Profile.e2_user_id}_${Date.now()}.${fileExt}`;
+
+            // Upload to Supabase Storage
+            const { data: uploadData, error: uploadError } = await supabase.storage
+              .from('publicpfp')
+              .upload(fileName, imageBuffer, {
+                contentType: `image/${fileExt}`,
+                upsert: true
+              });
+
+            if (uploadError) throw uploadError;
+
+            // Get the public URL
+            const { data: { publicUrl } } = supabase.storage
+              .from('publicpfp')
+              .getPublicUrl(fileName);
+
+            avatar_url = publicUrl;
+          } catch (err) {
+            console.error('Error uploading avatar:', err);
+            // Fall back to original URL if upload fails
+            avatar_url = imageUrl;
+          }
+
+          // Always update the profile with the latest username and avatar
+          const { error: profileUpdateError } = await supabase
+            .from('profiles')
+            .upsert({
+              id: session.user.id,
+              username: e2UserInfo.username,
+              avatar_url: avatar_url || imageUrl,
+              updated_at: new Date().toISOString()
+            });
+
+          if (profileUpdateError) {
+            console.error('Error updating profile:', profileUpdateError);
+          }
+        }
+      } catch (e) {
+        console.error('Error fetching E2 user info:', e);
+      }
+    }
+
+    return NextResponse.json({
+      e2_user_id: e2Profile?.e2_user_id || null,
+      username: userProfile?.username || e2UserInfo?.username || null,
+      avatar_url: e2UserInfo?.customPhoto || e2UserInfo?.picture || userProfile?.avatar_url || null
+    });
   } catch (error: any) {
     console.error('Catch block error in GET E2 profile:', error.message);
     return NextResponse.json({ error: error.message || 'Failed to fetch E2 profile' }, { status: 500 });
@@ -67,19 +147,25 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const supabase = await createSupabaseServerClient();
   let e2_user_id: string | undefined;
+  let username: string | undefined;
+  let customPhoto: string | undefined;
+  let picture: string | undefined;
 
   try {
     const body = await request.json();
     e2_user_id = body.e2_user_id;
+    username = body.username;
+    customPhoto = body.customPhoto;
+    picture = body.picture;
 
-  if (!e2_user_id || typeof e2_user_id !== 'string') {
+    if (!e2_user_id || typeof e2_user_id !== 'string') {
       return NextResponse.json({ error: 'Valid e2_user_id (string) is required in JSON body' }, { status: 400 });
-  }
+    }
 
-  const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
-  if (!uuidRegex.test(e2_user_id)) {
-    return NextResponse.json({ error: 'Invalid E2 User ID format. Should be a UUID.' }, { status: 400 });
-  }
+    const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+    if (!uuidRegex.test(e2_user_id)) {
+      return NextResponse.json({ error: 'Invalid E2 User ID format. Should be a UUID.' }, { status: 400 });
+    }
 
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
@@ -91,7 +177,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    const { data, error } = await supabase
+    // First save the E2 profile
+    const { error: e2Error } = await supabase
       .from('user_e2_profiles')
       .upsert(
         {
@@ -102,20 +189,76 @@ export async function POST(request: Request) {
         {
           onConflict: 'user_id',
         }
-      )
-      .select()
-      .single();
+      );
 
-    if (error) {
-      console.error('Error saving/upserting E2 profile (POST):', error);
-      throw error;
+    if (e2Error) throw e2Error;
+
+    // Fetch user info from Earth2 API
+    const e2Response = await fetch(`https://app.earth2.io/api/v2/user_info/${e2_user_id}`);
+    if (!e2Response.ok) {
+      throw new Error(`Failed to fetch E2 user info (status: ${e2Response.status})`);
     }
+    const e2UserInfo = await e2Response.json();
 
-    return NextResponse.json({ success: true, data });
+    // Download and store the avatar image
+    let avatar_url = null;
+    const imageUrl = e2UserInfo.customPhoto || e2UserInfo.picture;
+    if (imageUrl) {
+      try {
+        // Fetch the image
+        const imageResponse = await fetch(imageUrl);
+        if (!imageResponse.ok) throw new Error('Failed to fetch image');
+        const imageBuffer = await imageResponse.arrayBuffer();
+
+        // Generate a unique filename
+        const fileExt = imageUrl.split('.').pop()?.split('?')[0] || 'png';
+        const fileName = `avatars/${e2_user_id}_${Date.now()}.${fileExt}`;
+
+        // Upload to Supabase Storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('publicpfp')
+          .upload(fileName, imageBuffer, {
+            contentType: `image/${fileExt}`,
+            upsert: true
+          });
+
+        if (uploadError) throw uploadError;
+
+        // Get the public URL
+        const { data: { publicUrl } } = supabase.storage
+          .from('publicpfp')
+          .getPublicUrl(fileName);
+
+        avatar_url = publicUrl;
+      } catch (err) {
+        console.error('Error uploading avatar:', err);
+        // Fall back to original URL if upload fails
+        avatar_url = imageUrl;
+      }
+    }
+    
+    // Create/update the user profile with the E2 username
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .upsert(
+        {
+          id: session.user.id,
+          username: e2UserInfo.username,
+          avatar_url,
+          updated_at: new Date().toISOString(),
+        },
+        {
+          onConflict: 'id',
+        }
+      );
+
+    if (profileError) throw profileError;
+
+    return NextResponse.json({ success: true });
   } catch (error: any) {
     if (error instanceof SyntaxError && error.message.includes("JSON")) {
-        console.error('Error parsing JSON body in POST E2 profile:', error.message);
-        return NextResponse.json({ error: 'Invalid JSON format in request body' }, { status: 400 });
+      console.error('Error parsing JSON body in POST E2 profile:', error.message);
+      return NextResponse.json({ error: 'Invalid JSON format in request body' }, { status: 400 });
     }
     console.error('Catch block error in POST E2 profile:', error.message);
     return NextResponse.json({ error: error.message || 'Failed to save E2 profile' }, { status: 500 });

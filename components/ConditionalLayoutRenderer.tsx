@@ -36,9 +36,8 @@ export default function ConditionalLayoutRenderer({
   }, [supabase]);
 
   const isInHub = pathname.startsWith('/hub');
-  const showSidebar = session && isInHub;
-
-  console.log("[ConditionalLayoutRenderer] Path:", pathname, "Is in Hub:", isInHub, "Session Active:", !!session, "Show Sidebar:", showSidebar);
+  // Show sidebar for all Hub routes; access to /hub already gated by middleware/auth.
+  const showSidebar = isInHub;
 
   return (
     <>

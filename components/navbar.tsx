@@ -112,7 +112,7 @@ export default function Navbar() {
     }) ?? 'N/A';
 
     return (
-        <div className="inline-block whitespace-nowrap py-0.5 animate-[marquee_15s_linear_infinite] text-center">
+        <div className="inline-flex items-center justify-center whitespace-nowrap animate-[marquee_15s_linear_infinite]">
             <span className="font-medium mr-1">{cryptoSymbol}:</span>
             <span className="font-semibold text-earthie-mint">{formattedPrice}</span>
             {formatPercentage(price24hChange)}
@@ -122,28 +122,34 @@ export default function Navbar() {
 
   // --- JSX Structure ---
   return (
-    <nav className="sticky top-0 z-50 w-full border-b border-gray-700 bg-[#383A4B]/90 backdrop-blur-md">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex h-16 items-center justify-between flex-wrap min-w-0">
+    <nav className="sticky top-0 z-50 w-full border-b border-gray-700 bg-[#383A4B]/80 backdrop-blur-md">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex items-center h-16 min-w-0">
 
         {/* Left side: Logo and Name */}
-        <div className="flex items-center gap-2 z-30 flex-shrink-0">
+        <div className="flex items-center gap-2 z-30 flex-shrink-0 min-w-[40px] sm:min-w-[120px]">
           <Link href="/" className="flex items-center gap-2">
-            <div className="relative w-8 h-8 md:w-10 md:h-10 overflow-hidden rounded-full"> {/* Slightly smaller logo on mobile */} 
-              <Image src="/images/earthie_logo.png" alt="Earthie Logo" width={40} height={40} className="object-cover rounded-full" priority /> 
+            <div className="relative w-8 h-8 md:w-10 md:h-10 overflow-hidden rounded-full">
+              <Image src="/images/earthie_logo.png" alt="Earthie Logo" width={40} height={40} className="object-cover rounded-full" priority />
             </div>
             <span className="font-bold text-lg md:text-xl hidden sm:inline-block text-white">Earthie</span>
           </Link>
         </div>
 
-        {/* Center: Ticker - Flex item, prevents growing/shrinking, centers content */}
-        <div className="flex flex-initial justify-center items-center min-w-0 max-w-md sm:max-w-lg md:max-w-xl lg:max-w-2xl xl:max-w-3xl px-2 mx-2 overflow-hidden"> {/* Re-added max-width, slightly larger values */}
-          <a href={cryptoLink} target="_blank" rel="noopener noreferrer" className="block cursor-pointer w-full" aria-label={`View ${cryptoSymbol} price on CoinGecko`}> 
-            <TickerContent /> 
-          </a>
+        {/* Center: Ticker */}
+        <div className="flex-1 flex justify-center items-center mx-4 min-w-0 overflow-hidden">
+          <div className="w-full max-w-[400px] overflow-hidden px-2">
+            <a href={cryptoLink} 
+               target="_blank" 
+               rel="noopener noreferrer" 
+               className="block w-full text-center text-xs md:text-sm hover:text-earthie-mint transition-colors" 
+               aria-label={`View ${cryptoSymbol} price on CoinGecko`}>
+              <TickerContent />
+            </a>
+          </div>
         </div>
 
         {/* Right side: Desktop Nav, Currency, Mobile Toggle - Prevent shrinking */}
-        <div className="flex items-center gap-2 sm:gap-4 z-30 flex-shrink-0">
+        <div className="flex items-center gap-2 z-30 flex-shrink-0 min-w-[40px] sm:min-w-[120px] justify-end">
              {/* Desktop Navigation Items - Hidden below md */}
             <div className="hidden md:flex items-center space-x-4 lg:space-x-6">
               {navItems.map((item) => ( <Link key={item.path} href={item.path} className={`text-sm font-medium transition-colors hover:text-earthie-mint ${ pathname === item.path ? "text-earthie-mint border-b-2 border-earthie-mint" : "text-gray-300" }`}> {item.name} </Link> ))}
@@ -161,7 +167,7 @@ export default function Navbar() {
                           <>
                             <NavigationMenuLink asChild>
                               <Link
-                                href="/hub/profile"
+                                href="/hub"
                                 className="block px-4 py-2 text-sm text-gray-200 hover:text-earthie-mint hover:bg-gray-700 rounded-md"
                               >
                                 The Hub
@@ -245,7 +251,7 @@ export default function Navbar() {
               {/* Profile related links for mobile */} 
               {user ? (
                 <>
-              <Link href="/hub/profile" onClick={() => setIsMobileMenuOpen(false)} className={`block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white`}>
+              <Link href="/hub" onClick={() => setIsMobileMenuOpen(false)} className={`block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white`}>
                     The Hub
               </Link>
                   <button onClick={handleLogout} className={`block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white`}>

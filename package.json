@@ -10,6 +10,7 @@
     "build:cache": "node scripts/generate-cache.mjs"
   },
   "dependencies": {
+    "@covalenthq/client-sdk": "^2.2.6",
     "@google/generative-ai": "^0.24.0",
     "@hookform/resolvers": "^3.9.1",
     "@radix-ui/react-accordion": "^1.2.2",

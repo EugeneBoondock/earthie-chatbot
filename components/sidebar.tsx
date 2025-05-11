@@ -2,19 +2,20 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation'; // Corrected import
+import { useRouter } from 'next/navigation';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Button } from '@/components/ui/button';
 import {
-  LayoutDashboard, // Icon for Hub/Dashboard
-  UserCircle,      // Icon for Profile
-  Newspaper,       // Icon for E2Pedia
-  LogOut,          // Icon for Logout
-  Menu,            // Icon for Toggle Open
-  X,               // Icon for Toggle Close
-  MessageSquare    // Icon for My Lobbyist
+  LayoutDashboard,
+  UserCircle,
+  Newspaper,
+  LogOut,
+  PanelLeftClose,
+  PanelLeftOpen,
+  MessageSquare,
+  Coins
 } from 'lucide-react';
-import { cn } from '@/lib/utils'; // For conditional class names
+import { cn } from '@/lib/utils';
 
 // Define the type for your database if you have one for Supabase client
 // import { Database } from '@/lib/database.types';
@@ -24,14 +25,14 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ className }: SidebarProps) {
-  const [isOpen, setIsOpen] = useState(false); // Start closed by default
+  const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
-  const supabase = createClientComponentClient(); // For client-side auth actions like logout
+  const supabase = createClientComponentClient();
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.push('/'); // Redirect to home page after logout
-    router.refresh(); // Refresh server components
+    router.push('/');
+    router.refresh();
   };
 
   const toggleSidebar = () => setIsOpen(!isOpen);
@@ -39,9 +40,9 @@ export default function Sidebar({ className }: SidebarProps) {
   const navItems = [
     { href: '/hub', label: 'Hub Home', icon: LayoutDashboard },
     { href: '/hub/profile', label: 'My Profile', icon: UserCircle },
+    { href: '/hub/essence', label: 'Essence Tracker', icon: Coins },
     { href: '/hub/lobbyist', label: 'My Lobbyist', icon: MessageSquare },
     { href: '/hub/e2pedia', label: 'E2Pedia', icon: Newspaper },
-    // Add other Hub-specific links here
   ];
 
   return (
@@ -52,30 +53,31 @@ export default function Sidebar({ className }: SidebarProps) {
         size="icon"
         onClick={toggleSidebar}
         className={cn(
-          "fixed top-18 left-4 z-50 flex items-center justify-center text-white bg-gray-800/70 hover:bg-gray-700/90 backdrop-blur-sm rounded-full",
-          "lg:top-4",
+          "fixed top-[4.1rem] z-50 flex items-center justify-center text-white hover:text-earthie-mint transition-colors",
+          "h-10 w-10 rounded-none border-gray-700/50",
+          isOpen 
+            ? "left-64 border-l bg-gray-900/95" 
+            : "left-0 border-r bg-gray-800/70 hover:bg-gray-700/90",
         )}
         aria-label={isOpen ? "Close sidebar" : "Open sidebar"}
       >
-        {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+        {isOpen ? 
+          <PanelLeftClose className="h-5 w-5" /> : 
+          <PanelLeftOpen className="h-5 w-5" />
+        }
       </Button>
 
       {/* Sidebar Panel */}
       <aside
         className={cn(
-          "fixed top-0 left-0 z-40 h-screen bg-gray-900/95 backdrop-blur-lg text-white transition-transform duration-300 ease-in-out", // Use transform for animation
+          "fixed top-16 left-0 z-40 h-[calc(100vh-4rem)] bg-[#383A4B]/80 backdrop-blur-md text-white transition-all duration-300 ease-in-out",
           "flex flex-col shadow-2xl border-r border-gray-700/50",
-          isOpen ? "translate-x-0 w-64" : "-translate-x-full w-64", // Slide in/out
+          isOpen ? "translate-x-0 opacity-100 w-64" : "-translate-x-full opacity-0 w-64",
           className
         )}
       >
-        {/* Content is always rendered, but only visible when open */}
-        <div className="flex justify-between items-center p-4 border-b border-gray-700">
-            <h2 className="text-2xl font-semibold">Earthie Hub</h2>
-            {/* Optional: Keep X here too, or rely on external toggle */}
-             <Button variant="ghost" size="icon" onClick={toggleSidebar} className="lg:hidden" aria-label="Close sidebar">
-                <X className="h-6 w-6" />
-             </Button>
+        <div className="flex justify-between items-center p-4 border-b border-gray-700/50">
+          <h2 className="text-2xl font-semibold">Earthie Hub</h2>
         </div>
         <nav className="flex-grow p-4 overflow-y-auto">
           <ul className="space-y-2">
@@ -84,8 +86,7 @@ export default function Sidebar({ className }: SidebarProps) {
                 <Link href={item.href} passHref>
                   <Button
                     variant="ghost"
-                    className="w-full justify-start text-left hover:bg-gray-700"
-                    // Add active link styling if needed using usePathname
+                    className="w-full justify-start text-left hover:bg-gray-700/80 hover:text-earthie-mint transition-colors"
                   >
                     <item.icon className="mr-3 h-5 w-5" />
                     {item.label}
@@ -95,10 +96,10 @@ export default function Sidebar({ className }: SidebarProps) {
             ))}
           </ul>
         </nav>
-        <div className="p-4 border-t border-gray-700">
+        <div className="p-4 border-t border-gray-700/50">
           <Button
-            variant="destructive"
-            className="w-full justify-start text-left bg-red-600 hover:bg-red-700"
+            variant="ghost"
+            className="w-full justify-start text-left hover:bg-gray-700/80 hover:text-earthie-mint transition-colors"
             onClick={handleLogout}
           >
             <LogOut className="mr-3 h-5 w-5" />
@@ -107,7 +108,7 @@ export default function Sidebar({ className }: SidebarProps) {
         </div>
       </aside>
 
-      {/* Main content overlay when sidebar is open (for mobile/tablet touch dismiss) */}
+      {/* Main content overlay when sidebar is open */}
       {isOpen && (
         <div 
           onClick={toggleSidebar} 

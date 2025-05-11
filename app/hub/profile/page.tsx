@@ -1902,54 +1902,91 @@ export default function ProfilePage() {
             <DialogTitle className="text-sky-200">Earth2 Global Metrics</DialogTitle>
           </DialogHeader>
           {globalMetrics ? (
-            // ---- Helper for number formatting ----
-            (()=>{
-              const formatWithCommas = (val:number)=> val.toLocaleString();
+            <>
+              {/* ---- Helper for number formatting ---- */}
+              {(() => {
+                const formatWithCommas = (val:number)=> val.toLocaleString();
 
-              const entries = Object.entries(globalMetrics).slice(0,12);
+                // Restore original: just use the first 12 metrics, including individual tier tiles
+                const keysOfInterest = [
+                  'jewelsCount',
+                  't1JewelsCount',
+                  't2JewelsCount',
+                  't3JewelsCount',
+                  't1EverMinedJewelsCount',
+                  'mentarSlotsCount',
+                  'tilesPurchased',
+                  't1TilesPurchased',
+                  't2TilesPurchased',
+                  't3TilesPurchased',
+                  'essMaxSupply',
+                  'essMinted',
+                  'cydroidTechnicianCiviliansCount',
+                  'raidCommanderCiviliansCount',
+                  'etherDispenserCiviliansCount'
+                ];
+                const entries = keysOfInterest
+                  .map(k => [k, globalMetrics[k]])
+                  .filter(([k, v]) => v !== undefined);
 
-              return (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-                  {entries.map(([k,v])=> {
-                    const isNumber = typeof v==='number' || !isNaN(Number(v));
-                    const numericVal = isNumber? Number(v): null;
-                    // Detect cap counterpart – e.g. key ending with MINTED => look for MAXSUPPLY or CAP
-                    let maxKey:string|null = null; let maxVal:number|null=null; let percent:number|null=null;
-                    if(isNumber){
-                      if(k.endsWith('MINTED')){
-                        const base = k.slice(0,-'MINTED'.length);
-                        const candidate = `${base}MAXSUPPLY`;
-                        if(globalMetrics[candidate]){
-                          maxKey=candidate; maxVal = Number(globalMetrics[candidate]);
-                        }
-                      } else if(k.endsWith('COUNT')){
-                        // Check for TOTAL key (rare). Example TILESPURCHASED vs ??
+                return (
+                  <div className="max-h-[60vh] overflow-y-auto pr-2 grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                    {entries.map(([k,v])=> {
+                      const isNumber = typeof v==='number' || !isNaN(Number(v));
+                      const numericVal = isNumber? Number(v): null;
+                      // Detect cap counterpart – e.g. key ending with MINTED => look for MAXSUPPLY or CAP
+                      let maxKey:string|null = null; let maxVal:number|null=null; let percent:number|null=null;
+                      const kStr = String(k);
+                      if (kStr.toLowerCase() === 'jewelscount') {
+                        maxVal = 150000000;
+                      } else if (kStr.toLowerCase() === 'cydroidtechniciancivilianscount') {
+                        maxVal = 500000;
+                      } else if (kStr.toLowerCase() === 'raidcommandercivilianscount') {
+                        maxVal = 500000;
+                      } else if (kStr.toLowerCase() === 'etherdispensercivilianscount') {
+                        maxVal = 500000;
                       }
-                      if(maxVal!==null && maxVal>0){
+                      if(isNumber && maxVal === null){
+                        const keys = Object.keys(globalMetrics);
+                        if (/minted$/i.test(kStr)) {
+                          const base = kStr.replace(/minted$/i, '');
+                          const candidate = keys.find(key => key.toLowerCase() === (base + 'maxsupply').toLowerCase());
+                          if (candidate && globalMetrics[candidate]) {
+                            maxKey = candidate; maxVal = Number(globalMetrics[candidate]);
+                          }
+                        }
+                      }
+                      if(maxVal!==null && maxVal>0 && isNumber){
                         percent = Math.min(100, (numericVal!*100)/maxVal);
                       }
-                    }
-                    return (
-                      <Card key={k} className="bg-gray-800/75 border-gray-700 p-4">
-                        <p className="text-xs font-semibold tracking-wide uppercase text-gray-400 mb-1">{k}</p>
-                        <p className="text-2xl font-bold text-sky-100" title={isNumber? numericVal!.toLocaleString(): undefined}>
-                          {isNumber? formatWithCommas(numericVal!): v as any}
-                        </p>
-                        {percent!==null && (
-                          <div className="mt-3">
-                            <Progress value={percent} max={100} className="h-2 bg-gray-700" />
-                            <p className="text-[10px] text-gray-400 mt-1 flex justify-between uppercase">
-                              <span>Progress</span>
-                              <span>{percent.toFixed(1)}%</span>
-                            </p>
-                          </div>
-                        )}
-                      </Card>
-                    );
-                  })}
-                </div>
-              );
-            })()
+                      // DEBUG: Log percent for each metric
+                      if (percent !== null) {
+                        console.log('Progress bar percent:', percent, 'for', k, numericVal, maxVal);
+                      }
+                      return (
+                        <Card key={kStr} className="bg-gray-800/75 border-gray-700 p-4">
+                          <p className="text-xs font-semibold tracking-wide uppercase text-gray-400 mb-1">
+                            {kStr}
+                          </p>
+                          <p className="text-2xl font-bold text-sky-100" title={isNumber? numericVal!.toLocaleString(): undefined}>
+                            {isNumber? formatWithCommas(numericVal!): v as any}
+                          </p>
+                          {percent !== null && (
+                            <div className="mt-3" style={{ minHeight: 20 }}>
+                              <Progress value={percent} max={100} className={`h-4 bg-gray-700 border ${percent >= 100 ? 'border-red-500 [&_.bg-emerald-500]:!bg-red-500' : 'border-emerald-500'}`} style={{ minWidth: 100, minHeight: 16 }} />
+                              <p className="text-[10px] text-gray-400 mt-1 flex justify-between uppercase">
+                                <span>Progress</span>
+                                <span>{percent.toFixed(1)}%</span>
+                              </p>
+                            </div>
+                          )}
+                        </Card>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </>
           ) : (
              <div className="flex justify-center items-center py-8"><Loader2 className="h-6 w-6 animate-spin text-sky-400"/></div>
            )}

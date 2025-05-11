@@ -1,20 +1,24 @@
 'use client';
 
 import { useState, useEffect } from "react";
+import type { User } from '@supabase/supabase-js';
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Headphones, Code, MessageSquare, Swords, Info, Calculator, X as CloseIcon } from "lucide-react";
+import { ArrowRight, Headphones, Code, MessageSquare, Swords, Info, Calculator, X as CloseIcon, UserIcon, Book, Building } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { usePriceContext } from "@/contexts/PriceContext"; // Ensure PriceContext provider wraps layout
+import { supabase } from '@/lib/supabase';
 
 // This component contains all the original logic and JSX from app/page.tsx
 export default function HomePageClientContent() {
   const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
   const [essenceAmount, setEssenceAmount] = useState("");
   const [calculatedValue, setCalculatedValue] = useState("");
+  const [user, setUser] = useState<User | null>(null);
+  const [userLoaded, setUserLoaded] = useState(false);
 
   const {
       currentPrice: currentEssencePrice,
@@ -48,6 +52,18 @@ export default function HomePageClientContent() {
     }
   }, [essenceAmount, currentEssencePrice, selectedFiatCurrency, isLoadingPrice, priceError, isInitialising]);
 
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setUserLoaded(true);
+    });
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null);
+      setUserLoaded(true);
+    });
+    return () => listener?.subscription?.unsubscribe();
+  }, []);
+
   const handleEssenceInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
      const value = e.target.value;
      if (/^\d*\.?\d*$/.test(value) || value === "") {
@@ -60,7 +76,7 @@ export default function HomePageClientContent() {
     <>
       {/* --- Hero Section --- */}
       <section className="container mx-auto px-4 flex justify-center py-12 md:py-16 lg:py-20">
-        <div className="bg-gray-800 rounded-lg shadow-xl p-8 md:p-12 flex flex-col md:flex-row items-center gap-8 md:gap-12 w-full max-w-6xl">
+        <div className="rounded-2xl bg-gradient-to-br from-[#0b0e13]/80 to-[#23243a]/70 border border-[#1d1f24] shadow-xl p-8 md:p-12 flex flex-col md:flex-row items-center gap-8 md:gap-12 w-full max-w-6xl">
           <div className="flex-1 text-center md:text-left">
             <h1 className="text-3xl md:text-5xl font-bold mb-4 text-white leading-tight"> Meet Earthie, Your<br />Earth2 Companion </h1>
             <p className="text-lg text-gray-300 mb-8"> The AI chatbot that knows everything about Earth2. Get answers, discover tips, and enhance your virtual world experience. </p>
@@ -98,41 +114,84 @@ export default function HomePageClientContent() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {/* AI Chat */}
-            <div className="flex flex-col items-center space-y-4 p-6 border border-gray-700 rounded-lg bg-gray-800">
+            <div className="flex flex-col items-center space-y-4 p-6 rounded-2xl bg-gradient-to-br from-[#0b0e13]/80 to-[#23243a]/70 border border-[#1d1f24] relative">
+              {userLoaded && !user && (
+                <span className="absolute top-3 right-3 px-2 py-0.5 text-xs rounded bg-rose-500/30 text-rose-200 animate-pulse shadow-sm" style={{zIndex:2, fontWeight:500, letterSpacing:'0.02em'}}>Login Required</span>
+              )}
               <div className="p-3 rounded-full bg-[#50E3C1]/20"> <MessageSquare className="w-8 h-8 text-[#50E3C1]" /> </div>
               <h3 className="text-xl font-bold text-white">AI Chat Assistant</h3>
               <p className="text-center text-gray-300 text-sm flex-grow"> Get instant answers to all your Earth2 questions from property management to gameplay strategies. </p>
               <Link href="/chat" passHref className="mt-auto pt-4"> <Button variant="outline" className="bg-[#343547] text-[#50E3C1] border-[#50E3C1] hover:bg-[#50E3C1]/10 hover:text-[#50E3C1]"> Start Chatting <ArrowRight className="ml-2 h-4 w-4" /> </Button> </Link>
             </div>
+            {/* Profile */}
+            <div className="flex flex-col items-center space-y-4 p-6 rounded-2xl bg-gradient-to-br from-[#0b0e13]/80 to-[#23243a]/70 border border-[#1d1f24] relative">
+              {userLoaded && !user && (
+                <span className="absolute top-3 right-3 px-2 py-0.5 text-xs rounded bg-rose-500/30 text-rose-200 animate-pulse shadow-sm" style={{zIndex:2, fontWeight:500, letterSpacing:'0.02em'}}>Login Required</span>
+              )}
+              <div className="p-3 rounded-full bg-earthie-mint/20"> <UserIcon className="w-8 h-8 text-earthie-mint" /> </div>
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">Profile</h3>
+              <p className="text-center text-cyan-200/80 text-sm flex-grow">View your linked Earth2 profile, manage your properties, and track your net worth.</p>
+              <Link href="/hub/profile" passHref className="mt-auto pt-4"> <Button variant="outline" className="bg-[#343547] text-earthie-mint border-earthie-mint hover:bg-earthie-mint/10 hover:text-earthie-mint"> Go to Profile <ArrowRight className="ml-2 h-4 w-4" /> </Button> </Link>
+            </div>
+            {/* E2pedia */}
+            <div className="flex flex-col items-center space-y-4 p-6 rounded-2xl bg-gradient-to-br from-[#0b0e13]/80 to-[#23243a]/70 border border-[#1d1f24] relative">
+              {userLoaded && !user && (
+                <span className="absolute top-3 right-3 px-2 py-0.5 text-xs rounded bg-rose-500/30 text-rose-200 animate-pulse shadow-sm" style={{zIndex:2, fontWeight:500, letterSpacing:'0.02em'}}>Login Required</span>
+              )}
+              <div className="p-3 rounded-full bg-earthie-mint/20"> <Book className="w-8 h-8 text-earthie-mint" /> </div>
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">E2pedia</h3>
+              <p className="text-center text-cyan-200/80 text-sm flex-grow">Browse official Earth2 announcements and access a growing knowledge base.</p>
+              <Link href="/hub/e2pedia" passHref className="mt-auto pt-4"> <Button variant="outline" className="bg-[#343547] text-earthie-mint border-earthie-mint hover:bg-earthie-mint/10 hover:text-earthie-mint"> Open E2pedia <ArrowRight className="ml-2 h-4 w-4" /> </Button> </Link>
+            </div>
+            {/* My Lobbyist */}
+            <div className="flex flex-col items-center space-y-4 p-6 rounded-2xl bg-gradient-to-br from-[#0b0e13]/80 to-[#23243a]/70 border border-[#1d1f24] relative">
+              {userLoaded && !user && (
+                <span className="absolute top-3 right-3 px-2 py-0.5 text-xs rounded bg-rose-500/30 text-rose-200 animate-pulse shadow-sm" style={{zIndex:2, fontWeight:500, letterSpacing:'0.02em'}}>Login Required</span>
+              )}
+              <div className="p-3 rounded-full bg-earthie-mint/20"> <Building className="w-8 h-8 text-earthie-mint" /> </div>
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">My Lobbyist</h3>
+              <p className="text-center text-cyan-200/80 text-sm flex-grow">Join the community, share posts, comment, and react in the Earth2 social hub.</p>
+              <Link href="/hub/lobbyist" passHref className="mt-auto pt-4"> <Button variant="outline" className="bg-[#343547] text-earthie-mint border-earthie-mint hover:bg-earthie-mint/10 hover:text-earthie-mint"> Visit Lobbyist <ArrowRight className="ml-2 h-4 w-4" /> </Button> </Link>
+            </div>
             {/* Radio */}
-            <div className="flex flex-col items-center space-y-4 p-6 border border-gray-700 rounded-lg bg-gray-800">
+            <div className="flex flex-col items-center space-y-4 p-6 rounded-2xl bg-gradient-to-br from-[#0b0e13]/80 to-[#23243a]/70 border border-[#1d1f24] relative">
               <div className="p-3 rounded-full bg-[#50E3C1]/20"> <Headphones className="w-8 h-8 text-[#50E3C1]" /> </div>
               <h3 className="text-xl font-bold text-white">Earth2 Radio</h3>
               <p className="text-center text-gray-300 text-sm flex-grow"> Listen to podcasts and updates about the latest developments in the Earth2 universe. </p>
               <Link href="/radio" passHref className="mt-auto pt-4"> <Button variant="outline" className="bg-[#343547] text-[#50E3C1] border-[#50E3C1] hover:bg-[#50E3C1]/10 hover:text-[#50E3C1]"> Listen Now <ArrowRight className="ml-2 h-4 w-4" /> </Button> </Link>
             </div>
             {/* Dev Tools */}
-            <div className="flex flex-col items-center space-y-4 p-6 border border-gray-700 rounded-lg bg-gray-800">
+            <div className="flex flex-col items-center space-y-4 p-6 rounded-2xl bg-gradient-to-br from-[#0b0e13]/80 to-[#23243a]/70 border border-[#1d1f24] relative">
               <div className="p-3 rounded-full bg-[#50E3C1]/20"> <Code className="w-8 h-8 text-[#50E3C1]" /> </div>
               <h3 className="text-xl font-bold text-white">Developer Tools</h3>
               <p className="text-center text-gray-300 text-sm flex-grow"> Submit and share your Earth2 scripts to enhance the community experience. </p>
               <Link href="/script-tools" passHref className="mt-auto pt-4"> <Button variant="outline" className="bg-[#343547] text-[#50E3C1] border-[#50E3C1] hover:bg-[#50E3C1]/10 hover:text-[#50E3C1]"> Explore Tools <ArrowRight className="ml-2 h-4 w-4" /> </Button> </Link>
             </div>
             {/* Raid Helper */}
-            <div className="flex flex-col items-center space-y-4 p-6 border border-gray-700 rounded-lg bg-gray-800">
+            <div className="flex flex-col items-center space-y-4 p-6 rounded-2xl bg-gradient-to-br from-[#0b0e13]/80 to-[#23243a]/70 border border-[#1d1f24] relative">
               <div className="p-3 rounded-full bg-[#50E3C1]/20"> <Swords className="w-8 h-8 text-[#50E3C1]" /> </div>
               <h3 className="text-xl font-bold text-white">Raid Helper</h3>
               <p className="text-center text-gray-300 text-sm flex-grow"> Analyze your raiding performance! Upload your exported raid data CSV to visualize success rates, E-ther gains, and top targets. </p>
               <Link href="/raid-helper" passHref className="mt-auto pt-4"> <Button variant="outline" className="bg-[#343547] text-[#50E3C1] border-[#50E3C1] hover:bg-[#50E3C1]/10 hover:text-[#50E3C1]"> Analyze Raids <ArrowRight className="ml-2 h-4 w-4" /> </Button> </Link>
+            </div>
+            {/* Essence Tracker */}
+            <div className="flex flex-col items-center space-y-4 p-6 rounded-2xl bg-gradient-to-br from-[#0b0e13]/80 to-[#23243a]/70 border border-[#1d1f24] relative">
+              {userLoaded && !user && (
+                <span className="absolute top-3 right-3 px-2 py-0.5 text-xs rounded bg-rose-500/30 text-rose-200 animate-pulse shadow-sm" style={{zIndex:2, fontWeight:500, letterSpacing:'0.02em'}}>Login Required</span>
+              )}
+              <div className="p-3 rounded-full bg-[#50E3C1]/20"> <Calculator className="w-8 h-8 text-[#50E3C1]" /> </div>
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">Essence Tracker</h3>
+              <p className="text-center text-gray-300 text-sm flex-grow"> Track Essence price, view interactive charts, analyze wallet balances, and monitor buy/sell activity for the E2-E token. </p>
+              <Link href="/hub/essence" passHref className="mt-auto pt-4"> <Button variant="outline" className="bg-[#343547] text-[#50E3C1] border-[#50E3C1] hover:bg-[#50E3C1]/10 hover:text-[#50E3C1]"> Open Tracker <ArrowRight className="ml-2 h-4 w-4" /> </Button> </Link>
             </div>
           </div>
         </div>
       </section>
 
       {/* --- Call to Action Section --- */}
-      <section className="py-12 md:py-24 lg:py-32 bg-gray-900">
+      <section className="py-12 md:py-24 lg:py-32">
         <div className="container mx-auto px-4 md:px-6">
-          <div className="flex flex-col items-center justify-center space-y-4 text-center">
+          <div className="rounded-2xl bg-gradient-to-br from-[#0b0e13]/80 to-[#23243a]/70 border border-[#1d1f24] shadow-xl flex flex-col items-center justify-center space-y-4 text-center py-12 px-4 md:px-12">
             <div className="space-y-2">
               <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl text-white"> Ready to Explore Earth2? </h2>
               <p className="max-w-[600px] text-gray-300 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed"> Start chatting with Earthie today and unlock the full potential of your virtual world experience. </p>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { 
   Heart, 
@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import CommentSkeleton from './CommentSkeleton';
-import { useToast } from '@/components/ui/toast';
+import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
@@ -30,6 +30,7 @@ import {
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
+import { supabase } from '@/lib/supabase';
 
 // Post types
 export type PostType = 'text' | 'image' | 'link' | 'trade' | 'poll' | 'dev_diary' | 'raid' | 'showcase';
@@ -101,16 +102,135 @@ export default function LobbyistPost({ post, onLike, onComment, onEcho, onShare 
   const [commentsError, setCommentsError] = useState<string | null>(null);
   const [newComment, setNewComment] = useState('');
   const [addingComment, setAddingComment] = useState(false);
+  // Echo state
+  const [isEchoed, setIsEchoed] = useState(false);
+  const [echoCount, setEchoCount] = useState(post.echoCount);
+  const [echoLoading, setEchoLoading] = useState(false);
+
+  // Check if user has echoed this post
+  useEffect(() => {
+    const checkEchoStatus = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const { data } = await supabase
+        .from('lobbyist_echoes')
+        .select('id')
+        .eq('original_post_id', post.id)
+        .eq('user_id', session.user.id)
+        .single();
+
+      setIsEchoed(!!data);
+    };
+
+    checkEchoStatus();
+  }, [post.id]);
+
+  // Handle echo
+  const handleEcho = async () => {
+    if (echoLoading) return;
+    setEchoLoading(true);
+
+    try {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        throw new Error('Authentication required');
+      }
+
+      if (isEchoed) {
+        // Remove echo
+        const { error } = await supabase
+          .from('lobbyist_echoes')
+          .delete()
+          .eq('original_post_id', post.id)
+          .eq('user_id', session.user.id);
+
+        if (error) throw error;
+        setEchoCount(prev => Math.max(0, prev - 1));
+        setIsEchoed(false);
+      } else {
+        // Add echo
+        const { error } = await supabase
+          .from('lobbyist_echoes')
+          .insert({
+            original_post_id: post.id,
+            user_id: session.user.id
+          });
+
+        if (error) throw error;
+        setEchoCount(prev => prev + 1);
+        setIsEchoed(true);
+      }
+
+      if (onEcho) onEcho(post.id);
+    } catch (e: any) {
+      toast({
+        title: 'Failed to echo post',
+        description: e.message || 'Unknown error',
+        variant: 'destructive',
+      });
+    } finally {
+      setEchoLoading(false);
+    }
+  };
+
+  // Handle share
+  const handleShare = async () => {
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: post.title,
+          text: post.content,
+          url: `${window.location.origin}/hub/lobbyist/post/${post.id}`
+        });
+      } else {
+        // Fallback to copying link to clipboard
+        const url = `${window.location.origin}/hub/lobbyist/post/${post.id}`;
+        await navigator.clipboard.writeText(url);
+        toast({
+          title: 'Link copied to clipboard',
+          description: 'You can now share this post with others.',
+        });
+      }
+
+      if (onShare) onShare(post.id);
+    } catch (e: any) {
+      if (e.name !== 'AbortError') { // Don't show error if user cancelled share dialog
+        toast({
+          title: 'Failed to share post',
+          description: e.message || 'Unknown error',
+          variant: 'destructive',
+        });
+      }
+    }
+  };
 
   // Fetch comments when showComments is toggled on
   const fetchComments = async () => {
     setCommentsLoading(true);
     setCommentsError(null);
     try {
-      const res = await fetch(`/api/lobbyist/comments?postId=${encodeURIComponent(post.id)}`);
-      if (!res.ok) throw new Error('Failed to load comments');
-      const data = await res.json();
-      setComments(data.comments || []);
+      const { data: comments, error } = await supabase
+        .from('lobbyist_comments')
+        .select(`
+          *,
+          profiles (id, username, avatar_url)
+        `)
+        .eq('post_id', post.id)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      setComments(comments.map(comment => ({
+        id: comment.id,
+        content: comment.content,
+        createdAt: comment.created_at,
+        user: {
+          id: comment.profiles?.id || '',
+          name: comment.profiles?.username || 'Anonymous',
+          avatar: comment.profiles?.avatar_url
+        }
+      })));
     } catch (e: any) {
       setCommentsError(e.message || 'Unknown error');
       toast({
@@ -138,25 +258,44 @@ export default function LobbyistPost({ post, onLike, onComment, onEcho, onShare 
     let updated = { ...reactions };
     let newActive: ReactionType | null = type;
     try {
+      // Get current session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        throw new Error('Authentication required');
+      }
+
       if (activeReaction === type) {
         // Remove reaction
-        await fetch('/api/lobbyist/reactions', {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ postId: post.id, reaction: type })
-        });
+        const { error } = await supabase
+          .from('lobbyist_reactions')
+          .delete()
+          .eq('post_id', post.id)
+          .eq('reaction_type', type)
+          .eq('user_id', session.user.id);
+
+        if (error) throw error;
         updated[type] = Math.max(0, updated[type] - 1);
         newActive = null;
       } else {
         // Add reaction
-        await fetch('/api/lobbyist/reactions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ postId: post.id, reaction: type })
-        });
+        const { error } = await supabase
+          .from('lobbyist_reactions')
+          .insert({
+            post_id: post.id,
+            reaction_type: type,
+            user_id: session.user.id
+          });
+
+        if (error) throw error;
         updated[type] = (updated[type] || 0) + 1;
         // Remove previous reaction if any
         if (activeReaction && activeReaction !== type) {
+          await supabase
+            .from('lobbyist_reactions')
+            .delete()
+            .eq('post_id', post.id)
+            .eq('reaction_type', activeReaction)
+            .eq('user_id', session.user.id);
           updated[activeReaction] = Math.max(0, updated[activeReaction] - 1);
         }
       }
@@ -179,14 +318,39 @@ export default function LobbyistPost({ post, onLike, onComment, onEcho, onShare 
     if (!newComment.trim()) return;
     setAddingComment(true);
     try {
-      const res = await fetch('/api/lobbyist/comments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ postId: post.id, content: newComment })
-      });
-      if (!res.ok) throw new Error('Failed to add comment');
-      const data = await res.json();
-      setComments((prev) => [...prev, data.comment]);
+      // Get current session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        throw new Error('Authentication required');
+      }
+
+      const { data, error } = await supabase
+        .from('lobbyist_comments')
+        .insert({
+          post_id: post.id,
+          content: newComment,
+          user_id: session.user.id
+        })
+        .select(`
+          *,
+          profiles (id, username, avatar_url)
+        `)
+        .single();
+
+      if (error) throw error;
+
+      const newCommentData = {
+        id: data.id,
+        content: data.content,
+        createdAt: data.created_at,
+        user: {
+          id: data.profiles?.id || '',
+          name: data.profiles?.username || 'Anonymous',
+          avatar: data.profiles?.avatar_url
+        }
+      };
+
+      setComments((prev) => [...prev, newCommentData]);
       setNewComment('');
     } catch (e: any) {
       toast({
@@ -371,18 +535,19 @@ export default function LobbyistPost({ post, onLike, onComment, onEcho, onShare 
             <Button 
               variant="ghost" 
               size="sm" 
-              className="rounded-full px-2 text-gray-400 hover:text-purple-400 hover:bg-purple-950/30"
-              onClick={() => onEcho && onEcho(post.id)}
+              className={`rounded-full px-2 ${isEchoed ? 'bg-purple-950/60 text-purple-400' : 'text-gray-400 hover:text-purple-400 hover:bg-purple-950/30'}`}
+              onClick={handleEcho}
+              disabled={echoLoading}
             >
               <Repeat size={16} className="mr-1" />
-              <span className="text-xs">{post.echoCount}</span>
+              <span className="text-xs">{echoCount}</span>
             </Button>
             
             <Button 
               variant="ghost" 
               size="sm" 
               className="rounded-full px-2 text-gray-400 hover:text-blue-400 hover:bg-blue-950/30"
-              onClick={() => onShare && onShare(post.id)}
+              onClick={handleShare}
             >
               <Share2 size={16} />
             </Button>

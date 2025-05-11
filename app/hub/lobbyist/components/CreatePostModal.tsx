@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { supabase } from '@/lib/supabase';
 
 // Post types
 const POST_TYPES = [
@@ -146,30 +147,64 @@ export default function CreatePostModal({ isOpen, onClose, onCreatePost, user }:
       setIsLoading(false);
       return;
     }
+
     try {
-      const response = await fetch('/api/lobbyist/posts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title,
-          content,
-          postType,
-          tags,
-          imageUrl: imageUrls.length > 0 ? imageUrls[0] : null,
-          isPrivate,
-          followersOnly,
-          subLobby,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to create post');
+      // First get the current session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        throw new Error('Authentication required');
       }
 
-      // Backend returns the inserted row in result.data
-      onCreatePost(result.data);
+      const { data, error } = await supabase
+        .from('lobbyist_posts')
+        .insert({
+          title,
+          content,
+          post_type: postType,
+          tags,
+          image_url: imageUrls[0],
+          sub_lobby: subLobby,
+          is_private: isPrivate,
+          followers_only: followersOnly,
+          user_id: session.user.id
+        })
+        .select(`
+          *,
+          profiles (id, username, avatar_url),
+          reactions:lobbyist_reactions(reaction_type),
+          comments:lobbyist_comments(count)
+        `)
+        .single();
+
+      if (error) throw error;
+
+      // Transform the post data to match the expected format
+      const transformedPost = {
+        id: data.id,
+        title: data.title,
+        content: data.content,
+        postType: data.post_type,
+        createdAt: data.created_at,
+        tags: data.tags || [],
+        images: [data.image_url].filter(Boolean) as string[],
+        user: {
+          id: data.user_id,
+          name: data.profiles?.username || 'Earth2 Profile Required',
+          avatar: data.profiles?.avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${data.profiles?.username || 'anonymous'}`,
+          hasProfile: !!data.profiles
+        },
+        reactions: {
+          hyped: 0,
+          smart: 0,
+          love: 0,
+          watching: 0
+        },
+        commentCount: 0,
+        echoCount: 0
+      };
+
+      onCreatePost(transformedPost);
       setIsLoading(false);
       onClose();
     } catch (err: any) {
@@ -202,15 +237,14 @@ export default function CreatePostModal({ isOpen, onClose, onCreatePost, user }:
                 {user.avatar ? (
                   <AvatarImage src={user.avatar} alt={user.name} />
                 ) : (
-                  <span className="animate-pulse bg-sky-700/40 h-full w-full block rounded-full" />
+                  <AvatarFallback className="bg-sky-700/40 text-sky-200">
+                    {user.name ? user.name.slice(0, 2).toUpperCase() : '--'}
+                  </AvatarFallback>
                 )}
-                <AvatarFallback className="bg-sky-700/40 text-sky-200">
-                  {user.name ? user.name.slice(0, 2).toUpperCase() : '--'}
-                </AvatarFallback>
               </Avatar>
               <div>
                 <p className="font-medium text-white">
-                  {user.name || <span className="inline-block w-24 h-4 bg-sky-900/40 animate-pulse rounded" />}
+                  {user.name || 'Earth2 Profile Required'}
                 </p>
                 <Select value={postType} onValueChange={setPostType}>
                   <SelectTrigger className="h-7 w-auto border-0 bg-transparent focus:ring-0 p-0 text-gray-400 hover:text-sky-400">
@@ -250,7 +284,15 @@ export default function CreatePostModal({ isOpen, onClose, onCreatePost, user }:
                 </Select>
               </div>
             </div>
-          ) : null}
+          ) : (
+            <div className="flex items-center space-x-3">
+              <div className="h-9 w-9 rounded-full bg-sky-700/40 animate-pulse" />
+              <div className="space-y-2">
+                <div className="h-4 w-32 bg-sky-700/40 rounded animate-pulse" />
+                <div className="h-4 w-24 bg-sky-700/40 rounded animate-pulse" />
+              </div>
+            </div>
+          )}
 
           {/* Title Input */}
           <Input
