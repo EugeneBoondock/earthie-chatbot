@@ -376,34 +376,36 @@ export default function LobbyistPost({ post, onLike, onComment, onEcho, onShare 
   return (
     <Card className="backdrop-blur-md bg-gradient-to-br from-earthie-dark/70 to-earthie-dark-light/60 border border-sky-400/20 overflow-hidden transition-all hover:border-sky-400/40 hover:shadow-lg hover:shadow-sky-900/20">
       <CardHeader className="p-4 pb-2 flex flex-row items-start justify-between">
-        <div className="flex items-center space-x-3">
-          <Avatar className="h-9 w-9 border border-sky-400/30">
+        <div className="flex items-start space-x-3 min-w-0">
+          <Avatar className="h-9 w-9 border border-sky-400/30 flex-shrink-0">
             <AvatarImage src={post.user.avatar} alt={post.user.name} />
             <AvatarFallback className="bg-sky-700/40 text-sky-200">
               {post.user.name.slice(0, 2).toUpperCase()}
             </AvatarFallback>
           </Avatar>
           
-          <div>
-            <div className="flex items-center">
-              <span className="font-medium text-white">{post.user.name}</span>
+          <div className="min-w-0">
+            <div className="flex items-center flex-wrap gap-2">
+              <span className="font-medium text-white truncate">{post.user.name}</span>
               {post.user.tier && (
-                <Badge variant="outline" className="ml-2 bg-indigo-600/40 text-xs border-indigo-400/30 px-1.5">
+                <Badge variant="outline" className="bg-indigo-600/40 text-xs border-indigo-400/30 px-1.5">
                   T{post.user.tier}
                 </Badge>
               )}
               {post.user.country && (
-                <span className="text-xs text-gray-400 ml-2 flex items-center">
-                  <MapPin size={12} className="mr-0.5" />
+                <span className="text-xs text-gray-400 flex items-center">
+                  <MapPin size={12} className="mr-0.5 flex-shrink-0" />
                   {post.user.country}
                 </span>
               )}
             </div>
-            <div className="flex items-center text-xs text-gray-400 mt-0.5">
-              <Calendar size={12} className="mr-1" />
-              {formatDate(post.createdAt)}
+            <div className="flex items-center text-xs text-gray-400 mt-0.5 flex-wrap gap-2">
+              <span className="flex items-center">
+                <Calendar size={12} className="mr-1 flex-shrink-0" />
+                {formatDate(post.createdAt)}
+              </span>
               {post.postType && (
-                <Badge className="ml-2 bg-sky-900/30 text-sky-300 border-sky-500/30 text-[10px] h-5 px-1.5">
+                <Badge className="bg-sky-900/30 text-sky-300 border-sky-500/30 text-[10px] h-5 px-1.5">
                   {postTypeIcons[post.postType] || null}
                   <span className="ml-1">{post.postType}</span>
                 </Badge>
@@ -414,7 +416,7 @@ export default function LobbyistPost({ post, onLike, onComment, onEcho, onShare 
         
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="rounded-full h-8 w-8">
+            <Button variant="ghost" size="icon" className="rounded-full h-8 w-8 flex-shrink-0">
               <MoreHorizontal size={16} className="text-gray-400" />
             </Button>
           </DropdownMenuTrigger>
@@ -433,12 +435,15 @@ export default function LobbyistPost({ post, onLike, onComment, onEcho, onShare 
       </CardHeader>
       
       <CardContent className="px-4 py-2">
-        <h3 className="text-lg font-medium text-sky-100 mb-2">{post.title}</h3>
-        <p className="text-gray-300 text-sm">{post.content}</p>
-        
-        {/* Image gallery */}
+        {/* Post Content */}
+        {post.title && (
+          <h3 className="text-lg font-semibold text-white mb-2 break-words">{post.title}</h3>
+        )}
+        <div className="text-gray-200 whitespace-pre-wrap break-words">
+          {post.content}
+        </div>
         {post.images && post.images.length > 0 && (
-          <div className={`mt-3 grid ${post.images.length > 1 ? 'grid-cols-2 gap-2' : 'grid-cols-1'}`}>
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
             {post.images.map((img, index) => (
               <div 
                 key={index} 
@@ -463,7 +468,7 @@ export default function LobbyistPost({ post, onLike, onComment, onEcho, onShare 
               <Badge 
                 key={tag} 
                 variant="outline" 
-                className="text-xs bg-indigo-950/40 text-indigo-300 border-indigo-400/20 hover:bg-indigo-900/30 cursor-pointer"
+                className="text-xs bg-indigo-950/40 text-indigo-300 border-indigo-400/20 hover:bg-indigo-900/30 cursor-pointer truncate max-w-full"
               >
                 #{tag}
               </Badge>
@@ -474,13 +479,13 @@ export default function LobbyistPost({ post, onLike, onComment, onEcho, onShare 
       
       <CardFooter className="px-4 py-3 border-t border-sky-400/10 flex flex-col space-y-3">
         {/* Reaction buttons */}
-        <div className="flex justify-between w-full">
-          <div className="flex space-x-1">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-0 sm:justify-between w-full">
+          <div className="flex flex-wrap gap-1">
             <Button 
               variant="ghost" 
               size="sm" 
               disabled={reactionLoading === 'hyped'}
-              className={`rounded-full px-2 ${activeReaction === 'hyped' ? 'bg-amber-950/60 text-amber-400' : 'text-gray-400 hover:text-amber-400 hover:bg-amber-950/30'}`}
+              className={`rounded-full px-2 min-w-[60px] ${activeReaction === 'hyped' ? 'bg-amber-950/60 text-amber-400' : 'text-gray-400 hover:text-amber-400 hover:bg-amber-950/30'}`}
               onClick={() => handleReaction('hyped')}
             >
               <Flame size={16} className="mr-1" />
@@ -491,7 +496,7 @@ export default function LobbyistPost({ post, onLike, onComment, onEcho, onShare 
               variant="ghost" 
               size="sm" 
               disabled={reactionLoading === 'smart'}
-              className={`rounded-full px-2 ${activeReaction === 'smart' ? 'bg-indigo-950/60 text-indigo-400' : 'text-gray-400 hover:text-indigo-400 hover:bg-indigo-950/30'}`}
+              className={`rounded-full px-2 min-w-[60px] ${activeReaction === 'smart' ? 'bg-indigo-950/60 text-indigo-400' : 'text-gray-400 hover:text-indigo-400 hover:bg-indigo-950/30'}`}
               onClick={() => handleReaction('smart')}
             >
               <Brain size={16} className="mr-1" />
@@ -502,7 +507,7 @@ export default function LobbyistPost({ post, onLike, onComment, onEcho, onShare 
               variant="ghost" 
               size="sm" 
               disabled={reactionLoading === 'love'}
-              className={`rounded-full px-2 ${activeReaction === 'love' ? 'bg-pink-950/60 text-pink-400' : 'text-gray-400 hover:text-pink-400 hover:bg-pink-950/30'}`}
+              className={`rounded-full px-2 min-w-[60px] ${activeReaction === 'love' ? 'bg-pink-950/60 text-pink-400' : 'text-gray-400 hover:text-pink-400 hover:bg-pink-950/30'}`}
               onClick={() => handleReaction('love')}
             >
               <Heart size={16} className="mr-1" />
@@ -513,7 +518,7 @@ export default function LobbyistPost({ post, onLike, onComment, onEcho, onShare 
               variant="ghost" 
               size="sm" 
               disabled={reactionLoading === 'watching'}
-              className={`rounded-full px-2 ${activeReaction === 'watching' ? 'bg-emerald-950/60 text-emerald-400' : 'text-gray-400 hover:text-emerald-400 hover:bg-emerald-950/30'}`}
+              className={`rounded-full px-2 min-w-[60px] ${activeReaction === 'watching' ? 'bg-emerald-950/60 text-emerald-400' : 'text-gray-400 hover:text-emerald-400 hover:bg-emerald-950/30'}`}
               onClick={() => handleReaction('watching')}
             >
               <Eye size={16} className="mr-1" />
@@ -521,11 +526,11 @@ export default function LobbyistPost({ post, onLike, onComment, onEcho, onShare 
             </Button>
           </div>
           
-          <div className="flex space-x-1">
+          <div className="flex flex-wrap gap-1">
             <Button 
               variant="ghost" 
               size="sm" 
-              className="rounded-full px-2 text-gray-400 hover:text-sky-400 hover:bg-sky-950/30"
+              className="rounded-full px-2 min-w-[60px] text-gray-400 hover:text-sky-400 hover:bg-sky-950/30"
               onClick={handleToggleComments}
             >
               <MessageCircle size={16} className="mr-1" />
@@ -535,7 +540,7 @@ export default function LobbyistPost({ post, onLike, onComment, onEcho, onShare 
             <Button 
               variant="ghost" 
               size="sm" 
-              className={`rounded-full px-2 ${isEchoed ? 'bg-purple-950/60 text-purple-400' : 'text-gray-400 hover:text-purple-400 hover:bg-purple-950/30'}`}
+              className={`rounded-full px-2 min-w-[60px] ${isEchoed ? 'bg-purple-950/60 text-purple-400' : 'text-gray-400 hover:text-purple-400 hover:bg-purple-950/30'}`}
               onClick={handleEcho}
               disabled={echoLoading}
             >
@@ -546,7 +551,7 @@ export default function LobbyistPost({ post, onLike, onComment, onEcho, onShare 
             <Button 
               variant="ghost" 
               size="sm" 
-              className="rounded-full px-2 text-gray-400 hover:text-blue-400 hover:bg-blue-950/30"
+              className="rounded-full px-2 min-w-[40px] text-gray-400 hover:text-blue-400 hover:bg-blue-950/30"
               onClick={handleShare}
             >
               <Share2 size={16} />
@@ -555,14 +560,14 @@ export default function LobbyistPost({ post, onLike, onComment, onEcho, onShare 
         </div>
         
         {/* Comments section - collapsed by default */}
-         {showComments && (
+        {showComments && (
           <div className="w-full pt-2 border-t border-sky-400/10">
             {/* New comment input */}
             <div className="flex items-start space-x-2 mb-2">
-              <Avatar className="h-7 w-7">
+              <Avatar className="h-7 w-7 flex-shrink-0">
                 <AvatarFallback className="bg-sky-700/40 text-sky-200">ME</AvatarFallback>
               </Avatar>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <input 
                   type="text" 
                   placeholder="Add a comment..." 
@@ -573,13 +578,13 @@ export default function LobbyistPost({ post, onLike, onComment, onEcho, onShare 
                   disabled={addingComment}
                 />
               </div>
-              <Button size="sm" variant="ghost" className="text-sky-400 px-2" onClick={handleAddComment} disabled={addingComment || !newComment.trim()}>
+              <Button size="sm" variant="ghost" className="text-sky-400 px-2 flex-shrink-0" onClick={handleAddComment} disabled={addingComment || !newComment.trim()}>
                 Post
               </Button>
             </div>
             {/* Comments loading/error */}
             {commentsLoading && (
-              <div className="py-2">
+              <div className="py-2 space-y-2">
                 {[...Array(2)].map((_, i) => <CommentSkeleton key={i} />)}
               </div>
             )}
@@ -591,14 +596,16 @@ export default function LobbyistPost({ post, onLike, onComment, onEcho, onShare 
               <div className="space-y-2 mt-2">
                 {comments.map((c, idx) => (
                   <div key={c.id || idx} className="flex items-start gap-2">
-                    <Avatar className="h-6 w-6">
+                    <Avatar className="h-6 w-6 flex-shrink-0">
                       <AvatarImage src={c.user?.avatar || ''} alt={c.user?.name || ''} />
                       <AvatarFallback className="bg-sky-700/40 text-sky-200">{c.user?.name?.slice(0,2).toUpperCase() || '?'}</AvatarFallback>
                     </Avatar>
-                    <div className="bg-sky-900/20 rounded-lg px-3 py-1 flex-1">
-                      <span className="text-xs text-white font-semibold">{c.user?.name || 'User'}</span>
-                      <span className="ml-2 text-xs text-gray-400">{formatDate(c.createdAt)}</span>
-                      <div className="text-xs text-gray-200 mt-0.5">{c.content}</div>
+                    <div className="bg-sky-900/20 rounded-lg px-3 py-1 flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs text-white font-semibold truncate">{c.user?.name || 'User'}</span>
+                        <span className="text-xs text-gray-400">{formatDate(c.createdAt)}</span>
+                      </div>
+                      <div className="text-xs text-gray-200 mt-0.5 break-words">{c.content}</div>
                     </div>
                   </div>
                 ))}

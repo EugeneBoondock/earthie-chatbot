@@ -217,23 +217,23 @@ export default function LobbyistPage() {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header Section with Glassmorphic Effect */}
-      <div className="relative overflow-hidden rounded-2xl p-6 backdrop-blur-lg bg-gradient-to-br from-indigo-900/40 to-violet-900/30 border border-indigo-400/30 shadow-xl mb-6">
+      <div className="relative overflow-hidden rounded-2xl mx-4 sm:mx-6 lg:mx-0 p-4 sm:p-6 backdrop-blur-lg bg-gradient-to-br from-indigo-900/40 to-violet-900/30 border border-indigo-400/30 shadow-xl mb-6">
         <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-purple-500/5 z-0"></div>
         <div className="absolute -top-24 -right-24 w-64 h-64 bg-sky-500/10 rounded-full blur-3xl"></div>
         <div className="absolute -bottom-32 -left-32 w-80 h-80 bg-indigo-400/10 rounded-full blur-3xl"></div>
         
-        <div className="relative z-10 flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-sky-300 to-indigo-300 inline-block text-transparent bg-clip-text">
+        <div className="relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="min-w-0 w-full sm:w-auto">
+            <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-sky-300 to-indigo-300 inline-block text-transparent bg-clip-text truncate">
               🪩 My Lobbyist
             </h1>
-            <p className="text-cyan-200/90 mt-1">
+            <p className="text-cyan-200/90 mt-1 text-sm sm:text-base">
               Where digital landowners don't just talk — they lobby.
             </p>
           </div>
           <Button 
             onClick={() => setIsCreateModalOpen(true)}
-            className="bg-gradient-to-r from-indigo-600 to-sky-600 hover:from-indigo-700 hover:to-sky-700 text-white px-4 py-2 rounded-lg shadow-lg transition-all flex items-center gap-2"
+            className="bg-gradient-to-r from-indigo-600 to-sky-600 hover:from-indigo-700 hover:to-sky-700 text-white px-4 py-2 rounded-lg shadow-lg transition-all flex items-center gap-2 w-full sm:w-auto justify-center"
           >
             <PlusCircle size={16} />
             Create Post
@@ -241,151 +241,180 @@ export default function LobbyistPage() {
         </div>
       </div>
 
-      {/* Placeholder for the 3-column layout */}
-      <div className="flex flex-col lg:flex-row gap-6">
+      {/* Main Layout Container */}
+      <div className="flex flex-col lg:flex-row gap-6 max-w-full px-4 sm:px-6 lg:px-0">
         {/* Left Sidebar */}
         <div className="w-full lg:w-1/4 space-y-6">
-  {/* User Profile Summary - Only show if real user data is available */}
-  {/* TODO: Replace with actual user info from auth/session */}
-  {/* {user && (
-    <Card ...>...</Card>
-  )} */}
-  <Card className="backdrop-blur-md bg-gradient-to-br from-earthie-dark/70 to-earthie-dark-light/60 border border-sky-400/20 p-4">
-    <h3 className="text-lg font-semibold text-white mb-4">Lobbies</h3>
-    <div className="space-y-2">
-      {SUB_LOBBIES.map(lobby => (
-        <Button
-          key={lobby.id}
-          variant="ghost"
-          className={`w-full justify-start ${activeSubLobby === lobby.id ? 'bg-sky-600/20 text-sky-300' : 'text-gray-300 hover:text-white hover:bg-earthie-dark-light/40'}`}
-          onClick={() => setActiveSubLobby(lobby.id)}
-        >
-          {lobby.icon}
-          <span className="ml-2">{lobby.name}</span>
-        </Button>
-      ))}
-    </div>
-  </Card>
-</div>
-
-        {/* Main Content */}
-        <div className="flex-1">
-          {/* Tabs for different views */}
-          <Tabs defaultValue="feed" className="mb-6" onValueChange={setActiveTab}>
-            <TabsList className="backdrop-blur-md bg-earthie-dark/70 border border-sky-400/20 p-1">
-              <TabsTrigger value="feed" className="data-[state=active]:bg-sky-600/20">
-                <Globe className="h-4 w-4 mr-2" />
-                Feed
-              </TabsTrigger>
-              <TabsTrigger value="following" className="data-[state=active]:bg-sky-600/20">
-                <Users className="h-4 w-4 mr-2" />
-                Following
-              </TabsTrigger>
-              <TabsTrigger value="bookmarks" className="data-[state=active]:bg-sky-600/20">
-                <Bookmark className="h-4 w-4 mr-2" />
-                Bookmarks
-              </TabsTrigger>
-              <TabsTrigger value="trending" className="data-[state=active]:bg-sky-600/20">
-                <TrendingUp className="h-4 w-4 mr-2" />
-                Trending
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="feed" className="space-y-6">
-  {/* Search and Filter */}
-  <div className="flex gap-2 items-center mb-4">
-    <div className="relative flex-grow">
-      <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-      <Input
-        placeholder="Search posts..."
-        className="pl-10 bg-earthie-dark-light/30 border-sky-400/20 focus:border-sky-400/60"
-      />
-    </div>
-    <Button variant="outline" className="border-sky-400/20 bg-earthie-dark-light/30">
-      <Filter className="h-4 w-4 mr-2" />
-      Filter
-    </Button>
-  </div>
-
-  {/* Post Feed - loading, error, or posts */}
-  {loadingPosts ? (
-    <div className="py-4">
-      {[...Array(3)].map((_, i) => <PostSkeleton key={i} />)}
-    </div>
-  ) : postsError ? (
-    <div className="backdrop-blur-md bg-gradient-to-br from-red-900/70 to-red-800/60 border border-red-400/20 rounded-xl p-4 mb-6 text-center py-8">
-      <MessageSquare className="h-10 w-10 text-red-400/40 mx-auto mb-3" />
-      <h3 className="text-lg font-medium text-red-200 mb-2">{postsError}</h3>
-      <Button onClick={() => window.location.reload()} className="bg-red-600 hover:bg-red-700 mt-2">Retry</Button>
-    </div>
-  ) : posts.length === 0 ? (
-    <div className="backdrop-blur-md bg-gradient-to-br from-earthie-dark/70 to-earthie-dark-light/60 border border-sky-400/20 rounded-xl p-4 mb-6 text-center py-12">
-      <MessageSquare className="h-12 w-12 text-sky-400/30 mx-auto mb-3" />
-      <h3 className="text-xl font-medium text-white mb-2">No posts yet</h3>
-      <p className="text-gray-300 mb-4">Be the first to post in this lobby!</p>
-    </div>
-  ) : (
-    posts.map(post => (
-      <div key={post.id} className="mb-4">
-        <LobbyistPost post={post} />
-      </div>
-    ))
-  )}
-</TabsContent>
-
-            {/* Other tab contents are similar placeholders */}
-            <TabsContent value="following">
-  <div className="backdrop-blur-md bg-gradient-to-br from-earthie-dark/70 to-earthie-dark-light/60 border border-sky-400/20 rounded-xl p-6 text-center">
-    <Users className="h-10 w-10 text-sky-400/50 mx-auto mb-3" />
-    <h3 className="text-xl font-medium text-white mb-2">No followed posts yet</h3>
-    <p className="text-gray-300 mb-4">Follow other lobbyists to see their posts here.</p>
-    <Button className="bg-sky-600 hover:bg-sky-700">Discover People</Button>
-  </div>
-</TabsContent>
-<TabsContent value="bookmarks">
-  <div className="backdrop-blur-md bg-gradient-to-br from-earthie-dark/70 to-earthie-dark-light/60 border border-sky-400/20 rounded-xl p-6 text-center">
-    <Bookmark className="h-10 w-10 text-sky-400/50 mx-auto mb-3" />
-    <h3 className="text-xl font-medium text-white mb-2">No bookmarks yet</h3>
-    <p className="text-gray-300 mb-4">Save posts to see them here!</p>
-  </div>
-</TabsContent>
-<TabsContent value="trending">
-  <div className="backdrop-blur-md bg-gradient-to-br from-earthie-dark/70 to-earthie-dark-light/60 border border-sky-400/20 rounded-xl p-6 text-center">
-    <TrendingUp className="h-10 w-10 text-sky-400/50 mx-auto mb-3" />
-    <h3 className="text-xl font-medium text-white mb-2">No trending posts yet</h3>
-    <p className="text-gray-300 mb-4">Trending posts will appear here soon.</p>
-  </div>
-</TabsContent>
-          </Tabs>
+          <Card className="backdrop-blur-md bg-gradient-to-br from-earthie-dark/70 to-earthie-dark-light/60 border border-sky-400/20 p-4">
+            <h3 className="text-lg font-semibold text-white mb-4">Lobbies</h3>
+            <div className="flex flex-row flex-wrap lg:flex-col gap-2">
+              {SUB_LOBBIES.map(lobby => (
+                <Button
+                  key={lobby.id}
+                  variant="ghost"
+                  className={`flex-1 sm:flex-none justify-start text-sm ${activeSubLobby === lobby.id ? 'bg-sky-600/20 text-sky-300' : 'text-gray-300 hover:text-white hover:bg-earthie-dark-light/40'}`}
+                  onClick={() => setActiveSubLobby(lobby.id)}
+                >
+                  {lobby.icon}
+                  <span className="ml-2 truncate">{lobby.name}</span>
+                </Button>
+              ))}
+            </div>
+          </Card>
         </div>
 
-        {/* Right Sidebar */}
-        <div className="w-full lg:w-1/4 space-y-6">
-  {/* Leaderboard - Only show if real leaderboard data exists */}
-  {/* {leaderboard && leaderboard.length > 0 && (
-    <Card>...</Card>
-  )} */}
-  {/* Trending Topics - Only show if real trending data exists */}
-  {/* {trendingTopics && trendingTopics.length > 0 && (
-    <Card>...</Card>
-  )} */}
-  {/* Drafts - Only show if user has drafts */}
-  {/* {drafts && drafts.length > 0 && (
-    <Card>...</Card>
-  )} */}
-</div>
+        {/* Main Content */}
+        <div className="flex-1 min-w-0 overflow-hidden">
+          {/* Tabs for different views */}
+          <div className="max-w-full px-4 sm:px-6 lg:px-0 mb-6">
+            <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-1.5 w-full">
+              <button 
+                onClick={() => setActiveTab('feed')} 
+                className={`flex items-center justify-center gap-2 py-2 sm:py-1.5 px-3 text-sm rounded-md transition-colors ${activeTab === 'feed' 
+                  ? 'bg-sky-600/20 text-sky-300 border border-sky-500/30' 
+                  : 'text-gray-300 bg-earthie-dark/40 border border-transparent hover:border-sky-500/10 hover:bg-earthie-dark-light/20'
+                }`}
+              >
+                <Globe className="h-3.5 w-3.5" />
+                <span>Feed</span>
+              </button>
+              
+              <button 
+                onClick={() => setActiveTab('following')} 
+                className={`flex items-center justify-center gap-2 py-2 sm:py-1.5 px-3 text-sm rounded-md transition-colors ${activeTab === 'following' 
+                  ? 'bg-sky-600/20 text-sky-300 border border-sky-500/30' 
+                  : 'text-gray-300 bg-earthie-dark/40 border border-transparent hover:border-sky-500/10 hover:bg-earthie-dark-light/20'
+                }`}
+              >
+                <Users className="h-3.5 w-3.5" />
+                <span>Following</span>
+              </button>
+              
+              <button 
+                onClick={() => setActiveTab('bookmarks')} 
+                className={`flex items-center justify-center gap-2 py-2 sm:py-1.5 px-3 text-sm rounded-md transition-colors ${activeTab === 'bookmarks' 
+                  ? 'bg-sky-600/20 text-sky-300 border border-sky-500/30' 
+                  : 'text-gray-300 bg-earthie-dark/40 border border-transparent hover:border-sky-500/10 hover:bg-earthie-dark-light/20'
+                }`}
+              >
+                <Bookmark className="h-3.5 w-3.5" />
+                <span>Bookmarks</span>
+              </button>
+              
+              <button 
+                onClick={() => setActiveTab('trending')} 
+                className={`flex items-center justify-center gap-2 py-2 sm:py-1.5 px-3 text-sm rounded-md transition-colors ${activeTab === 'trending' 
+                  ? 'bg-sky-600/20 text-sky-300 border border-sky-500/30' 
+                  : 'text-gray-300 bg-earthie-dark/40 border border-transparent hover:border-sky-500/10 hover:bg-earthie-dark-light/20'
+                }`}
+              >
+                <TrendingUp className="h-3.5 w-3.5" />
+                <span>Trending</span>
+              </button>
+            </div>
+
+            <div className="mt-6">
+              {activeTab === 'feed' && (
+                <div className="space-y-6">
+                  {/* Search and Filter */}
+                  <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center mb-4">
+                    <div className="relative flex-grow">
+                      <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                      <Input
+                        placeholder="Search posts..."
+                        className="pl-10 bg-earthie-dark-light/30 border-sky-400/20 focus:border-sky-400/60 w-full"
+                      />
+                    </div>
+                    <Button variant="outline" className="border-sky-400/20 bg-earthie-dark-light/30 whitespace-nowrap">
+                      <Filter className="h-4 w-4 mr-2" />
+                      Filter
+                    </Button>
+                  </div>
+
+                  {/* Post Feed - loading, error, or posts */}
+                  <div className="w-full">
+                    {loadingPosts ? (
+                      <div className="py-4 space-y-4">
+                        {[...Array(3)].map((_, i) => <PostSkeleton key={i} />)}
+                      </div>
+                    ) : postsError ? (
+                      <div className="backdrop-blur-md bg-gradient-to-br from-red-900/70 to-red-800/60 border border-red-400/20 rounded-xl p-4 mb-6 text-center py-8">
+                        <MessageSquare className="h-10 w-10 text-red-400/40 mx-auto mb-3" />
+                        <h3 className="text-lg font-medium text-red-200 mb-2">{postsError}</h3>
+                        <Button onClick={() => window.location.reload()} className="bg-red-600 hover:bg-red-700 mt-2">Retry</Button>
+                      </div>
+                    ) : posts.length === 0 ? (
+                      <div className="backdrop-blur-md bg-gradient-to-br from-earthie-dark/70 to-earthie-dark-light/60 border border-sky-400/20 rounded-xl p-4 mb-6 text-center py-12">
+                        <MessageSquare className="h-12 w-12 text-sky-400/30 mx-auto mb-3" />
+                        <h3 className="text-xl font-medium text-white mb-2">No posts yet</h3>
+                        <p className="text-gray-300 mb-4">Be the first to post in this lobby!</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {posts.map(post => (
+                          <div key={post.id} className="w-full">
+                            <LobbyistPost post={post} />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Following content */}
+              {activeTab === 'following' && (
+                <div className="backdrop-blur-md bg-gradient-to-br from-earthie-dark/70 to-earthie-dark-light/60 border border-sky-400/20 rounded-xl p-4 sm:p-6 text-center">
+                  <Users className="h-10 w-10 text-sky-400/50 mx-auto mb-3" />
+                  <h3 className="text-xl font-medium text-white mb-2">No followed posts yet</h3>
+                  <p className="text-gray-300 mb-4">Follow other lobbyists to see their posts here.</p>
+                  <Button className="bg-sky-600 hover:bg-sky-700">Discover People</Button>
+                </div>
+              )}
+              
+              {/* Bookmarks content */}
+              {activeTab === 'bookmarks' && (
+                <div className="backdrop-blur-md bg-gradient-to-br from-earthie-dark/70 to-earthie-dark-light/60 border border-sky-400/20 rounded-xl p-4 sm:p-6 text-center">
+                  <Bookmark className="h-10 w-10 text-sky-400/50 mx-auto mb-3" />
+                  <h3 className="text-xl font-medium text-white mb-2">No bookmarks yet</h3>
+                  <p className="text-gray-300 mb-4">Save posts to see them here!</p>
+                </div>
+              )}
+              
+              {/* Trending content */}
+              {activeTab === 'trending' && (
+                <div className="backdrop-blur-md bg-gradient-to-br from-earthie-dark/70 to-earthie-dark-light/60 border border-sky-400/20 rounded-xl p-4 sm:p-6 text-center">
+                  <TrendingUp className="h-10 w-10 text-sky-400/50 mx-auto mb-3" />
+                  <h3 className="text-xl font-medium text-white mb-2">No trending posts yet</h3>
+                  <p className="text-gray-300 mb-4">Trending posts will appear here soon.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Right Sidebar - Hidden on mobile, shown on lg screens */}
+        <div className="hidden lg:block w-1/4 space-y-6">
+          {/* Leaderboard - Only show if real leaderboard data exists */}
+          {/* {leaderboard && leaderboard.length > 0 && (
+            <Card>...</Card>
+          )} */}
+          {/* Trending Topics - Only show if real trending data exists */}
+          {/* {trendingTopics && trendingTopics.length > 0 && (
+            <Card>...</Card>
+          )} */}
+          {/* Drafts - Only show if user has drafts */}
+          {/* {drafts && drafts.length > 0 && (
+            <Card>...</Card>
+          )} */}
+        </div>
       </div>
 
       {/* Create Post Modal */}
-      <CreatePostModal
-        isOpen={isCreateModalOpen}
+      <CreatePostModal 
+        isOpen={isCreateModalOpen} 
         onClose={() => setIsCreateModalOpen(false)}
         onCreatePost={handlePostCreated}
-        user={userProfile ? {
-          id: userProfile.id,
-          name: userProfile.username,
-          avatar: userProfile.avatar
-        } : null}
       />
     </div>
   );
