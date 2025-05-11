@@ -772,15 +772,13 @@ export default function ProfilePage() {
 
     setLinkingLoading(true);
     try {
-      const response = await fetch('/api/me/e2profile', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ e2_user_id: extractedId }),
-      });
-      if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.error || 'Failed to link E2 profile via API');
+      // First fetch the E2 user info
+      const userInfoResponse = await fetch(`https://app.earth2.io/api/v2/user_info/${extractedId}`);
+      if (!userInfoResponse.ok) {
+        throw new Error('Failed to fetch Earth2 user info');
       }
+      const userInfo: E2UserInfo = await userInfoResponse.json();
+      setUserInfo(userInfo);
       setLinkedE2UserId(extractedId);
     } catch (err: any) {
       console.error('Error linking E2 profile:', err);
@@ -1671,19 +1669,19 @@ export default function ProfilePage() {
                   </CardTitle>
                   <CardDescription className="text-gray-400">Top 10 countries by tiles across your portfolio.</CardDescription>
                 </CardHeader>
-                <CardContent className="h-80">
+                <CardContent className="h-96"> {/* Increased height for better spacing */}
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
                         data={countryChartData}
                         cx="50%"
                         cy="50%"
-                        labelLine={false}
-                        outerRadius="80%"
+                        labelLine={{ stroke: '#6B7280', strokeWidth: 1 }}
+                        outerRadius="65%"
                         fill="#8884d8"
                         dataKey="value"
                         nameKey="name"
-                        label={({ name, percent }) => `${countryNameMap[name] || name} (${(percent * 100).toFixed(0)}%)`}
+                        label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
                         stroke="#374151"
                       >
                         {countryChartData.map((entry, index) => (
@@ -1694,11 +1692,22 @@ export default function ProfilePage() {
                         contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }}
                         itemStyle={{ color: '#d1d5db' }}
                         formatter={(value: number, name: string) => [
-                           value.toLocaleString(), // Format the value (property count)
-                           countryNameMap[name] || name // Show full country name in tooltip
+                          `${value.toLocaleString()} tiles`,
+                          countryNameMap[name] || name
                         ]}
                       />
-                      <Legend formatter={(value) => countryNameMap[value] || value} />
+                      <Legend 
+                        formatter={(value) => countryNameMap[value] || value}
+                        layout="vertical"
+                        align="right"
+                        verticalAlign="middle"
+                        wrapperStyle={{
+                          paddingLeft: '20px',
+                          maxWidth: '40%',
+                          fontSize: '0.875rem',
+                          lineHeight: '1.25rem'
+                        }}
+                      />
                     </PieChart>
                   </ResponsiveContainer>
                 </CardContent>

@@ -1,4 +1,3 @@
-// This API route allows you to backfill the last 30 days of hourly prices
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
@@ -56,4 +55,4 @@ export async function POST() {
   } catch (err: any) {
     return NextResponse.json({ error: err.message || String(err) }, { status: 500 });
   }
-}
+} 
