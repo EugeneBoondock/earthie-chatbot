@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
@@ -28,6 +28,7 @@ export default function Sidebar({ className }: SidebarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
   const supabase = createClientComponentClient();
+  const [user, setUser] = useState<any>(null);
 
   const handleLogout = async () => {
     try {
@@ -52,6 +53,10 @@ export default function Sidebar({ className }: SidebarProps) {
     { href: '/hub/lobbyist', label: 'My Lobbyist', icon: MessageSquare },
     { href: '/hub/e2pedia', label: 'E2Pedia', icon: Newspaper },
   ];
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setUser(data.user));
+  }, []);
 
   return (
     <>
@@ -102,6 +107,18 @@ export default function Sidebar({ className }: SidebarProps) {
                 </Link>
               </li>
             ))}
+            {/* Code Review link - always show since sidebar is only for logged-in users */}
+            <li>
+              <Link href="/script-tools/reviews" passHref>
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start text-left hover:bg-gray-700/80 hover:text-earthie-mint transition-colors"
+                >
+                  <Newspaper className="mr-3 h-5 w-5" />
+                  Code Review
+                </Button>
+              </Link>
+            </li>
           </ul>
         </nav>
         <div className="p-4 border-t border-gray-700/50">

@@ -10,7 +10,11 @@ export default function PWAInstallButton() {
       console.log("beforeinstallprompt event fired");
       e.preventDefault();
       setDeferredPrompt(e);
-      setShowButton(true);
+      const hasVisited = localStorage.getItem("hasVisited");
+      if (hasVisited) {
+        setShowButton(true);
+      }
+      localStorage.setItem("hasVisited", "true");
     };
     console.log("Event listener added");
     window.addEventListener("beforeinstallprompt", handler as EventListener);

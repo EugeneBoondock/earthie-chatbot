@@ -118,6 +118,7 @@ export default function DevToolsPage() {
   const [reviewMethod, setReviewMethod] = useState<string>("");
   const [reviewComment, setReviewComment] = useState<string>("");
   const [reviewSubmitting, setReviewSubmitting] = useState<boolean>(false);
+  const [reviewerUsernames, setReviewerUsernames] = useState<Map<string, string>>(new Map());
 
   // Load current user
   useEffect(() => {
@@ -162,6 +163,53 @@ export default function DevToolsPage() {
   }, []); // Empty dependency array is fine as it doesn't depend on component state/props
 
   useEffect(() => { fetchScripts(true); }, [fetchScripts]);
+
+  // Effect to fetch usernames for reviewers when scripts are loaded/changed
+  useEffect(() => {
+    const fetchReviewerUsernames = async () => {
+      if (scripts.length === 0) return;
+
+      const reviewerIds = new Set<string>();
+      const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+
+      scripts.forEach(script => {
+        if (script.review_by && uuidRegex.test(script.review_by) && !reviewerUsernames.has(script.review_by)) {
+          reviewerIds.add(script.review_by);
+        }
+      });
+
+      if (reviewerIds.size === 0) return;
+
+      try {
+        console.log("Fetching usernames for reviewer IDs:", Array.from(reviewerIds));
+        const { data: profiles, error } = await supabase
+          .from('profiles')
+          .select('id, username')
+          .in('id', Array.from(reviewerIds));
+
+        if (error) {
+          console.error("Error fetching reviewer profiles:", error);
+          return;
+        }
+
+        if (profiles) {
+          setReviewerUsernames(prevUsernames => {
+            const newUsernames = new Map(prevUsernames);
+            profiles.forEach(profile => {
+              if (profile.id && profile.username) {
+                newUsernames.set(profile.id, profile.username);
+              }
+            });
+            return newUsernames;
+          });
+        }
+      } catch (err) {
+        console.error("Client-side error fetching reviewer usernames:", err);
+      }
+    };
+
+    fetchReviewerUsernames();
+  }, [scripts]); // Re-run when scripts change, reviewerUsernames removed from deps to avoid loop with its own update
 
   // --- Liking Logic ---
   const toggleLike = useCallback(async (scriptId: string) => {
@@ -452,7 +500,7 @@ export default function DevToolsPage() {
   // --- NEW HELPERS & EFFECTS FOR FILE PREVIEW -----------------------------------------
   // Helper to determine if a filename corresponds to a preview-able text file
   const isTextBasedFile = (filename: string): boolean => {
-    const textExts = ['js', 'jsx', 'ts', 'tsx', 'py', 'sh', '.json', 'css', 'html', 'txt', 'md', 'csv'];
+    const textExts = ['js', 'jsx', 'ts', 'tsx', 'py', 'sh', '.json', 'css', 'html', 'txt', 'md', 'csv']; // Note: .json was duplicated, removed one
     const extMatch = filename.split('.').pop()?.toLowerCase();
     return extMatch ? textExts.includes(extMatch) : false;
   };
@@ -460,43 +508,68 @@ export default function DevToolsPage() {
   // Whenever scripts change, fetch the content for any text files that do not yet have `code`
   useEffect(() => {
     const fetchMissingCode = async () => {
-      const updatedScriptsPromises = scripts.map(async (script) => {
-        // Skip if code already present, no file_url, or not a text file, or already fetching
-        if (script.code || !script.file_url || !isTextBasedFile(script.file_url) || fetchingFileContent.has(script.id)) {
-          return script;
-        }
+      // Identify scripts that need their code fetched
+      const scriptsToFetch = scripts.filter(script => 
+        !script.code && 
+        script.file_url && 
+        isTextBasedFile(script.file_url) && 
+        !fetchingFileContent.has(script.id)
+      );
+
+      if (scriptsToFetch.length === 0) {
+        return;
+      }
+
+      // Mark scripts as fetching
+      setFetchingFileContent(prev => {
+        const next = new Set(prev);
+        scriptsToFetch.forEach(s => next.add(s.id));
+        return next;
+      });
+
+      const updatedScriptsPromises = scriptsToFetch.map(async (script) => {
         try {
-          // Mark as fetching to avoid duplicate requests in fast re-renders
-          setFetchingFileContent((prev: Set<string>) => new Set(prev).add(script.id));
-          const resp = await fetch(script.file_url);
-          if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+          console.log(`Fetching content for file (script-tools): ${script.file_url}`);
+          const resp = await fetch(script.file_url!); 
+          if (!resp.ok) throw new Error(`HTTP ${resp.status} ${resp.statusText} for ${script.file_url}`);
           const text = await resp.text();
-          return { ...script, code: text } as Script;
+          console.log(`Successfully fetched content for (script-tools) ${script.file_url}`);
+          return { ...script, code: text };
         } catch (err) {
-          console.error(`Failed to fetch file content for script ${script.id}:`, err);
+          console.error(`Failed to fetch file content for script (script-tools) ${script.id} (${script.file_url}):`, err);
           return script; // Return unchanged on failure
-        } finally {
-          setFetchingFileContent((prev: Set<string>) => {
-            const next = new Set(prev);
-            next.delete(script.id);
-            return next;
-          });
         }
       });
 
-      const updatedScripts = await Promise.all(updatedScriptsPromises);
-      // Only update state if at least one script gained code content
-      const hasChanges = updatedScripts.some((s, idx) => s.code !== scripts[idx].code);
-      if (hasChanges) {
-        setScripts(updatedScripts);
-      }
+      const fetchedScriptContents = await Promise.all(updatedScriptsPromises);
+
+      // Update the main scripts array with the fetched content
+      setScripts(currentScripts => {
+        const newScripts = currentScripts.map(s => {
+          const updatedVersion = fetchedScriptContents.find(fs => fs.id === s.id && fs.code !== s.code);
+          return updatedVersion || s;
+        });
+        // Only trigger re-render if there are actual changes
+        if (JSON.stringify(newScripts) !== JSON.stringify(currentScripts)) {
+            return newScripts;
+        }
+        return currentScripts;
+      });
+      
+      // Unmark scripts from fetching
+      setFetchingFileContent(prev => {
+        const next = new Set(prev);
+        scriptsToFetch.forEach(s => next.delete(s.id));
+        return next;
+      });
     };
 
-    if (scripts.length) {
+    // Only run if there are scripts and some might need fetching
+    if (scripts.length > 0 && scripts.some(s => !s.code && s.file_url && isTextBasedFile(s.file_url))) {
       fetchMissingCode();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scripts]);
+  }, [scripts, fetchingFileContent]);
   // ------------------------------------------------------------------------------------
 
   // --- Component Return / JSX ---
@@ -531,14 +604,21 @@ export default function DevToolsPage() {
                 // Check for badge in metadata first (new format)
                 if (script.metadata && typeof script.metadata === 'object') {
                   badgeText = script.metadata.review_badge || '';
-                  // Set badge type based on approval status
                   if (script.metadata.review_approved === true) {
-                    badgeType = 'success';
+                    badgeType = 'success'; // Approved
                   } else if (script.metadata.review_approved === false) {
-                    badgeType = 'warning';
+                    if (badgeText === 'Caution') {
+                      badgeType = 'warning'; // Caution
+                    } else if (badgeText === 'Danger') {
+                      badgeType = 'error'; // Danger
+                    } else {
+                      badgeType = 'warning'; // Default to warning if not approved and badge text doesn't specify Danger
+                    }
+                  } else {
+                     badgeType = 'default'; // Default if no specific approval status but metadata exists
                   }
                 } 
-                // Fallback to old format: extract from title if needed
+                // Fallback to old format: extract from title if needed (SHOULD BE DEPRECATED)
                 else {
                   const badgeRegex = /\[(.+?)\]$/;
                   const match = badgeRegex.exec(script.title);
@@ -566,11 +646,17 @@ export default function DevToolsPage() {
                             <div className="flex items-center flex-wrap gap-2">
                                 <CardTitle>{displayTitle}</CardTitle>
                                 {badgeText && (
-                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                    <span 
+                                      title={[
+                                        script.review_by ? `Reviewed by: ${reviewerUsernames.get(script.review_by) || script.review_by}` : null,
+                                        script.review_method ? `Method: ${script.review_method}` : null,
+                                        script.review_comment ? `Comment: ${script.review_comment}` : null
+                                      ].filter(Boolean).join(' | ') || badgeText}
+                                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium cursor-default ${
                                       badgeType === 'success' ? 'bg-emerald-100 text-emerald-800' :
                                       badgeType === 'warning' ? 'bg-amber-100 text-amber-800' :
                                       badgeType === 'error' ? 'bg-red-100 text-red-800' :
-                                      'bg-blue-100 text-blue-800'
+                                      'bg-blue-100 text-blue-800' // Default/fallback for older or unclassified badges
                                     }`}>
                                         {badgeType === 'success' && <span className="mr-1 h-1.5 w-1.5 rounded-full bg-emerald-500"></span>}
                                         {badgeType === 'warning' && <span className="mr-1 h-1.5 w-1.5 rounded-full bg-amber-500"></span>}
