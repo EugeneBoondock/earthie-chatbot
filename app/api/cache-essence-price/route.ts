@@ -39,10 +39,6 @@ const ESSENCE_TOKEN_ADDRESS = '0x2c0687215Aca7F5e2792d956E170325e92A02aCA'.toLow
 // GET: Fetch last N hours of price history (default: 720 = 30 days)
 export async function GET(req: NextRequest) {
   try {
-    const moralisKey = process.env.NEXT_PUBLIC_MORALIS_API_KEY;
-    if (!moralisKey) {
-      return NextResponse.json({ error: 'Missing Moralis API key' }, { status: 500 });
-    }
     // Parse ?hours=N from query
     const url = new URL(req.url);
     const hours = parseInt(url.searchParams.get('hours') || '720', 10); // default 720 = 30 days
@@ -61,28 +57,45 @@ export async function GET(req: NextRequest) {
     }
     let prices = rows || [];
 
-    // If latest hour is missing, fetch from Moralis and upsert
+    // If latest hour is missing, attempt to fetch current price from Moralis
     const lastHour = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), now.getUTCHours()));
     const lastCached = prices.length ? new Date(prices[prices.length - 1].date) : null;
+
     if (!lastCached || lastCached.getTime() < lastHour.getTime()) {
-      const priceRes = await fetch(
-        `https://deep-index.moralis.io/api/v2/erc20/${ESSENCE_TOKEN_ADDRESS}/price?chain=eth`,
-        { headers: { 'X-API-Key': moralisKey } }
-      );
-      if (priceRes.ok) {
-        const priceJson = await priceRes.json();
-        const usdPrice = priceJson.usdPrice;
-        if (typeof usdPrice === 'number') {
-          // Upsert to Supabase
-          await supabase
-            .from('essence_hourly_prices')
-            .upsert({
-              date: lastHour.toISOString(),
-              price: usdPrice,
-              token_address: ESSENCE_TOKEN_ADDRESS
-            }, { onConflict: 'token_address,date' });
-          prices.push({ date: lastHour.toISOString(), price: usdPrice });
+      const moralisKey = process.env.NEXT_PUBLIC_MORALIS_API_KEY;
+
+      if (moralisKey) {
+        try {
+          const priceRes = await fetch(
+            `https://deep-index.moralis.io/api/v2/erc20/${ESSENCE_TOKEN_ADDRESS}/price?chain=eth`,
+            { headers: { 'X-API-Key': moralisKey } }
+          );
+
+          if (priceRes.ok) {
+            const priceJson = await priceRes.json();
+            const usdPrice = priceJson.usdPrice;
+
+            if (typeof usdPrice === 'number') {
+              // Upsert to Supabase
+              await supabase
+                .from('essence_hourly_prices')
+                .upsert({
+                  date: lastHour.toISOString(),
+                  price: usdPrice,
+                  token_address: ESSENCE_TOKEN_ADDRESS
+                }, { onConflict: 'token_address,date' });
+
+              prices.push({ date: lastHour.toISOString(), price: usdPrice });
+            }
+          } else {
+            console.warn('[Moralis Fetch Warning]', priceRes.status, priceRes.statusText);
+          }
+        } catch (fetchErr) {
+          console.error('[Moralis Fetch Error]', fetchErr);
         }
+      } else {
+        // Moralis key missing; skip live fetch and just return cached data
+        console.warn('[Moralis] API key not set – returning cached Essence prices only');
       }
     }
     return NextResponse.json({ prices });
