@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Search, MapPin, Building, Landmark, User, Users, Loader2, InfoIcon } from 'lucide-react';
+import { Search, MapPin, Building, Landmark, User, Users, Loader2, InfoIcon, ArrowLeft } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 interface ProfileUser {
@@ -274,7 +274,7 @@ export default function DiscoverPeopleModal({ isOpen, onClose }: DiscoverPeopleM
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-hidden flex flex-col bg-earthie-dark-light border-sky-400/30 backdrop-blur-md">
+      <DialogContent className="sm:max-w-4xl max-h-[90vh] h-full md:h-auto overflow-hidden flex flex-col bg-earthie-dark-light border-sky-400/30 backdrop-blur-md">
         <DialogHeader>
           <DialogTitle className="text-xl text-sky-100 font-bold flex items-center gap-2">
             <Users className="h-5 w-5 text-sky-400" />
@@ -285,9 +285,9 @@ export default function DiscoverPeopleModal({ isOpen, onClose }: DiscoverPeopleM
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col md:flex-row h-[70vh] gap-4 mt-4">
+        <div className="flex flex-col md:flex-row h-[calc(100%-80px)] md:h-[70vh] gap-4 mt-4 overflow-hidden">
           {/* Left side: User list */}
-          <div className="w-full md:w-1/2 flex flex-col overflow-hidden mb-4 md:mb-0">
+          <div className={`w-full md:w-1/2 flex flex-col overflow-hidden ${selectedUser ? 'hidden md:flex' : 'flex'}`}>
             <div className="relative mb-4">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
               <Input
@@ -298,7 +298,7 @@ export default function DiscoverPeopleModal({ isOpen, onClose }: DiscoverPeopleM
               />
             </div>
 
-            <div className="flex-1 overflow-y-auto pr-2 space-y-2 min-h-0 max-h-[30vh] md:max-h-none">
+            <div className="flex-1 overflow-y-auto pr-2 space-y-2 min-h-0">
               {loading ? (
                 <div className="flex flex-col items-center justify-center h-full">
                   <Loader2 className="h-8 w-8 animate-spin text-sky-400 mb-2" />
@@ -317,13 +317,13 @@ export default function DiscoverPeopleModal({ isOpen, onClose }: DiscoverPeopleM
                   <div
                     key={user.id}
                     onClick={() => handleUserSelect(user)}
-                    className={`flex items-center p-3 rounded-lg cursor-pointer transition-colors ${
+                    className={`flex items-center p-2 sm:p-3 rounded-lg cursor-pointer transition-colors ${
                       selectedUser?.id === user.id
                         ? 'bg-sky-600/20 border border-sky-500/40'
                         : 'bg-earthie-dark/60 border border-gray-700/50 hover:bg-gray-800/70 hover:border-sky-500/20'
                     }`}
                   >
-                    <Avatar className="h-10 w-10 border border-sky-400/30 mr-3">
+                    <Avatar className="h-8 w-8 sm:h-10 sm:w-10 border border-sky-400/30 mr-2 sm:mr-3">
                       {user.avatar_url ? (
                         <AvatarImage src={user.avatar_url} alt={user.username} />
                       ) : (
@@ -338,7 +338,7 @@ export default function DiscoverPeopleModal({ isOpen, onClose }: DiscoverPeopleM
                     </Avatar>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center">
-                        <p className="font-medium text-sky-100 truncate">
+                        <p className="font-medium text-sky-100 truncate text-sm sm:text-base">
                           {user.is_loading ? (
                             <span className="flex items-center">
                               <Loader2 className="h-3 w-3 mr-1 animate-spin" />
@@ -347,28 +347,28 @@ export default function DiscoverPeopleModal({ isOpen, onClose }: DiscoverPeopleM
                           ) : user.username.startsWith('User') && user.e2_user_id ? (
                             <span className="flex items-center gap-1">
                               <span className="text-sky-300 font-mono">#{user.e2_user_id.slice(0, 8)}</span>
-                              <span>Earth2 User</span>
+                              <span className="hidden sm:inline">Earth2 User</span>
                             </span>
                           ) : (
                             user.username
                           )}
                         </p>
                       </div>
-                      <div className="flex items-center space-x-1">
+                      <div className="flex flex-wrap items-center gap-1 mt-1">
                         {user.is_fully_linked || (user.e2_user_id && user.has_earth2_data) ? (
-                          <Badge variant="outline" className="bg-emerald-900/30 text-emerald-300 border-emerald-500/30 text-xs">
-                            Earth2 Profile Linked
+                          <Badge variant="outline" className="bg-emerald-900/30 text-emerald-300 border-emerald-500/30 text-[10px] sm:text-xs px-1 sm:px-2 h-4 sm:h-5">
+                            <span className="hidden sm:inline">Earth2 Profile </span>Linked
                           </Badge>
                         ) : user.has_earth2_data || user.avatar_url ? (
-                          <Badge variant="outline" className="bg-amber-900/30 text-amber-300 border-amber-500/30 text-xs">
-                            Earth2 Data Available
+                          <Badge variant="outline" className="bg-amber-900/30 text-amber-300 border-amber-500/30 text-[10px] sm:text-xs px-1 sm:px-2 h-4 sm:h-5">
+                            <span className="hidden sm:inline">Earth2 Data </span>Available
                           </Badge>
                         ) : (
-                          <span className="text-xs text-gray-400">No Earth2 profile</span>
+                          <span className="text-[10px] sm:text-xs text-gray-400">No Earth2 profile</span>
                         )}
                         
                         {user.e2_user_id && !user.username.startsWith('User') && (
-                          <span className="text-xs text-sky-400 font-mono">#{user.e2_user_id.slice(0, 8)}</span>
+                          <span className="text-[10px] sm:text-xs text-sky-400 font-mono">#{user.e2_user_id.slice(0, 8)}</span>
                         )}
                       </div>
                     </div>
@@ -379,7 +379,20 @@ export default function DiscoverPeopleModal({ isOpen, onClose }: DiscoverPeopleM
           </div>
 
           {/* Right side: User details */}
-          <div className="w-full md:w-1/2 bg-earthie-dark/40 border border-sky-400/20 rounded-lg p-4 overflow-y-auto max-h-[40vh] md:max-h-none">
+          <div className={`w-full md:w-1/2 bg-earthie-dark/40 border border-sky-400/20 rounded-lg p-4 overflow-y-auto ${selectedUser ? 'flex' : 'hidden md:block'} flex-col h-full`}>
+            {/* Mobile-only back button */}
+            {selectedUser && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="md:hidden mb-3 text-sky-300 hover:text-sky-200 inline-flex items-center"
+                onClick={() => setSelectedUser(null)}
+              >
+                <ArrowLeft className="mr-1 h-4 w-4" />
+                Back to list
+              </Button>
+            )}
+            
             {!selectedUser ? (
               <div className="flex flex-col items-center justify-center h-full text-center text-gray-400">
                 <User className="h-10 w-10 text-gray-500/50 mb-2" />
@@ -397,8 +410,8 @@ export default function DiscoverPeopleModal({ isOpen, onClose }: DiscoverPeopleM
               </div>
             ) : selectedUserDetails ? (
               <div className="space-y-6">
-                <div className="flex items-center">
-                  <Avatar className="h-16 w-16 border-2 border-sky-400/40 mr-4">
+                <div className="flex flex-col sm:flex-row sm:items-center">
+                  <Avatar className="h-16 w-16 border-2 border-sky-400/40 mr-4 self-center sm:self-start mb-3 sm:mb-0">
                     {selectedUserDetails.customPhoto || selectedUserDetails.picture || selectedUser.avatar_url ? (
                       <AvatarImage src={selectedUserDetails.customPhoto || selectedUserDetails.picture || selectedUser.avatar_url} alt={selectedUserDetails.username || selectedUser.username} />
                     ) : (
@@ -407,7 +420,7 @@ export default function DiscoverPeopleModal({ isOpen, onClose }: DiscoverPeopleM
                       </AvatarFallback>
                     )}
                   </Avatar>
-                  <div>
+                  <div className="text-center sm:text-left">
                     <h3 className="text-xl font-bold text-sky-100">
                       {selectedUserDetails.username || 
                        (selectedUser.username.startsWith('User') ? 
@@ -415,7 +428,7 @@ export default function DiscoverPeopleModal({ isOpen, onClose }: DiscoverPeopleM
                         selectedUser.username)}
                     </h3>
                     {selectedUser.e2_user_id && (
-                      <div className="flex items-center mt-1 bg-sky-900/20 border border-sky-500/30 rounded-md px-2 py-1">
+                      <div className="flex items-center justify-center sm:justify-start mt-1 bg-sky-900/20 border border-sky-500/30 rounded-md px-2 py-1">
                         <p className="text-sky-300 font-mono text-xs">Earth2 ID: {selectedUser.e2_user_id}</p>
                       </div>
                     )}
@@ -427,13 +440,13 @@ export default function DiscoverPeopleModal({ isOpen, onClose }: DiscoverPeopleM
 
                 <div className="space-y-4">
                   {selectedUserDetails.countryCode && (
-                    <div className="flex items-center text-gray-300">
+                    <div className="flex items-center justify-center sm:justify-start text-gray-300">
                       <MapPin className="h-4 w-4 mr-2 text-sky-400" />
                       <span>{selectedUserDetails.countryCode}</span>
                     </div>
                   )}
 
-                  <div className="grid grid-cols-2 gap-4 mt-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
                     <div className="bg-earthie-dark/60 border border-sky-400/20 rounded-lg p-3">
                       <div className="flex items-center mb-1">
                         <Landmark className="h-4 w-4 mr-2 text-sky-400" />

@@ -30,9 +30,17 @@ export default function Sidebar({ className }: SidebarProps) {
   const supabase = createClientComponentClient();
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push('/');
-    router.refresh();
+    try {
+      console.log('[Sidebar] Logout initiated');
+      
+      // Close sidebar first for immediate UI feedback
+      setIsOpen(false);
+      
+      // Use direct browser navigation for more reliable logout
+      window.location.href = '/auth/logout';
+    } catch (error: any) {
+      console.error('[Sidebar] Logout failed:', error);
+    }
   };
 
   const toggleSidebar = () => setIsOpen(!isOpen);

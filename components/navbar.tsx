@@ -40,14 +40,18 @@ export default function Navbar() {
 
   // --- Supabase Auth Listener ---
   useEffect(() => {
+    // Fetch initial session on component mount
+    const fetchSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setUser(session?.user ?? null);
+    };
+    
+    fetchSession();
+    
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log(`[Navbar] Auth state change: ${event}`, session?.user?.id);
       setUser(session?.user ?? null);
     });
-
-    // Fetch initial session (optional, as onAuthStateChange fires on load)
-    // supabase.auth.getSession().then(({ data: { session } }) => {
-    //   setUser(session?.user ?? null);
-    // });
 
     return () => {
       authListener?.subscription?.unsubscribe();
@@ -55,11 +59,17 @@ export default function Navbar() {
   }, []);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    router.push('/'); // Redirect to home after logout
-    // Optionally close mobile menu if open
-    setIsMobileMenuOpen(false);
+    try {
+      console.log('[Navbar] Logout initiated');
+      
+      // Close mobile menu immediately for better UX
+      setIsMobileMenuOpen(false);
+      
+      // Use direct browser navigation for more reliable logout
+      window.location.href = '/auth/logout';
+    } catch (error: any) {
+      console.error('[Navbar] Logout failed:', error);
+    }
   };
 
   // --- Consume Price Context ---

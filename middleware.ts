@@ -57,57 +57,70 @@ export default async function middleware(req: NextRequest) {
         },
         remove: (name, options) => {
           console.log(`[Middleware] Cookie REMOVE: ${name}`);
-          res.cookies.set({ name, value: '', ...options })
+          // For logout, set a very short expiration time
+          const expireOptions = {
+            ...options,
+            expires: new Date(0),
+            maxAge: 0
+          };
+          res.cookies.set({ name, value: '', ...expireOptions })
         },
       },
     }
   )
 
-  const {
-    data: { session },
-    error: sessionError
-  } = await supabase.auth.getSession()
+  try {
+    const {
+      data: { session },
+      error: sessionError
+    } = await supabase.auth.getSession()
 
-  if (sessionError) {
-    console.error('[Middleware] Error getting session:', sessionError.message)
-  }
-  
-  console.log(`[Middleware] Session state: ${session ? `Authenticated (User ID: ${session.user.id})` : 'Not Authenticated'}`)
-  console.log(`[Middleware] Current path: ${currentPath}`)
-
-  const isProtectedRoute = protectedRoutes.some(route => currentPath.startsWith(route))
-  const isAuthPage = authPages.includes(currentPath)
-
-  console.log(`[Middleware] Is protected route: ${isProtectedRoute}`)
-  console.log(`[Middleware] Is auth page: ${isAuthPage}`)
-
-  // Scenario 1: User is NOT signed in and trying to access a protected route
-  if (!session && isProtectedRoute) {
-    const loginUrl = new URL('/auth/login', req.nextUrl.origin)
-    loginUrl.searchParams.set('redirectTo', currentPath)
-    console.log(`[Middleware] SCENARIO 1: Unauthenticated user on protected route. Redirecting to: ${loginUrl.href}`)
+    if (sessionError) {
+      console.error('[Middleware] Error getting session:', sessionError.message)
+    }
     
-    const redirectResponse = NextResponse.redirect(loginUrl);
-    res.cookies.getAll().forEach(cookie => redirectResponse.cookies.set(cookie));
-    return redirectResponse;
-  }
+    console.log(`[Middleware] Session state: ${session ? `Authenticated (User ID: ${session.user.id})` : 'Not Authenticated'}`)
+    console.log(`[Middleware] Current path: ${currentPath}`)
 
-  // Scenario 2: User IS signed in
-  if (session) {
-    console.log('[Middleware] SCENARIO 2 active: User is authenticated.')
-    if (isAuthPage) {
-      const targetPath = '/hub/profile'
-      const redirectUrl = new URL(targetPath, req.nextUrl.origin)
-      console.log(`[Middleware] Authenticated user on auth page ('${currentPath}'). Redirecting to default profile: ${redirectUrl.href}`)
+    const isProtectedRoute = protectedRoutes.some(route => currentPath.startsWith(route))
+    const isAuthPage = authPages.includes(currentPath)
+
+    console.log(`[Middleware] Is protected route: ${isProtectedRoute}`)
+    console.log(`[Middleware] Is auth page: ${isAuthPage}`)
+
+    // Scenario 1: User is NOT signed in and trying to access a protected route
+    if (!session && isProtectedRoute) {
+      const loginUrl = new URL('/auth/login', req.nextUrl.origin)
+      loginUrl.searchParams.set('redirectTo', currentPath)
+      console.log(`[Middleware] SCENARIO 1: Unauthenticated user on protected route. Redirecting to: ${loginUrl.href}`)
       
-      const redirectResponse = NextResponse.redirect(redirectUrl);
+      const redirectResponse = NextResponse.redirect(loginUrl);
+      // Copy all cookies to maintain state
       res.cookies.getAll().forEach(cookie => redirectResponse.cookies.set(cookie));
       return redirectResponse;
     }
-  }
 
-  console.log('[Middleware] END: No redirection conditions met, passing through.')
-  return res
+    // Scenario 2: User IS signed in
+    if (session) {
+      console.log('[Middleware] SCENARIO 2 active: User is authenticated.')
+      if (isAuthPage) {
+        const targetPath = '/hub/profile'
+        const redirectUrl = new URL(targetPath, req.nextUrl.origin)
+        console.log(`[Middleware] Authenticated user on auth page ('${currentPath}'). Redirecting to default profile: ${redirectUrl.href}`)
+        
+        const redirectResponse = NextResponse.redirect(redirectUrl);
+        // Copy all cookies to maintain state
+        res.cookies.getAll().forEach(cookie => redirectResponse.cookies.set(cookie));
+        return redirectResponse;
+      }
+    }
+
+    console.log('[Middleware] END: No redirection conditions met, passing through.')
+    return res;
+  } catch (error) {
+    console.error('[Middleware] Unexpected error:', error);
+    return res; // Allow the request to continue on error
+  }
 }
 
 export const config = {

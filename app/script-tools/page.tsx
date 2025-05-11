@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useCallback } from "react"
-import { createClient, SupabaseClient } from "@supabase/supabase-js"
+import { createClient, SupabaseClient, User } from "@supabase/supabase-js"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -29,7 +29,7 @@ const SCRIPT_FILES_BUCKET = 'script-files'; // Match the bucket name you created
 const LIKED_SCRIPTS_STORAGE_KEY = 'earthie_liked_scripts'; // Key for localStorage
 
 // --- Types ---
-type Script = {
+export type Script = {
   id: string;
   created_at: string;
   title: string;
@@ -41,6 +41,17 @@ type Script = {
   copies: number;
   file_url: string | null;
   support_url: string | null;
+  // Review fields
+  review_method?: string | null;
+  review_by?: string | null;
+  review_comment?: string | null;
+  reviewed_at?: string | null;
+  // Metadata field for storing additional info like badges
+  metadata?: {
+    review_badge?: string;
+    review_approved?: boolean;
+    [key: string]: any; // Allow any other metadata properties
+  } | null;
 }
 
 type NewScriptData = {
@@ -101,6 +112,19 @@ export default function DevToolsPage() {
   });
   const [submitStatus, setSubmitStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [submitError, setSubmitError] = useState<string | null>(null);
+  // Manual review state
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [reviewOpenId, setReviewOpenId] = useState<string | null>(null);
+  const [reviewMethod, setReviewMethod] = useState<string>("");
+  const [reviewComment, setReviewComment] = useState<string>("");
+  const [reviewSubmitting, setReviewSubmitting] = useState<boolean>(false);
+
+  // Load current user
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) setCurrentUser(data.user);
+    });
+  }, []);
 
   // --- Load Local Liked Status on Mount ---
   useEffect(() => {
@@ -245,63 +269,182 @@ export default function DevToolsPage() {
     if (code && newScript.file) { const fi = document.getElementById('file-upload') as HTMLInputElement | null; if (fi) fi.value = ''; }
   }
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault(); setSubmitStatus("submitting"); setSubmitError(null);
-    if (!newScript.title || !newScript.description || (!newScript.code && !newScript.file)) { setSubmitStatus("error"); setSubmitError("Fill Title, Description & Code/File."); return; }
-    if (newScript.code && newScript.file) { setSubmitStatus("error"); setSubmitError("Provide Code OR File, not both."); return; }
+    e.preventDefault(); 
+    setSubmitStatus("submitting"); 
+    setSubmitError(null);
+    
+    // Basic validation
+    if (!newScript.title || !newScript.description || (!newScript.code && !newScript.file)) { 
+      setSubmitStatus("error"); 
+      setSubmitError("Fill Title, Description & Code/File."); 
+      return; 
+    }
+    
+    if (newScript.code && newScript.file) { 
+      setSubmitStatus("error"); 
+      setSubmitError("Provide Code OR File, not both."); 
+      return; 
+    }
+    
+    // Check code size
+    if (newScript.code) {
+      const encoder = new TextEncoder();
+      const codeBytes = encoder.encode(newScript.code);
+      const codeSizeKB = codeBytes.length / 1024;
+      
+      if (codeSizeKB > 100) {
+        setSubmitStatus("error");
+        setSubmitError(`Script is extremely large (${codeSizeKB.toFixed(2)}KB). Consider splitting into smaller modules or uploading as a file instead.`);
+        return;
+      }
+      
+      // Warn user if code is large
+      if (codeSizeKB > 15) {
+        console.log(`Large script detected: ${codeSizeKB.toFixed(2)}KB. Will be truncated for review.`);
+      }
+    }
+    
     try {
-      // Run LLM code review via server endpoint
-      const codeToReview = newScript.code || ''
-      const res = await fetch('/api/gemini-review', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: codeToReview }),
-      })
-      if (!res.ok) {
-        const errData = await res.json()
-        setSubmitStatus('error')
-        setSubmitError(errData.error || 'Review endpoint error')
-        return
+      // Only run LLM code review for code submissions, not file uploads
+      let reviewData = null;
+      
+      if (newScript.code) {
+        const codeToReview = newScript.code;
+        
+        try {
+          setSubmitStatus("submitting");
+          setSubmitError("Reviewing code with AI, please wait...");
+          
+          const res = await fetch('/api/gemini-review', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code: codeToReview }),
+          });
+          
+          if (!res.ok) {
+            const errData = await res.json();
+            // For payload size errors, provide a helpful message
+            if (res.status === 400 && errData.error?.includes('payload size exceeds')) {
+              throw new Error(`Script is too large for automatic review. Please reduce its size or submit for manual review. (${errData.error})`);
+            }
+            throw new Error(errData.error || `Review endpoint error: ${res.status}`);
+          }
+          
+          reviewData = await res.json();
+          console.log('Review results:', reviewData);
+          
+          if (reviewData.error) {
+            throw new Error(reviewData.error);
+          }
+          
+          // Show warning for scripts that need human review but don't block submission
+          if (!reviewData.approved || reviewData.requiresHuman) {
+            console.log('Script requires further review:', reviewData);
+            setSubmitError(
+              reviewData.requiresHuman 
+                ? `${reviewData.comment} (Submission will still be allowed)`
+                : `Review caution: ${reviewData.comment} (Submission will still be allowed)`
+            );
+          } else {
+            setSubmitError(null); // Clear error message if review is successful
+          }
+        } catch (error: any) {
+          console.error('Script review error:', error);
+          setSubmitError(`Review issue: ${error.message} (Proceeding without review)`);
+          
+          // Create a fallback review result
+          reviewData = {
+            approved: false,
+            comment: `Review failed: ${error.message}`,
+            badge: 'Manual Review Needed',
+            requiresHuman: true
+          };
+          
+          // Don't return, let the submission continue but mark it for manual review
+        }
       }
-      const reviewData = await res.json()
-      if (reviewData.error) {
-        setSubmitStatus('error')
-        setSubmitError(reviewData.error)
-        return
-      }
-      if (!reviewData.approved) {
-        setSubmitStatus('error')
-        setSubmitError(`Review failed: ${reviewData.comment}`)
-        return
-      }
-      if (reviewData.requiresHuman) {
-        setSubmitStatus('error')
-        setSubmitError(`Requires human review: ${reviewData.comment}`)
-        return
-      }
+      
+      // Handle file upload if needed
       let fileUrl: string | null = null;
       if (newScript.file) {
-        const file = newScript.file; const uniqueFileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`; const filePath = `public/${uniqueFileName}`;
-        const { error: uploadError } = await supabase.storage.from(SCRIPT_FILES_BUCKET).upload(filePath, file);
-        if (uploadError) { throw new Error(`Storage Upload Failed: ${uploadError.message || JSON.stringify(uploadError)}`); }
-        const { data: urlData } = supabase.storage.from(SCRIPT_FILES_BUCKET).getPublicUrl(filePath); fileUrl = urlData?.publicUrl ?? null;
+        const file = newScript.file;
+        const uniqueFileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+        const filePath = `public/${uniqueFileName}`;
+        
+        // Upload the file
+        const { error: uploadError } = await supabase.storage
+          .from(SCRIPT_FILES_BUCKET)
+          .upload(filePath, file);
+          
+        if (uploadError) {
+          throw new Error(`Storage Upload Failed: ${uploadError.message || JSON.stringify(uploadError)}`);
+        }
+        
+        // Get the public URL
+        const { data: urlData } = supabase.storage
+          .from(SCRIPT_FILES_BUCKET)
+          .getPublicUrl(filePath);
+          
+        fileUrl = urlData?.publicUrl ?? null;
       }
+      
+      // Prepare script for database insertion
+      let title = newScript.title;
+      let reviewBadge = reviewData?.badge || '';
+      
+      // Since we have the metadata column, don't include the badge in the title
+      // if (reviewData?.badge) {
+      //   title = `${title} [${reviewData.badge}]`;
+      // }
+      
       const scriptToInsert = {
-        title: `${newScript.title} [${reviewData.badge}]`,
+        title,
         description: newScript.description,
         author: newScript.author || 'Anonymous',
         code: newScript.code || null,
         file_url: fileUrl,
         support_url: newScript.support_url || null,
+        metadata: reviewData ? {
+          review_badge: reviewData.badge,
+          review_approved: reviewData.approved
+        } : null
       };
+      
+      // Insert into database
       const tableNameForInsert = "Earthie_scripts";
-      const { data: insertedData, error: insertError } = await supabase.from(tableNameForInsert).insert([scriptToInsert]).select();
-      if (insertError) { throw new Error(`Database Insert Failed: ${insertError.message || JSON.stringify(insertError)}`); }
-      setSubmitStatus("success"); const successfullyInsertedScript = insertedData?.[0] as Script | undefined;
-      if (successfullyInsertedScript) { setScripts(prevScripts => [successfullyInsertedScript, ...prevScripts]); } else { await fetchScripts(false); } // Refresh list
+      const { data: insertedData, error: insertError } = await supabase
+        .from(tableNameForInsert)
+        .insert([scriptToInsert])
+        .select();
+        
+      if (insertError) {
+        throw new Error(`Database Insert Failed: ${insertError.message || JSON.stringify(insertError)}`);
+      }
+      
+      // Success - reset form and update UI
+      setSubmitStatus("success");
+      
+      const successfullyInsertedScript = insertedData?.[0] as Script | undefined;
+      if (successfullyInsertedScript) {
+        setScripts(prevScripts => [successfullyInsertedScript, ...prevScripts]);
+      } else {
+        await fetchScripts(false);
+      }
+      
+      // Reset form
       setNewScript({ title: "", description: "", author: "", code: "", file: null, support_url: "" });
-      const fi = document.getElementById('file-upload') as HTMLInputElement | null; if (fi) fi.value = '';
-      setTimeout(() => { setSubmitStatus("idle"); }, 3000);
-    } catch (err) { /* Existing error handling */ console.error("--- Submission Error ---"); console.error(err); let msg = 'Unknown error.'; if (err instanceof Error){msg = err.message;} else if(typeof err === 'string'){msg=err;} else{try{msg = JSON.stringify(err);}catch{}} setSubmitStatus("error"); setSubmitError(msg); }
+      const fi = document.getElementById('file-upload') as HTMLInputElement | null;
+      if (fi) fi.value = '';
+      
+      // Automatically clear success message after delay
+      setTimeout(() => {
+        setSubmitStatus("idle");
+      }, 3000);
+    } catch (error: any) {
+      console.error('Script submission error:', error);
+      setSubmitStatus("error");
+      setSubmitError(error.message || 'An unknown error occurred');
+    }
   };
   const formatDate = (ds: string | null) => { if (!ds) return "N/A"; try { return new Date(ds).toLocaleDateString("en-US", { year: 'numeric', month: 'short', day: 'numeric' }); } catch (e) { return "Invalid Date"; } }
   const generateFilename = (t: string, ext: string) => { const st = t.replace(/[^a-z0-9]/gi, '_').toLowerCase(); return `${st || 'script'}.${ext}`; }
@@ -380,25 +523,96 @@ export default function DevToolsPage() {
           {!isLoading && !error && scripts.map((script) => {
                 const likedLocally = isLocallyLiked(script.id, locallyLikedScripts);
 
-                // Parse review badge from title
-                const badgeRegex = /\[Reviewed by (.+?)\]$/;
-                const match = badgeRegex.exec(script.title);
-                const badgeText = match?.[1];
-                const displayTitle = match ? script.title.slice(0, match.index).trim() : script.title;
+                // Get badge info from either title or metadata
+                let badgeText = '';
+                let badgeType = 'default';
+                let displayTitle = script.title;
+                
+                // Check for badge in metadata first (new format)
+                if (script.metadata && typeof script.metadata === 'object') {
+                  badgeText = script.metadata.review_badge || '';
+                  // Set badge type based on approval status
+                  if (script.metadata.review_approved === true) {
+                    badgeType = 'success';
+                  } else if (script.metadata.review_approved === false) {
+                    badgeType = 'warning';
+                  }
+                } 
+                // Fallback to old format: extract from title if needed
+                else {
+                  const badgeRegex = /\[(.+?)\]$/;
+                  const match = badgeRegex.exec(script.title);
+                  
+                  if (match) {
+                    badgeText = match[1];
+                    displayTitle = script.title.slice(0, match.index).trim();
+                    
+                    // Set badge type based on text content
+                    if (badgeText.includes('Error') || badgeText.includes('Manual Review')) {
+                      badgeType = 'error';
+                    } else if (badgeText.includes('Caution') || badgeText.includes('Warning')) {
+                      badgeType = 'warning';
+                    } else if (badgeText.includes('Gemini') || badgeText.includes('Approved')) {
+                      badgeType = 'success';
+                    } else if (badgeText.includes('Try Later') || badgeText.includes('Timeout')) {
+                      badgeType = 'info';
+                    }
+                  }
+                }
 
                 return (
                     <Card key={script.id} className="bg-earthie-dark-light border-earthie-dark-light overflow-hidden">
                         <CardHeader>
-                            <div className="flex items-center space-x-2">
+                            <div className="flex items-center flex-wrap gap-2">
                                 <CardTitle>{displayTitle}</CardTitle>
                                 {badgeText && (
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded bg-earthie-mint text-earthie-dark text-xs font-medium">
+                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                      badgeType === 'success' ? 'bg-emerald-100 text-emerald-800' :
+                                      badgeType === 'warning' ? 'bg-amber-100 text-amber-800' :
+                                      badgeType === 'error' ? 'bg-red-100 text-red-800' :
+                                      'bg-blue-100 text-blue-800'
+                                    }`}>
+                                        {badgeType === 'success' && <span className="mr-1 h-1.5 w-1.5 rounded-full bg-emerald-500"></span>}
+                                        {badgeType === 'warning' && <span className="mr-1 h-1.5 w-1.5 rounded-full bg-amber-500"></span>}
+                                        {badgeType === 'error' && <span className="mr-1 h-1.5 w-1.5 rounded-full bg-red-500"></span>}
                                         {badgeText}
                                     </span>
                                 )}
                             </div>
                             {script.description && (<CardDescription className="text-gray-300 pt-1">{script.description}</CardDescription>)}
                         </CardHeader>
+                        {/* Display existing reviews */}
+                        {script.review_method && (
+                            <div className="mt-1 flex items-center space-x-2">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded bg-earthie-yellow text-earthie-dark text-xs font-medium">
+                                    {script.review_method}{script.review_by ? ` by ${script.review_by}` : ""}
+                                </span>
+                                {script.review_comment && (
+                                    <span className="text-xs text-gray-400">{script.review_comment}</span>
+                                )}
+                            </div>
+                        )}
+                        {/* Human review button - Disabled until database columns are added */}
+                        {/* {!script.review_method && currentUser && (
+                            <div className="mt-2">
+                                <Button variant="outline" size="sm" onClick={() => { setReviewOpenId(script.id); setReviewMethod(''); setReviewComment(''); }}>
+                                    Review
+                                </Button>
+                            </div>
+                        )} */}
+                        {/* Review form */}
+                        {reviewOpenId === script.id && (
+                            <div className="mt-2 space-y-2">
+                                <Input id={`review-method-${script.id}`} placeholder="Method (e.g. Spectrum)" value={reviewMethod} onChange={e => setReviewMethod(e.target.value)} className="bg-earthie-dark border-earthie-dark-light text-white" />
+                                <Textarea id={`review-comment-${script.id}`} placeholder="Review comment" rows={3} value={reviewComment} onChange={e => setReviewComment(e.target.value)} className="bg-earthie-dark border-earthie-dark-light text-white" />
+                                <div className="flex space-x-2">
+                                    <Button onClick={() => setReviewOpenId(null)}>Cancel</Button>
+                                    <Button disabled={reviewSubmitting} onClick={() => handleReviewSubmit(script.id)}>
+                                        {reviewSubmitting ? "Submitting..." : "Submit Review"}
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
                         <CardContent>
                             {script.code && (
                                 <div className="relative group bg-earthie-dark p-4 rounded-md overflow-x-auto mb-4 max-h-96">
@@ -457,4 +671,43 @@ export default function DevToolsPage() {
       </Tabs>
     </div>
   )
+
+  // Submit human review
+  const handleReviewSubmit = useCallback(async (scriptId: string) => {
+    // NOTE: This function requires database columns to be added first
+    if (!reviewMethod || !reviewComment || !currentUser) return;
+    setReviewSubmitting(true);
+    
+    // Display a temporary message until database is updated
+    alert("Review submissions are temporarily disabled until database is updated with review columns");
+    console.log("Review attempted but database columns don't exist yet", {
+      scriptId,
+      reviewMethod,
+      reviewBy: currentUser.email ?? currentUser.id,
+      reviewComment,
+      reviewedAt: new Date().toISOString()
+    });
+    
+    /*
+    // Commented out until database is updated
+    const { error } = await supabase
+      .from("Earthie_scripts")
+      .update({
+        review_method: reviewMethod,
+        review_by: currentUser.email ?? currentUser.id,
+        review_comment: reviewComment,
+        reviewed_at: new Date().toISOString(),
+      })
+      .eq("id", scriptId);
+    if (error) {
+      console.error("Review update error:", error);
+      alert("Failed to submit review");
+    } else {
+      await fetchScripts(false);
+    }
+    */
+    
+    setReviewSubmitting(false);
+    setReviewOpenId(null);
+  }, [reviewMethod, reviewComment, currentUser, fetchScripts]);
 }
