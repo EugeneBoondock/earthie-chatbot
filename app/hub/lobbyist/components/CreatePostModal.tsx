@@ -55,8 +55,9 @@ interface CreatePostModalProps {
 
 interface UserProfile {
   id: string;
-  name: string;
-  avatar: string;
+  name?: string;
+  username?: string;
+  avatar?: string;
 }
 
 interface CreatePostModalProps {
@@ -235,16 +236,16 @@ export default function CreatePostModal({ isOpen, onClose, onCreatePost, user }:
             <div className="flex items-center space-x-3">
               <Avatar className="h-9 w-9 border border-sky-400/30">
                 {user.avatar ? (
-                  <AvatarImage src={user.avatar} alt={user.name} />
+                  <AvatarImage src={user.avatar} alt={user.name || user.username || 'User'} />
                 ) : (
                   <AvatarFallback className="bg-sky-700/40 text-sky-200">
-                    {user.name ? user.name.slice(0, 2).toUpperCase() : '--'}
+                    {(user.name || user.username) ? (user.name || user.username)?.slice(0, 2).toUpperCase() : '--'}
                   </AvatarFallback>
                 )}
               </Avatar>
               <div>
                 <p className="font-medium text-white">
-                  {user.name || 'Earth2 Profile Required'}
+                  {user.name || user.username || 'Earth2 Profile Required'}
                 </p>
                 <Select value={postType} onValueChange={setPostType}>
                   <SelectTrigger className="h-7 w-auto border-0 bg-transparent focus:ring-0 p-0 text-gray-400 hover:text-sky-400">

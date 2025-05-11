@@ -36,15 +36,19 @@ export async function GET(request: Request) {
   const supabase = await createSupabaseServerClient();
 
   try {
+    console.log('[e2profile/GET] Starting request');
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
     if (sessionError) {
-      console.error('Session error in GET E2 profile:', sessionError.message);
+      console.error('[e2profile/GET] Session error:', sessionError.message);
       throw sessionError;
     }
     if (!session) {
+      console.error('[e2profile/GET] No session found');
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
+
+    console.log(`[e2profile/GET] Valid session for user: ${session.user.id}`);
 
     // Get both the E2 profile and user profile
     const { data: e2Profile, error: e2Error } = await supabase
@@ -54,9 +58,11 @@ export async function GET(request: Request) {
       .single();
 
     if (e2Error && e2Error.code !== 'PGRST116') { // PGRST116: no rows found, which is acceptable
-      console.error('Error fetching E2 profile (GET):', e2Error);
+      console.error('[e2profile/GET] Error fetching E2 profile:', e2Error);
       throw e2Error;
     }
+
+    console.log(`[e2profile/GET] E2 profile fetch result:`, e2Profile);
 
     // Also get the user profile
     const { data: userProfile, error: profileError } = await supabase
@@ -66,8 +72,20 @@ export async function GET(request: Request) {
       .single();
 
     if (profileError && profileError.code !== 'PGRST116') {
-      console.error('Error fetching user profile (GET):', profileError);
+      console.error('[e2profile/GET] Error fetching user profile:', profileError);
       throw profileError;
+    }
+
+    console.log(`[e2profile/GET] User profile fetch result:`, userProfile);
+
+    // If a user profile exists but has no E2 profile, we should still return the user profile
+    if (userProfile && (!e2Profile || !e2Profile.e2_user_id)) {
+      console.log('[e2profile/GET] No E2 profile, but user profile exists - returning user profile');
+      return NextResponse.json({
+        e2_user_id: null,
+        username: userProfile.username,
+        avatar_url: userProfile.avatar_url
+      });
     }
 
     // If we have an E2 user ID, fetch the latest info from Earth2

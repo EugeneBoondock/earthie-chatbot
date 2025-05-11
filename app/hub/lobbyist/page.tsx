@@ -115,10 +115,41 @@ export default function LobbyistPage() {
         setProfileLoading(true);
         try {
           const { fetchUserProfile } = await import('./profileUtils');
-          const profile = await fetchUserProfile(user.id);
-          if (profile) {
-            setUserProfile(profile);
+          console.log('Fetching user profile for user ID:', user.id);
+          let profile = await fetchUserProfile(user.id);
+          console.log('Profile fetch result:', profile);
+          
+          // If no profile was found, create a minimal fallback profile
+          if (!profile) {
+            console.log('No profile found, using fallback profile');
+            profile = {
+              id: user.id,
+              username: user.email?.split('@')[0] || 'anonymous',
+              avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${user.email?.split('@')[0] || 'anonymous'}`
+            };
+            
+            // If this is the case, we should also try to save this basic profile to the database
+            try {
+              const { data, error } = await supabase
+                .from('profiles')
+                .upsert({
+                  id: user.id,
+                  username: profile.username,
+                  avatar_url: profile.avatar,
+                  updated_at: new Date().toISOString()
+                });
+                
+              if (error) {
+                console.error('Error saving fallback profile:', error);
+              } else {
+                console.log('Fallback profile saved successfully');
+              }
+            } catch (e) {
+              console.error('Error during fallback profile save:', e);
+            }
           }
+          
+          setUserProfile(profile);
         } catch (e) {
           console.error('Error loading profile:', e);
         } finally {
@@ -415,6 +446,7 @@ export default function LobbyistPage() {
         isOpen={isCreateModalOpen} 
         onClose={() => setIsCreateModalOpen(false)}
         onCreatePost={handlePostCreated}
+        user={userProfile}
       />
     </div>
   );
