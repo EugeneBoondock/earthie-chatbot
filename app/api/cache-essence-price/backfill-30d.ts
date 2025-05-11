@@ -1,12 +1,24 @@
 // This API route allows you to backfill the last 30 days of hourly prices
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabaseClient';
-
+import { createClient } from '@supabase/supabase-js';
 
 const ESSENCE_TOKEN_ADDRESS = '0x2c0687215Aca7F5e2792d956E170325e92A02aCA'.toLowerCase();
 
+// Helper function to initialize Supabase client
+function getSupabaseClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error('Missing required environment variables for Supabase connection');
+  }
+
+  return createClient(supabaseUrl, supabaseKey);
+}
+
 export async function POST() {
   try {
+    const supabase = getSupabaseClient();
     const moralisKey = process.env.NEXT_PUBLIC_MORALIS_API_KEY;
     if (!moralisKey) {
       return NextResponse.json({ error: 'Missing Moralis API key' }, { status: 500 });
@@ -33,7 +45,10 @@ export async function POST() {
       if (typeof usdPrice !== 'number') continue;
       await supabase
         .from('essence_hourly_prices')
-        .upsert({ timestamp: hour.toISOString(), price: usdPrice }, { onConflict: 'timestamp' });
+        .upsert({
+          timestamp: hour.toISOString(),
+          price: usdPrice
+        }, { onConflict: 'timestamp' });
       successCount++;
       await new Promise(res => setTimeout(res, 350)); // avoid rate limits
     }
