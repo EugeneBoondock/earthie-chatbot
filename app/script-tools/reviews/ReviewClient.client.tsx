@@ -1,7 +1,8 @@
 "use client"
 
 import React, { useState, useEffect, useCallback } from "react"
-import { User, createClient, SupabaseClient } from '@supabase/supabase-js'
+import { User } from '@supabase/supabase-js'
+import { supabase } from '@/lib/supabase'
 import { Card, CardHeader, CardContent, CardDescription, CardFooter, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -20,19 +21,6 @@ export interface ReviewClientProps {
   user: User
   username: string | null
 }
-
-// --- Supabase Configuration ---
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-// Ensure keys are provided
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error("Supabase URL or Anon Key environment variables are missing!");
-  console.error("Ensure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are set in your .env.local file or Vercel environment variables.");
-  throw new Error("Supabase environment variables not set. Check console for details.");
-}
-
-const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey);
 
 // Script type definition based on the Earthie_scripts table
 interface Script {
@@ -159,7 +147,7 @@ export default function ReviewClient({ user, username }: ReviewClientProps) {
     // An alternative could be to use a separate state to trigger this effect only once after initial script load.
     // For now, the internal checks should be sufficient.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scripts, fetchingFileContent]); // Added fetchingFileContent to dependencies to ensure re-evaluation when it changes.
+  }, [scripts, fetchingFileContent]) // Added fetchingFileContent to dependencies to ensure re-evaluation when it changes.
 
   // Fetch scripts from the database
   const fetchScripts = useCallback(async () => {
@@ -176,64 +164,15 @@ export default function ReviewClient({ user, username }: ReviewClientProps) {
         console.log("Authenticated as:", session.user.email);
       }
       
-      // Log exact API URL for debugging
-      const apiUrl = `${supabaseUrl}/rest/v1/Earthie_scripts?select=*&order=created_at.desc`;
-      console.log("Direct API URL:", apiUrl);
-      
-      console.log("Attempting to fetch from table: Earthie_scripts");
+      // Fetch scripts via Supabase client
       const { data, error: fetchError } = await supabase
         .from("Earthie_scripts")
         .select("*")
         .order("created_at", { ascending: false });
-      
-      console.log("Raw response data:", data);
-      
-      if (fetchError) { 
+      if (fetchError) {
         console.error("Error fetching scripts:", fetchError);
         throw fetchError;
       }
-      
-      if (!data || data.length === 0) {
-        console.log("No scripts found in the database");
-        
-        // Try fetching with a direct fetch request to debug
-        console.log("Attempting direct fetch to API URL...");
-        try {
-          const headers: Record<string, string> = {
-            'apikey': supabaseAnonKey || '',
-            'Authorization': `Bearer ${supabaseAnonKey || ''}`,
-            'Content-Type': 'application/json'
-          };
-          
-          // Add session auth if available
-          if (session?.access_token) {
-            headers['Authorization'] = `Bearer ${session.access_token}`;
-          }
-          
-          const response = await fetch(apiUrl, {
-            method: 'GET',
-            headers: headers
-          });
-          
-          if (response.ok) {
-            const directData = await response.json();
-            console.log("Direct fetch response:", directData);
-            if (directData && directData.length > 0) {
-              console.log("Direct fetch successful with data!");
-              setScripts(directData);
-              return;
-            }
-          } else {
-            console.log("Direct fetch failed:", response.status, response.statusText);
-          }
-        } catch (directErr) {
-          console.error("Direct fetch error:", directErr);
-        }
-      } else {
-        console.log("Fetch successful. Data received:", data.length);
-        console.log("First script:", data[0]);
-      }
-      
       setScripts(data || []);
     } catch (err: any) {
       console.error("--- Error caught in fetchScripts catch block ---");
@@ -298,41 +237,43 @@ export default function ReviewClient({ user, username }: ReviewClientProps) {
           break
       }
 
-      console.log("Submitting review:", {
-        scriptId,
-        status: reviewStatus,
-        method: reviewMethod,
-        reviewedBy_log: displayName,
-        reviewerId_for_db: reviewerUserId,
-        reviewComment,
-        metadata: {
-          review_badge: reviewBadgeText,
-          review_approved: reviewApproved,
+      console.log("About to call supabase.from(\"Earthie_scripts\").update...");
+      
+      // Proceed with direct Supabase update using client
+
+      // Ensure metadata is properly structured as a JSONB column
+      const existingScript = scripts.find(s => s.id === scriptId);
+      const updatedMetadata = {
+        ...(existingScript?.metadata ?? {}),  // Preserve existing metadata (default to empty)
+        review_badge: reviewBadgeText,
+        review_approved: reviewApproved,
+        review_status_raw: reviewStatus
+      };
+
+      const updatePayload = {
+        review_method: reviewMethod,
+        review_by: reviewerUserId,
+        review_comment: reviewComment,
+        reviewed_at: new Date().toISOString(),
+        metadata: updatedMetadata
+      };
+
+      console.log("With payload:", JSON.stringify(updatePayload, null, 2));
+      try {
+        const { data, error } = await supabase
+          .from("Earthie_scripts")
+          .update(updatePayload)
+          .eq("id", scriptId)
+          .select("*")
+          .single();
+        if (error || !data) {
+          throw error || new Error("No data returned from supabase update");
         }
-      })
-      
-      const { error } = await supabase
-        .from("Earthie_scripts")
-        .update({
-          review_method: reviewMethod,
-          review_by: reviewerUserId,
-          review_comment: reviewComment,
-          reviewed_at: new Date().toISOString(),
-          metadata: {
-            ...(scripts.find(s => s.id === scriptId)?.metadata || {}),
-            review_badge: reviewBadgeText,
-            review_approved: reviewApproved,
-            review_status_raw: reviewStatus,
-          }
-        })
-        .eq("id", scriptId)
-      
-      if (error) {
-        console.error("Review update error:", error)
-        alert("Failed to submit review: " + error.message)
-      } else {
-        console.log("Review submitted successfully")
-        await fetchScripts()
+        console.log("Review submitted successfully", data);
+        fetchScripts();  // Refresh scripts asynchronously
+      } catch (error: any) {
+        console.error("Review update error:", error);
+        alert("Failed to submit review: " + (error.message || "Unknown error"));
       }
     } catch (err) {
       console.error("Error in review submission:", err)
