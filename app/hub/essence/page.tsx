@@ -84,6 +84,7 @@ const EssenceTracker: React.FC = () => {
   const [stats, setStats] = useState<StatsData>({ holders: undefined });
   const [error, setError] = useState<string | null>(null);
   const [loadingStats, setLoadingStats] = useState(true);
+  const [loadingHolders, setLoadingHolders] = useState(true);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loadingWallet, setLoadingWallet] = useState(false);
   const [walletError, setWalletError] = useState<string | null>(null);
@@ -130,11 +131,11 @@ const EssenceTracker: React.FC = () => {
         // Set initial stats from DexScreener
     setStats(prev => ({
       ...prev,
-          priceUsd: mainPair.priceUsd,
-          priceChange24h: mainPair.priceChange?.h24,
+      priceUsd: mainPair.priceUsd,
+      priceChange24h: mainPair.priceChange?.h24,
       total_volume: mainPair.volume?.h24 ?? 0,
       market_cap: mainPair.marketCap ?? 0,
-      }));
+    }));
 
         // Fetch Earth2 metrics
       const metricsRes = await fetch('/api/e2/metrics');
@@ -160,7 +161,7 @@ const EssenceTracker: React.FC = () => {
         setStats(prev => ({
           ...prev,
           circulating_supply: circulatingSupply,
-            holders: holdersCount,
+          holders: prev.holders, // preserve holders value
         }));
       }
       } catch (err: any) {
@@ -671,10 +672,13 @@ const EssenceTracker: React.FC = () => {
       .maybeSingle(); // Use maybeSingle to allow null if not found
 
     if (error || !data) {
-      return null;
+      return undefined;
     }
-    // data.count may be 0, so check for undefined/null, not falsy
-    return typeof data.count === 'number' ? data.count : null;
+    // Handle both array and object responses
+    if (Array.isArray(data)) {
+      return typeof data[0]?.count === 'number' ? data[0].count : undefined;
+    }
+    return typeof data.count === 'number' ? data.count : undefined;
   };
 
   // Fetch holders count from Ethplorer and upsert to Supabase
@@ -703,10 +707,12 @@ const EssenceTracker: React.FC = () => {
   // On mount and every 12 hours, fetch from Supabase and display. In the background, update from Ethplorer and upsert to Supabase, but do not update UI from Ethplorer.
   useEffect(() => {
     const fetchAndDisplay = async () => {
+      setLoadingHolders(true);
       const supabaseCount = await fetchHoldersCountFromSupabase();
       if (supabaseCount !== undefined) {
         setStats(prev => ({ ...prev, holders: supabaseCount as number }));
       }
+      setLoadingHolders(false);
       // In the background, update from Ethplorer and upsert to Supabase
       fetchAndUpsertHoldersCountFromEthplorer();
     };
@@ -833,7 +839,7 @@ const EssenceTracker: React.FC = () => {
             <div className="min-w-0 flex-1">
               <p className="text-xs sm:text-sm text-cyan-200/70">Holders</p>
               <p className="text-base sm:text-xl font-semibold text-white truncate">
-                {stats?.holders !== undefined && stats?.holders !== null ? formatNumber(stats.holders) : '...'}
+                {loadingHolders ? '...' : (stats?.holders !== undefined ? formatNumber(stats.holders) : '...')}
               </p>
           </div>
         </div>
