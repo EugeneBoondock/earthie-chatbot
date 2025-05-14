@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Loader2, AlertCircle, MapPin, Maximize, Building, Zap, Tag, Landmark, CheckCircle, XCircle, Gem, ShieldCheck, User, Globe, ArrowUpRight, LinkIcon, PlusCircle, Trash2 } from 'lucide-react';
-import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer, Sector } from 'recharts';
 import { BarChart, CartesianGrid, XAxis, YAxis, Bar } from 'recharts';
 import { get as idbGet, set as idbSet } from 'idb-keyval';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -98,6 +98,110 @@ const extractE2UserId = (input: string): string | null => {
 
 // Helper for IndexedDB cache key
 const getCacheKey = (userId: string) => `e2_properties_${userId}`;
+
+interface Pie3DProps {
+  cx?: string | number;
+  cy?: string | number;
+  data: Array<Record<string, any>>;
+  dataKey: string;
+  nameKey: string;
+  innerRadius?: string | number;
+  outerRadius?: string | number;
+  fill?: string;
+  colorArray: string[];
+  stroke?: string;
+  startAngle?: number;
+  endAngle?: number;
+}
+
+// Create custom 3D pie effect component
+const Pie3D = (props: Pie3DProps) => {
+  const { cx = '50%', cy = '50%', data, dataKey, nameKey, innerRadius = 0, outerRadius = '80%', fill, colorArray, stroke } = props;
+  
+  return data.map((entry, index) => {
+    const color = colorArray[index % colorArray.length];
+    // Generate layered circles to create 3D effect
+    const layers = 5;
+    const startAngle = props.startAngle || 0;
+    const endAngle = props.endAngle || 360;
+    
+    // Calculate angles for this slice
+    let prevSum = 0;
+    let sum = 0;
+    for (let i = 0; i < data.length; i++) {
+      sum += data[i][dataKey];
+      if (i < index) prevSum += data[i][dataKey];
+    }
+    
+    const sliceStartAngle = startAngle + (prevSum / sum) * (endAngle - startAngle);
+    const sliceEndAngle = startAngle + ((prevSum + entry[dataKey]) / sum) * (endAngle - startAngle);
+    
+    return Array.from({ length: layers }).map((_, i) => {
+      // Darker colors for back layers, lighter for front
+      const darkenPercent = i / layers;
+      const layerColor = i === layers-1 ? color : shadeColor(color, -15 * darkenPercent);
+      const offset = i*2;
+      
+      // Convert to numbers before arithmetic operations
+      const numCx = typeof cx === 'string' ? parseFloat(cx) : cx;
+      const numCy = typeof cy === 'string' ? parseFloat(cy) : cy;
+      const numInnerRadius = typeof innerRadius === 'string' ? parseFloat(innerRadius) : innerRadius;
+      const numOuterRadius = typeof outerRadius === 'string' ? parseFloat(outerRadius) : outerRadius;
+      
+      return (
+        <Sector
+          key={`${index}-layer-${i}`}
+          cx={numCx}
+          cy={numCy + offset}
+          innerRadius={numInnerRadius}
+          outerRadius={numOuterRadius - offset}
+          startAngle={sliceStartAngle}
+          endAngle={sliceEndAngle}
+          fill={layerColor}
+          stroke={stroke || '#374151'}
+          strokeWidth={0.5}
+        />
+      );
+    });
+  }).flat();
+};
+
+// Helper function to shade colors
+const shadeColor = (color: string, percent: number): string => {
+  let R = parseInt(color.substring(1,3), 16);
+  let G = parseInt(color.substring(3,5), 16);
+  let B = parseInt(color.substring(5,7), 16);
+
+  R = parseInt(String(R * (100 + percent) / 100));
+  G = parseInt(String(G * (100 + percent) / 100));
+  B = parseInt(String(B * (100 + percent) / 100));
+
+  R = (R<255) ? R : 255;  
+  G = (G<255) ? G : 255;  
+  B = (B<255) ? B : 255;  
+
+  const RR = ((R.toString(16).length===1)?"0"+R.toString(16):R.toString(16));
+  const GG = ((G.toString(16).length===1)?"0"+G.toString(16):G.toString(16));
+  const BB = ((B.toString(16).length===1)?"0"+B.toString(16):B.toString(16));
+
+  return "#"+RR+GG+BB;
+};
+
+// Create a CSS class for 3D pie chart effect
+const pie3DStyle = `
+  .recharts-pie {
+    filter: drop-shadow(0px 10px 8px rgba(0, 0, 0, 0.5));
+    transform: perspective(1000px) rotateX(45deg);
+    transform-origin: center center;
+  }
+  .recharts-pie-sector {
+    transition: transform 0.2s;
+  }
+  .recharts-pie-sector:hover {
+    transform: scale(1.05) translateY(-5px);
+    filter: brightness(1.1);
+  }
+`;
 
 export default function ProfilePage() {
   const [e2ProfileInput, setE2ProfileInput] = useState('');
@@ -1619,38 +1723,39 @@ export default function ProfilePage() {
                   </div>
                   
                   <div className="h-64 md:h-80"> 
-                      {tileClassPieData.length > 0 ? (
-                          <ResponsiveContainer width="100%" height="100%">
-                              <PieChart>
-                                <>
-                                  <Pie
-                                      data={tileClassPieData}
-                                      cx="50%"
-                                      cy="50%"
-                                      labelLine={false}
-                                      outerRadius="80%"
-                                      innerRadius="40%"
-                                      fill="#8884d8"
-                                      dataKey="value"
-                                      stroke="#374151"
-                                  >
-                                      {tileClassPieData.map((entry, index) => (
-                                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                      ))}
-                                  </Pie>
-                                  <Tooltip 
-                                      contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }}
-                                      itemStyle={{ color: '#d1d5db' }}
-                                      formatter={(value: number) => value.toLocaleString()}
-                                  />
-                                </>
-                              </PieChart>
-                          </ResponsiveContainer>
-                      ) : (
-                        <div className="flex items-center justify-center h-full text-gray-500 text-sm">
-                            No data for tile class chart.
-                        </div>
-                      )}
+                    {tileClassPieData.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <>
+                            <style>{pie3DStyle}</style>
+                            <Pie
+                              data={tileClassPieData}
+                              cx="50%"
+                              cy="50%"
+                              labelLine={false}
+                              outerRadius="70%"
+                              innerRadius="40%"
+                              fill="#8884d8"
+                              dataKey="value"
+                              stroke="#374151"
+                            >
+                              {tileClassPieData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                              ))}
+                            </Pie>
+                            <Tooltip 
+                              contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }}
+                              itemStyle={{ color: '#d1d5db' }}
+                              formatter={(value: number) => value.toLocaleString()}
+                            />
+                          </>
+                        </PieChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-gray-500 text-sm">
+                        No data for tile class chart.
+                      </div>
+                    )}
                   </div>
               </CardContent>
           </Card>
@@ -1709,6 +1814,7 @@ export default function ProfilePage() {
                 <CardContent className="h-96"> {/* Increased height for better spacing */}
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
+                      <style>{pie3DStyle}</style>
                       <Pie
                         data={countryChartData}
                         cx="50%"
@@ -1764,12 +1870,13 @@ export default function ProfilePage() {
                   <CardContent className="h-80">
                       <ResponsiveContainer width="100%" height="100%">
                           <PieChart>
+                            <style>{pie3DStyle}</style>
                             <Pie
                                 data={tierChartData}
                                 cx="50%"
                                 cy="50%"
                                 labelLine={false}
-                                outerRadius="80%"
+                                outerRadius="70%"
                                 fill="#8884d8"
                                 dataKey="value"
                                 nameKey="name"
@@ -1862,12 +1969,13 @@ export default function ProfilePage() {
                     <CardContent className="h-80">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
+                              <style>{pie3DStyle}</style>
                                 <Pie
                                     data={forSaleChartData}
                                     cx="50%"
                                     cy="50%"
                                     labelLine={false}
-                                    outerRadius="80%"
+                                    outerRadius="70%"
                                     fill="#8884d8"
                                     dataKey="value"
                                     nameKey="name"
@@ -1901,12 +2009,13 @@ export default function ProfilePage() {
                     <CardContent className="h-80">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
+                              <style>{pie3DStyle}</style>
                                 <Pie
                                     data={eplChartData}
                                     cx="50%"
                                     cy="50%"
                                     labelLine={false}
-                                    outerRadius="80%"
+                                    outerRadius="70%"
                                     fill="#8884d8"
                                     dataKey="value"
                                     nameKey="name"

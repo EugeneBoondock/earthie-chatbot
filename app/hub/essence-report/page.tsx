@@ -49,6 +49,7 @@ import {
   Legend,
   ChartOptions,
 } from 'chart.js';
+import ChartDataLabels from 'chartjs-plugin-datalabels';
 
 // Register ChartJS components
 ChartJS.register(
@@ -60,7 +61,8 @@ ChartJS.register(
   ArcElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
+  ChartDataLabels
 );
 
 interface TotalStats {
@@ -237,6 +239,22 @@ const EssenceReport = () => {
         'rgba(59, 130, 246, 0.8)',
         'rgba(16, 185, 129, 0.8)',
       ],
+      borderWidth: 1,
+      borderColor: [
+        'rgba(80, 227, 193, 1)',
+        'rgba(239, 68, 68, 1)',
+        'rgba(59, 130, 246, 1)',
+        'rgba(16, 185, 129, 1)',
+      ],
+      offset: [20, 10, 15, 5],
+      hoverBackgroundColor: [
+        'rgba(80, 227, 193, 1)',
+        'rgba(239, 68, 68, 1)',
+        'rgba(59, 130, 246, 1)',
+        'rgba(16, 185, 129, 1)',
+      ],
+      hoverBorderColor: '#fff',
+      hoverBorderWidth: 2,
     }],
   };
 
@@ -280,6 +298,53 @@ const EssenceReport = () => {
         padding: 12,
       },
     },
+  };
+
+  // 3D pie chart specific options
+  const pie3DOptions = {
+    ...chartOptions,
+    plugins: {
+      ...chartOptions.plugins,
+      legend: {
+        ...chartOptions.plugins?.legend,
+        position: 'right' as const,
+      },
+      tooltip: {
+        ...chartOptions.plugins?.tooltip,
+        callbacks: {
+          label: function(context: any) {
+            const value = context.raw;
+            const label = context.chart.data.labels[context.dataIndex];
+            return `${label}: ${value.toFixed(2)} ESS`;
+          }
+        }
+      },
+      title: {
+        display: true,
+        text: 'Overall Token Distribution',
+        color: '#fff',
+        font: { size: 14, weight: 'bold' }
+      },
+      datalabels: {
+        color: '#fff',
+        textStrokeColor: '#000',
+        textStrokeWidth: 1,
+        font: {
+          weight: 'bold',
+        },
+        formatter: (value: any, ctx: any) => {
+          const sum = ctx.dataset.data.reduce((a: number, b: number) => a + b, 0);
+          const percentage = (value / sum * 100).toFixed(1) + '%';
+          return percentage;
+        }
+      }
+    },
+    rotation: -0.6 * Math.PI,
+    radius: '80%',
+    animation: {
+      animateRotate: true,
+      animateScale: true
+    }
   };
 
   return (
@@ -428,18 +493,7 @@ const EssenceReport = () => {
         <Card className="p-6 bg-gradient-to-br from-earthie-dark/80 to-earthie-dark-light/70 border-earthie-mint/30">
           <h3 className="text-lg font-semibold text-white mb-4">Token Distribution</h3>
           <div className="h-[300px]">
-            <Pie data={pieChartData} options={{
-              ...chartOptions,
-              plugins: {
-                ...chartOptions.plugins,
-                title: {
-                  display: true,
-                  text: 'Overall Token Distribution',
-                  color: '#fff',
-                  font: { size: 14 }
-                }
-              }
-            }} />
+            <Pie data={pieChartData} options={pie3DOptions} />
           </div>
         </Card>
 

@@ -190,10 +190,10 @@ export default function SplashScreen() {
             />
           </div>
         </div>
-        <h1 className="text-3xl font-bold text-white/90 mt-4 tracking-wider">
+        <h1 className="text-3xl font-bold mt-4 tracking-wider text-gradient">
           EARTHIE
         </h1>
-        <p className="text-white/60 mt-2 text-sm">Your Earth2 AI Companion</p>
+        <p className="text-gradient-subtle mt-2 text-sm font-medium">Your Earth2 AI Companion</p>
       </div>
 
       <style jsx>{`
@@ -202,6 +202,19 @@ export default function SplashScreen() {
         }
         .logo-container {
           animation: pulse 2s infinite alternate;
+        }
+        .text-gradient {
+          background: linear-gradient(to right, #50E3C1, #38bdf8);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          text-shadow: 0 0 10px rgba(80, 227, 193, 0.3);
+          letter-spacing: 0.2em;
+        }
+        .text-gradient-subtle {
+          background: linear-gradient(to right, #50E3C1, #818cf8);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          letter-spacing: 0.15em;
         }
         @keyframes pulse {
           0% {

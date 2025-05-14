@@ -34,6 +34,33 @@ export const metadata: Metadata = {
     icon: "/images/earthie_logo.png",
     apple: "/images/earthie_logo.png"
   },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Earthie",
+    startupImage: [
+      {
+        url: "/images/splash/splash-640x1136.png",
+        media: "(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2)"
+      },
+      {
+        url: "/images/splash/splash-750x1334.png",
+        media: "(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)"
+      },
+      {
+        url: "/images/splash/splash-1242x2208.png", 
+        media: "(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3)"
+      },
+      {
+        url: "/images/splash/splash-1125x2436.png",
+        media: "(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3)"
+      },
+      {
+        url: "/images/splash/splash-1242x2688.png",
+        media: "(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3)"
+      }
+    ]
+  },
   generator: 'EugeneBoondock'
 }
 

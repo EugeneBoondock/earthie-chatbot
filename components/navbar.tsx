@@ -29,7 +29,7 @@ const navItems = [
 ]
 
 // --- Configuration Constants (can be removed if not needed outside context) ---
-const cryptoSymbol = 'E2E';
+const cryptoSymbol = 'ESS';
 const cryptoLink = 'https://www.coingecko.com/en/coins/earth-2-essence';
 
 export default function Navbar() {
