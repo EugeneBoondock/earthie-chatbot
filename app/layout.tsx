@@ -13,6 +13,7 @@ import Footer from "@/components/footer"
 import TopographicBackground from "@/components/TopographicBackground"
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister"
 import PWAInstallButton from "@/components/PWAInstallButton"
+import SplashScreenProvider from "@/components/SplashScreenProvider"
 import { Analytics } from "@vercel/analytics/react"
 import { PriceProvider } from "@/contexts/PriceContext"
 
@@ -76,15 +77,17 @@ export default async function RootLayout({
       <body className={`${inter.className} text-white`}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} forcedTheme="dark">
           <TopographicBackground />
-          <div className="grid grid-rows-[auto_1fr_auto] min-h-screen relative z-0">
-            <PriceProvider>
-              <Navbar />
-              <ConditionalLayoutRenderer initialSession={session}>
-                {children}
-              </ConditionalLayoutRenderer>
-              <Footer />
-            </PriceProvider>
-          </div>
+          <SplashScreenProvider>
+            <div className="grid grid-rows-[auto_1fr_auto] min-h-screen relative z-0">
+              <PriceProvider>
+                <Navbar />
+                <ConditionalLayoutRenderer initialSession={session}>
+                  {children}
+                </ConditionalLayoutRenderer>
+                <Footer />
+              </PriceProvider>
+            </div>
+          </SplashScreenProvider>
         </ThemeProvider>
         <ServiceWorkerRegister />
         <PWAInstallButton />
