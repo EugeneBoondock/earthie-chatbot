@@ -64,12 +64,12 @@ ChartJS.register(
 );
 
 interface TotalStats {
-  total_minted: number;
-  total_burned: number;
-  total_withdrawn: number;
-  total_deposited: number;
-  total_bought: number;
-  total_sold: number;
+  total_minted: string;
+  total_burned: string;
+  total_withdrawn: string;
+  total_deposited: string;
+  total_bought: string;
+  total_sold: string;
   unique_buyers_all_time: number;
   unique_sellers_all_time: number;
   total_transactions: number;
@@ -77,12 +77,12 @@ interface TotalStats {
 
 interface DailyStats {
   date: string;
-  total_minted: number;
-  total_burned: number;
-  total_withdrawn: number;
-  total_deposited: number;
-  total_bought: number;
-  total_sold: number;
+  total_minted: string;
+  total_burned: string;
+  total_withdrawn: string;
+  total_deposited: string;
+  total_bought: string;
+  total_sold: string;
   unique_buyers: number;
   unique_sellers: number;
   transaction_count: number;
@@ -166,11 +166,12 @@ const EssenceReport = () => {
     }
   };
 
-  const formatNumber = (num: number) => {
+  const formatNumber = (num: string | number) => {
+    const numValue = typeof num === 'string' ? parseFloat(num) : num;
     return new Intl.NumberFormat('en-US', {
       minimumFractionDigits: 0,
       maximumFractionDigits: 2,
-    }).format(num);
+    }).format(numValue);
   };
 
   const handleSubscribe = async (e: React.FormEvent) => {
@@ -190,14 +191,14 @@ const EssenceReport = () => {
     datasets: [
       {
         label: 'Minted',
-        data: dailyStats.map(stat => stat.total_minted),
+        data: dailyStats.map(stat => parseFloat(stat.total_minted || '0')),
         borderColor: '#50E3C1',
         backgroundColor: 'rgba(80, 227, 193, 0.1)',
         tension: 0.4,
       },
       {
         label: 'Burned',
-        data: dailyStats.map(stat => stat.total_burned),
+        data: dailyStats.map(stat => parseFloat(stat.total_burned || '0')),
         borderColor: '#EF4444',
         backgroundColor: 'rgba(239, 68, 68, 0.1)',
         tension: 0.4,
@@ -210,12 +211,12 @@ const EssenceReport = () => {
     datasets: [
       {
         label: 'Withdrawals',
-        data: dailyStats.map(stat => stat.total_withdrawn),
+        data: dailyStats.map(stat => parseFloat(stat.total_withdrawn || '0')),
         backgroundColor: 'rgba(59, 130, 246, 0.8)',
       },
       {
         label: 'Deposits',
-        data: dailyStats.map(stat => stat.total_deposited),
+        data: dailyStats.map(stat => parseFloat(stat.total_deposited || '0')),
         backgroundColor: 'rgba(16, 185, 129, 0.8)',
       },
     ],
@@ -225,10 +226,10 @@ const EssenceReport = () => {
     labels: ['Minted', 'Burned', 'Withdrawn', 'Deposited'],
     datasets: [{
       data: totalStats ? [
-        totalStats.total_minted,
-        totalStats.total_burned,
-        totalStats.total_withdrawn,
-        totalStats.total_deposited,
+        parseFloat(totalStats.total_minted || '0'),
+        parseFloat(totalStats.total_burned || '0'),
+        parseFloat(totalStats.total_withdrawn || '0'),
+        parseFloat(totalStats.total_deposited || '0'),
       ] : [],
       backgroundColor: [
         'rgba(80, 227, 193, 0.8)',

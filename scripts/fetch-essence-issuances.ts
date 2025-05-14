@@ -6,8 +6,6 @@ import { resolve } from 'path';
 // Load environment variables from .env.local
 dotenv.config({ path: resolve(__dirname, '../.env.local') });
 
-const ESSENCE_TOKEN_ADDRESS = "0x2c0687215aca7f5e2792d956e170325e92a02aca";
-
 interface ApiResponse {
   success: boolean;
   error?: string;
@@ -15,30 +13,8 @@ interface ApiResponse {
   hasMore: boolean;
   lastTimestamp: number;
   message?: string;
-}
-
-interface SyncStatus {
-  id: number;
-  last_sync: string;
-  last_timestamp: number;
-  transactions_processed: number;
-  has_more: boolean;
-}
-
-async function getLastProcessedTimestamp(supabase: any): Promise<number> {
-  const { data, error } = await supabase
-    .from('essence_sync_status')
-    .select('*')
-    .eq('id', 1)
-    .single();
-
-  if (error) {
-    console.log('No sync status found, starting from timestamp 0');
-    return 0;
-  }
-
-  const status = data as SyncStatus;
-  return status.has_more ? status.last_timestamp : 0;
+  mintCount?: number;
+  burnCount?: number;
 }
 
 async function sleep(ms: number) {
@@ -54,7 +30,7 @@ async function checkServerPort(): Promise<number> {
       console.log(`Using server URL from environment: ${appUrl}`);
       
       // Test the connection
-      const response = await fetch(`${appUrl}/api/essence/fetch-historical?timestamp=0`);
+      const response = await fetch(`${appUrl}/api/essence/fetch-issuances?timestamp=0`);
       if (response.ok) {
         return parseInt(url.port) || (url.protocol === 'https:' ? 443 : 80);
       }
@@ -74,7 +50,7 @@ async function checkServerPort(): Promise<number> {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeout);
       
-      const response = await fetch(`http://localhost:${port}/api/essence/fetch-historical?timestamp=0`, {
+      const response = await fetch(`http://localhost:${port}/api/essence/fetch-issuances?timestamp=0`, {
         signal: controller.signal
       });
       
@@ -101,18 +77,9 @@ interface FetchOptions {
   maxBatches?: number;
 }
 
-async function fetchInitialData(options: FetchOptions) {
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    throw new Error('Missing Supabase environment variables');
-  }
-
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  );
-
+async function fetchIssuancesData(options: FetchOptions) {
   try {
-    console.log('Starting initial data fetch...');
+    console.log('Starting issuances data fetch...');
     console.log(`Starting from timestamp: ${options.startTimestamp}`);
     if (options.maxBatches) console.log(`Will stop after ${options.maxBatches} batches`);
     
@@ -124,24 +91,26 @@ async function fetchInitialData(options: FetchOptions) {
     let timestamp = options.startTimestamp;
     let hasMore = true;
     let totalProcessed = 0;
+    let totalMintCount = 0;
+    let totalBurnCount = 0;
     let consecutiveErrors = 0;
     const maxConsecutiveErrors = 3;
     let batchesProcessed = 0;
 
     while (hasMore && (!options.maxBatches || batchesProcessed < options.maxBatches)) {
       try {
-        console.log(`\nFetching transactions from timestamp ${timestamp}...`);
+        console.log(`\nFetching issuance transactions from timestamp ${timestamp}...`);
         
         // Add delay between requests (Ethplorer free tier allows 2 requests per second)
         await sleep(500); // 500ms delay = 2 requests per second
         
         const response = await fetch(
-          `${baseUrl}/api/essence/fetch-historical?timestamp=${timestamp}`,
+          `${baseUrl}/api/essence/fetch-issuances?timestamp=${timestamp}`,
           { method: 'GET' }
         );
 
         if (!response.ok) {
-          throw new Error(`Failed to fetch from timestamp ${timestamp}: ${response.statusText}`);
+          throw new Error(`Failed to fetch issuances from timestamp ${timestamp}: ${response.statusText}`);
         }
 
         const data = await response.json() as ApiResponse;
@@ -151,9 +120,16 @@ async function fetchInitialData(options: FetchOptions) {
         }
 
         totalProcessed += data.transactionsCount;
-        console.log(`Processed ${data.transactionsCount} transactions`);
-        console.log(`Total transactions processed so far: ${totalProcessed}`);
-        console.log(`Has more transactions: ${data.hasMore}`);
+        if (data.mintCount) totalMintCount += data.mintCount;
+        if (data.burnCount) totalBurnCount += data.burnCount;
+        
+        console.log(`Processed ${data.transactionsCount} issuance transactions`);
+        if (data.mintCount !== undefined && data.burnCount !== undefined) {
+          console.log(`This batch: ${data.mintCount} mints, ${data.burnCount} burns`);
+        }
+        console.log(`Total issuance transactions processed so far: ${totalProcessed}`);
+        console.log(`Total mints: ${totalMintCount}, Total burns: ${totalBurnCount}`);
+        console.log(`Has more issuance transactions: ${data.hasMore}`);
         if (data.message) console.log(`Server message: ${data.message}`);
         
         hasMore = data.hasMore;
@@ -161,19 +137,6 @@ async function fetchInitialData(options: FetchOptions) {
           timestamp = data.lastTimestamp;
           batchesProcessed++;
           consecutiveErrors = 0; // Reset error count on success
-          
-          // Update sync status
-          await supabase
-            .from('essence_sync_status')
-            .upsert([{
-              id: 1,
-              last_sync: new Date().toISOString(),
-              last_timestamp: timestamp,
-              transactions_processed: totalProcessed,
-              has_more: hasMore
-            }], {
-              onConflict: 'id'
-            });
         }
       } catch (error) {
         console.error(`Error processing batch:`, error);
@@ -181,7 +144,7 @@ async function fetchInitialData(options: FetchOptions) {
         
         if (consecutiveErrors >= maxConsecutiveErrors) {
           console.log(`\nStopping due to ${maxConsecutiveErrors} consecutive errors.`);
-          console.log(`To continue from this point, run: npm run ts-node scripts/fetch-initial-essence-data.ts ${timestamp}`);
+          console.log(`To continue from this point, run: npx ts-node scripts/fetch-essence-issuances.ts ${timestamp}`);
           break;
         }
         
@@ -193,12 +156,13 @@ async function fetchInitialData(options: FetchOptions) {
       }
     }
 
-    console.log('\nData fetch session complete!');
+    console.log('\nIssuances data fetch session complete!');
     console.log(`Last timestamp processed: ${timestamp}`);
-    console.log(`Total transactions processed in this session: ${totalProcessed}`);
+    console.log(`Total issuance transactions processed in this session: ${totalProcessed}`);
+    console.log(`Final counts - Mints: ${totalMintCount}, Burns: ${totalBurnCount}`);
 
   } catch (error) {
-    console.error('Error fetching initial data:', error);
+    console.error('Error fetching issuances data:', error);
     process.exit(1);
   }
 }
@@ -207,4 +171,4 @@ async function fetchInitialData(options: FetchOptions) {
 const startTimestamp = parseInt(process.argv[2] || '0');
 const maxBatches = process.argv[3] ? parseInt(process.argv[3]) : undefined;
 
-fetchInitialData({ startTimestamp, maxBatches }); 
+fetchIssuancesData({ startTimestamp, maxBatches }); 

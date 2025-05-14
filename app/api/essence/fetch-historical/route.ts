@@ -7,6 +7,8 @@ export const dynamic = 'force-dynamic';
 const ESSENCE_TOKEN_ADDRESS = "0x2c0687215aca7f5e2792d956e170325e92a02aca";
 const EARTH2_WITHDRAWAL_ADDRESS = "0x68d332EC97800Aa1a112160195cc281978eC8Eea";
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+const TREASURY_ADDRESS_1 = "0x5086d1e7314d9c24A9c4386dcedEEC5549502989";
+const TREASURY_ADDRESS_2 = "0x40399dE3a3ca6a9dF0D04C62d20DD08b8EAfe280";
 
 // Initialize Supabase client
 const supabase = createClient(
@@ -26,12 +28,20 @@ interface EthploperTransaction {
 }
 
 // Helper function to determine transaction type
-function determineTransactionType(tx: EthploperTransaction): 'MINT' | 'BURN' | 'WITHDRAWAL' | 'DEPOSIT' | 'BUY' | 'SELL' | 'TRANSFER' {
+function determineTransactionType(tx: EthploperTransaction): 'MINT' | 'BURN' | 'WITHDRAWAL' | 'DEPOSIT' | 'BUY' | 'SELL' | 'TRANSFER' | 'TREASURY' {
   const fromLower = tx.from.toLowerCase();
   const toLower = tx.to.toLowerCase();
   const earth2Lower = EARTH2_WITHDRAWAL_ADDRESS.toLowerCase();
   const zeroLower = ZERO_ADDRESS.toLowerCase();
+  const treasury1Lower = TREASURY_ADDRESS_1.toLowerCase();
+  const treasury2Lower = TREASURY_ADDRESS_2.toLowerCase();
 
+  // Check if this is a transfer between treasury wallets
+  if ((fromLower === treasury1Lower && toLower === treasury2Lower) || 
+      (fromLower === treasury2Lower && toLower === treasury1Lower)) {
+    return 'TREASURY';
+  }
+  
   // Check for MINT (from zero address to Earth2)
   if (fromLower === zeroLower && toLower === earth2Lower) {
     return 'MINT';
@@ -42,7 +52,12 @@ function determineTransactionType(tx: EthploperTransaction): 'MINT' | 'BURN' | '
     return 'BURN';
   }
   
-  // Check for WITHDRAWAL (from Earth2 to other wallets)
+  // Check for TREASURY transactions (from Earth2 to treasury wallets)
+  if (fromLower === earth2Lower && (toLower === treasury1Lower || toLower === treasury2Lower)) {
+    return 'TREASURY';
+  }
+  
+  // Check for WITHDRAWAL (from Earth2 to other wallets, excluding treasury)
   if (fromLower === earth2Lower) {
     return 'WITHDRAWAL';
   }
@@ -50,6 +65,12 @@ function determineTransactionType(tx: EthploperTransaction): 'MINT' | 'BURN' | '
   // Check for DEPOSIT (from other wallets to Earth2)
   if (toLower === earth2Lower && fromLower !== zeroLower) {
     return 'DEPOSIT';
+  }
+  
+  // Special case for transfers involving treasury wallets
+  if (fromLower === treasury1Lower || fromLower === treasury2Lower || 
+      toLower === treasury1Lower || toLower === treasury2Lower) {
+    return 'TREASURY';
   }
   
   // Check for BUY/SELL based on Earth2 involvement
