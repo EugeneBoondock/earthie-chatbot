@@ -141,7 +141,10 @@ export default function Navbar() {
             <div className="relative w-8 h-8 md:w-10 md:h-10 overflow-hidden rounded-full">
               <Image src="/images/earthie_logo.png" alt="Earthie Logo" width={40} height={40} className="object-cover rounded-full" priority /> 
             </div>
-            <span className="font-bold text-lg md:text-xl hidden sm:inline-block text-white">Earthie</span>
+            <div className="hidden sm:block relative overflow-hidden">
+              <span className="font-bold text-lg md:text-xl earthie-text-gradient">Earthie</span>
+              <div className="light-ray"></div>
+            </div>
           </Link>
         </div>
 
@@ -306,6 +309,43 @@ export default function Navbar() {
             </div>
          </div>
       )}
+
+      {/* Add the styles */}
+      <style jsx>{`
+        .earthie-text-gradient {
+          background: linear-gradient(to right, #50E3C1, #38bdf8);
+          -webkit-background-clip: text;
+          background-clip: text;
+          color: transparent;
+          position: relative;
+          display: inline-block;
+          font-weight: 700;
+          letter-spacing: 0.05em;
+          text-shadow: 0 2px 10px rgba(80, 227, 193, 0.3);
+        }
+        
+        .light-ray {
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 50%;
+          height: 100%;
+          background: linear-gradient(
+            90deg, 
+            transparent, 
+            rgba(255, 255, 255, 0.4), 
+            transparent
+          );
+          transform: skewX(-25deg);
+          animation: ray-animation 3s infinite;
+        }
+        
+        @keyframes ray-animation {
+          0% { left: -100%; }
+          50% { left: 200%; }
+          100% { left: 200%; }
+        }
+      `}</style>
     </nav>
   )
 }

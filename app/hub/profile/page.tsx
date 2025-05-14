@@ -201,7 +201,39 @@ const pie3DStyle = `
     transform: scale(1.05) translateY(-5px);
     filter: brightness(1.1);
   }
+  
+  @media (max-width: 640px) {
+    .recharts-pie {
+      transform: perspective(1000px) rotateX(25deg);
+    }
+    .recharts-legend-wrapper {
+      font-size: 0.75rem !important;
+      max-width: 50% !important;
+    }
+  }
 `;
+
+// Helper function to create pie data with minimum visible percentages
+const createPieDataWithMinSize = (data: {name: string, value: number}[], minPercent = 2) => {
+  if (!data.length) return [];
+  
+  const total = data.reduce((sum, item) => sum + item.value, 0);
+  
+  return data.map(item => {
+    const percent = (item.value / total) * 100;
+    // Ensure small percentages are still visible by applying a minimum
+    const adjustedValue = percent < minPercent && percent > 0 
+      ? (minPercent / 100) * total 
+      : item.value;
+      
+    return {
+      ...item,
+      // Store original value for accurate tooltips and labels
+      originalValue: item.value,
+      value: adjustedValue
+    };
+  });
+};
 
 export default function ProfilePage() {
   const [e2ProfileInput, setE2ProfileInput] = useState('');
@@ -239,6 +271,7 @@ export default function ProfilePage() {
   const [sortOption, setSortOption] = useState<'latest'|'size'>('latest');
   const [tierFilter, setTierFilter] = useState<number|null>(null); // 1,2,3
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [eplFilter, setEplFilter] = useState<'all'|'with'|'without'>('all'); // New EPL filter
 
   const PER_PAGE_DISPLAY = 12;
 
@@ -256,6 +289,14 @@ export default function ProfilePage() {
     if (tierFilter !== null) {
       list = list.filter(p => p.attributes.landfieldTier === tierFilter);
     }
+    
+    // Apply EPL filter
+    if (eplFilter === 'with') {
+      list = list.filter(p => p.attributes.epl && typeof p.attributes.epl === 'string' && p.attributes.epl.trim() !== '');
+    } else if (eplFilter === 'without') {
+      list = list.filter(p => !p.attributes.epl || typeof p.attributes.epl !== 'string' || p.attributes.epl.trim() === '');
+    }
+    
     if (sortOption === 'size') {
       list.sort((a,b) => (b.attributes.tileCount||0) - (a.attributes.tileCount||0));
     } else { // 'latest'
@@ -270,7 +311,7 @@ export default function ProfilePage() {
       });
     }
     return list;
-  }, [properties, cachedProps, sortOption, tierFilter, searchQuery]);
+  }, [properties, cachedProps, sortOption, tierFilter, searchQuery, eplFilter]);
 
   // total pages after filter
   const totalFilteredPages = Math.max(1, Math.ceil(displayedData.length / PER_PAGE_DISPLAY));
@@ -278,7 +319,9 @@ export default function ProfilePage() {
   const paginatedDisplay = displayedData.slice((propertiesCurrentPage-1)*PER_PAGE_DISPLAY, propertiesCurrentPage*PER_PAGE_DISPLAY);
 
   // reset page when filters change
-  useEffect(()=>{setPropertiesCurrentPage(1);}, [sortOption, tierFilter, searchQuery]);
+  useEffect(()=>{
+    setPropertiesCurrentPage(1);
+  }, [sortOption, tierFilter, searchQuery, eplFilter]);
 
   // --- Fetch Exchange Rate ---
   useEffect(() => {
@@ -987,8 +1030,13 @@ export default function ProfilePage() {
         if (attrs.activeResourceClaimsCount && attrs.activeResourceClaimsCount > 0) activeClaimsC++;
         if (attrs.landfieldTierUpgraded) tierUpgradedC++;
         if (attrs.purchasedForEssence) purchasedForEssenceC++;
-        if (attrs.forSale) forSaleC++; else notForSaleC++;
-        if (attrs.epl && attrs.epl.trim() !== '') withEPLC++; else withoutEPLC++;
+        
+        // Fix For Sale status counting - use strict equality check
+        if (attrs.forSale === true) forSaleC++; else notForSaleC++;
+        
+        // Fix EPL counting - check for string existence and non-emptiness
+        if (attrs.epl && typeof attrs.epl === 'string' && attrs.epl.trim() !== '') withEPLC++; 
+        else withoutEPLC++;
 
         const currentV = parseFloat(String(attrs.currentValue));
         const purchaseV = attrs.purchaseValue !== undefined && attrs.purchaseValue !== null ? parseFloat(String(attrs.purchaseValue)) : null;
@@ -1096,18 +1144,18 @@ export default function ProfilePage() {
 
   const forSaleChartData = useMemo(() => {
     if (featureCounts.forSale === 0 && featureCounts.notForSale === 0) return [];
-    return [
+    return createPieDataWithMinSize([
         { name: 'For Sale', value: featureCounts.forSale },
         { name: 'Not For Sale', value: featureCounts.notForSale }
-    ];
+    ], 2);
   }, [featureCounts]);
   
   const eplChartData = useMemo(() => {
     if (featureCounts.withEPL === 0 && featureCounts.withoutEPL === 0) return [];
-    return [
+    return createPieDataWithMinSize([
         { name: 'With EPL', value: featureCounts.withEPL },
         { name: 'No EPL', value: featureCounts.withoutEPL }
-    ];
+    ], 2);
   }, [featureCounts]);
 
   // --- Country Code to Name Mapping (Basic) ---
@@ -1517,7 +1565,7 @@ export default function ProfilePage() {
                 <h2 className="text-2xl font-semibold text-sky-200">Your Earth2 Properties ({properties.length.toLocaleString()} of {userInfo?.userLandfieldCount?.toLocaleString() ?? (allPropertiesForAnalytics.length > 0 ? allPropertiesForAnalytics.length.toLocaleString() : '...')})</h2>
             </div>
             {/* Sort / Filter Bar */}
-            <div className="flex flex-wrap items-center justify-between bg-gray-800/60 backdrop-blur-md mb-4 px-4 py-2 rounded-lg">
+            <div className="flex flex-wrap items-center justify-between bg-gray-800/60 backdrop-blur-md mb-4 px-4 py-2 rounded-lg gap-4">
               <div className="flex items-center space-x-2 text-sm text-sky-200">
                 <span>Sort by:</span>
                 <select
@@ -1544,8 +1592,23 @@ export default function ProfilePage() {
                   <option value="3">T3</option>
                 </select>
               </div>
+              
+              {/* New EPL filter */}
+              <div className="flex items-center space-x-2 text-sm text-sky-200">
+                <span>EPL status:</span>
+                <select
+                  value={eplFilter}
+                  onChange={e => setEplFilter(e.target.value as 'all'|'with'|'without')}
+                  className="bg-gray-700 text-sky-200 px-2 py-1 rounded border border-gray-600 focus:outline-none"
+                >
+                  <option value="all">All properties</option>
+                  <option value="with">With EPL only</option>
+                  <option value="without">Without EPL only</option>
+                </select>
+              </div>
+              
               {/* Search */}
-              <form onSubmit={e=>{e.preventDefault();}} className="flex items-center mt-2 md:mt-0">
+              <form onSubmit={e=>{e.preventDefault();}} className="flex items-center">
                 <input
                   type="text"
                   placeholder="Search description/location..."
@@ -1845,7 +1908,7 @@ export default function ProfilePage() {
                         align="right"
                         verticalAlign="middle"
                         wrapperStyle={{
-                          paddingLeft: '20px',
+                          paddingLeft: '15px',
                           maxWidth: '40%',
                           fontSize: '0.875rem',
                           lineHeight: '1.25rem'
@@ -1892,7 +1955,15 @@ export default function ProfilePage() {
                                   itemStyle={{ color: '#d1d5db' }}
                                   formatter={(value: number) => value.toLocaleString()}
                               />
-                              <Legend />
+                              <Legend 
+                                layout="vertical"
+                                align="right" 
+                                verticalAlign="middle"
+                                wrapperStyle={{
+                                  fontSize: '0.875rem',
+                                  paddingLeft: '15px'
+                                }}
+                              />
                           </PieChart>
                       </ResponsiveContainer>
                   </CardContent>
@@ -1964,7 +2035,9 @@ export default function ProfilePage() {
                         <CardTitle className="flex items-center text-teal-300">
                             <CheckCircle className="h-5 w-5 mr-2" /> For Sale Status
                         </CardTitle>
-                        <CardDescription className="text-gray-400">Breakdown of properties listed for sale.</CardDescription>
+                        <CardDescription className="text-gray-400">
+                            {featureCounts.forSale} of {featureCounts.forSale + featureCounts.notForSale} properties for sale ({((featureCounts.forSale / (featureCounts.forSale + featureCounts.notForSale)) * 100).toFixed(2)}%)
+                        </CardDescription>
                     </CardHeader>
                     <CardContent className="h-80">
                         <ResponsiveContainer width="100%" height="100%">
@@ -1979,7 +2052,7 @@ export default function ProfilePage() {
                                     fill="#8884d8"
                                     dataKey="value"
                                     nameKey="name"
-                                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                                    label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
                                     stroke="#374151"
                                 >
                                     {forSaleChartData.map((entry, index) => (
@@ -1989,9 +2062,26 @@ export default function ProfilePage() {
                                 <Tooltip 
                                     contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }}
                                     itemStyle={{ color: '#d1d5db' }}
-                                    formatter={(value: number) => value.toLocaleString()}
+                                    formatter={(value: number, name: string, props: any) => {
+                                        // Use the original value for tooltip display
+                                        const originalValue = props.payload.originalValue || value;
+                                        return originalValue.toLocaleString();
+                                    }}
                                 />
-                                <Legend />
+                                <Legend 
+                                  layout="vertical"
+                                  align="right" 
+                                  verticalAlign="middle" 
+                                  wrapperStyle={{
+                                    fontSize: '0.875rem',
+                                    paddingLeft: '15px'
+                                  }}
+                                  formatter={(value, entry, index) => {
+                                    const item = forSaleChartData[index];
+                                    const count = item?.originalValue || item?.value || 0;
+                                    return `${value} (${count.toLocaleString()})`;
+                                  }}
+                                />
                             </PieChart>
                         </ResponsiveContainer>
                     </CardContent>
@@ -2004,7 +2094,9 @@ export default function ProfilePage() {
                         <CardTitle className="flex items-center text-fuchsia-300">
                             <Tag className="h-5 w-5 mr-2" /> EPL Usage
                         </CardTitle>
-                        <CardDescription className="text-gray-400">Properties with and without an EPL.</CardDescription>
+                        <CardDescription className="text-gray-400">
+                            {featureCounts.withEPL} of {featureCounts.withEPL + featureCounts.withoutEPL} properties have EPLs ({((featureCounts.withEPL / (featureCounts.withEPL + featureCounts.withoutEPL)) * 100).toFixed(2)}%)
+                        </CardDescription>
                     </CardHeader>
                     <CardContent className="h-80">
                         <ResponsiveContainer width="100%" height="100%">
@@ -2019,7 +2111,7 @@ export default function ProfilePage() {
                                     fill="#8884d8"
                                     dataKey="value"
                                     nameKey="name"
-                                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                                    label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
                                     stroke="#374151"
                                 >
                                     {eplChartData.map((entry, index) => (
@@ -2029,9 +2121,26 @@ export default function ProfilePage() {
                                 <Tooltip 
                                     contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }}
                                     itemStyle={{ color: '#d1d5db' }}
-                                    formatter={(value: number) => value.toLocaleString()}
+                                    formatter={(value: number, name: string, props: any) => {
+                                        // Use the original value for tooltip display
+                                        const originalValue = props.payload.originalValue || value;
+                                        return originalValue.toLocaleString();
+                                    }}
                                 />
-                                <Legend />
+                                <Legend 
+                                  layout="vertical"
+                                  align="right" 
+                                  verticalAlign="middle"
+                                  wrapperStyle={{
+                                    fontSize: '0.875rem',
+                                    paddingLeft: '15px'
+                                  }}
+                                  formatter={(value, entry, index) => {
+                                    const item = eplChartData[index];
+                                    const count = item?.originalValue || item?.value || 0;
+                                    return `${value} (${count.toLocaleString()})`;
+                                  }}
+                                />
                             </PieChart>
                         </ResponsiveContainer>
                     </CardContent>

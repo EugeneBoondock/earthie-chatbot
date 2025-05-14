@@ -87,7 +87,7 @@ export default function SplashScreen() {
         }
 
         // Clear canvas with slight fade effect for trail
-        ctx.fillStyle = 'rgba(24, 24, 27, 0.12)';
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.12)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         // Draw and update points
@@ -171,7 +171,7 @@ export default function SplashScreen() {
   if (!show) return null;
 
   return (
-    <div className={`fixed inset-0 z-[9999] flex items-center justify-center bg-[#18181b] transition-opacity duration-300 ${fadeOut ? 'opacity-0' : 'opacity-100'}`}>
+    <div className={`fixed inset-0 z-[9999] flex items-center justify-center bg-[#0f172a] transition-opacity duration-300 ${fadeOut ? 'opacity-0' : 'opacity-100'}`}>
       <canvas
         ref={canvasRef}
         className="absolute inset-0"
