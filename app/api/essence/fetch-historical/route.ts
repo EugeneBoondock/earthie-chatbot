@@ -36,9 +36,18 @@ function determineTransactionType(tx: EthploperTransaction): 'MINT' | 'BURN' | '
   const treasury1Lower = TREASURY_ADDRESS_1.toLowerCase();
   const treasury2Lower = TREASURY_ADDRESS_2.toLowerCase();
 
-  // Check if this is a transfer between treasury wallets
-  if ((fromLower === treasury1Lower && toLower === treasury2Lower) || 
-      (fromLower === treasury2Lower && toLower === treasury1Lower)) {
+  // Check if this is a transfer between ANY of the treasury wallets OR the Earth2 wallet
+  if ((fromLower === treasury1Lower || fromLower === treasury2Lower || fromLower === earth2Lower) && 
+      (toLower === treasury1Lower || toLower === treasury2Lower || toLower === earth2Lower)) {
+    // Special case: if it's from zero address to Earth2, it's still a MINT
+    if (fromLower === zeroLower && toLower === earth2Lower) {
+      return 'MINT';
+    }
+    // Special case: if it's from Earth2 to zero address, it's still a BURN
+    if (fromLower === earth2Lower && toLower === zeroLower) {
+      return 'BURN';
+    }
+    // Otherwise it's a treasury transaction
     return 'TREASURY';
   }
   
@@ -52,25 +61,14 @@ function determineTransactionType(tx: EthploperTransaction): 'MINT' | 'BURN' | '
     return 'BURN';
   }
   
-  // Check for TREASURY transactions (from Earth2 to treasury wallets)
-  if (fromLower === earth2Lower && (toLower === treasury1Lower || toLower === treasury2Lower)) {
-    return 'TREASURY';
-  }
-  
   // Check for WITHDRAWAL (from Earth2 to other wallets, excluding treasury)
   if (fromLower === earth2Lower) {
     return 'WITHDRAWAL';
   }
   
-  // Check for DEPOSIT (from other wallets to Earth2)
+  // Check for DEPOSIT (from other wallets to Earth2, excluding treasury)
   if (toLower === earth2Lower && fromLower !== zeroLower) {
     return 'DEPOSIT';
-  }
-  
-  // Special case for transfers involving treasury wallets
-  if (fromLower === treasury1Lower || fromLower === treasury2Lower || 
-      toLower === treasury1Lower || toLower === treasury2Lower) {
-    return 'TREASURY';
   }
   
   // Check for BUY/SELL based on Earth2 involvement
