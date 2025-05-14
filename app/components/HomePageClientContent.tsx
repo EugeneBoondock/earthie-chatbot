@@ -5,7 +5,20 @@ import type { User } from '@supabase/supabase-js';
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Headphones, Code, MessageSquare, Swords, Info, Calculator, X as CloseIcon, UserIcon, Book, Building } from "lucide-react";
+import { 
+  ArrowRight, 
+  Headphones, 
+  Code, 
+  MessageSquare, 
+  Swords, 
+  Info, 
+  Calculator, 
+  X as CloseIcon, 
+  UserIcon, 
+  Book, 
+  Building,
+  FileText 
+} from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -183,6 +196,15 @@ export default function HomePageClientContent() {
               <h3 className="text-xl font-bold text-white flex items-center gap-2">Essence Tracker</h3>
               <p className="text-center text-gray-300 text-sm flex-grow"> Track Essence price, view interactive charts, analyze wallet balances, and monitor buy/sell activity for the E2-E token. </p>
               <Link href="/hub/essence" passHref className="mt-auto pt-4"> <Button variant="outline" className="bg-[#343547] text-[#50E3C1] border-[#50E3C1] hover:bg-[#50E3C1]/10 hover:text-[#50E3C1]"> Open Tracker <ArrowRight className="ml-2 h-4 w-4" /> </Button> </Link>
+            </div>
+            <div className="flex flex-col items-center space-y-4 p-6 rounded-2xl bg-gradient-to-br from-[#0b0e13]/80 to-[#23243a]/70 border border-[#1d1f24] relative">
+              {userLoaded && !user && (
+                <span className="absolute top-3 right-3 px-2 py-0.5 text-xs rounded bg-rose-500/30 text-rose-200 animate-pulse shadow-sm" style={{zIndex:2, fontWeight:500, letterSpacing:'0.02em'}}>Login Required</span>
+              )}
+              <div className="p-3 rounded-full bg-[#50E3C1]/20"> <FileText className="w-8 h-8 text-[#50E3C1]" /> </div>
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">Essence Report</h3>
+              <p className="text-center text-gray-300 text-sm flex-grow"> Comprehensive analytics and insights for the E2-E token ecosystem with historical data tracking and weekly reports. </p>
+              <Link href="/hub/essence-report" passHref className="mt-auto pt-4"> <Button variant="outline" className="bg-[#343547] text-[#50E3C1] border-[#50E3C1] hover:bg-[#50E3C1]/10 hover:text-[#50E3C1]"> View Report <ArrowRight className="ml-2 h-4 w-4" /> </Button> </Link>
             </div>
           </div>
         </div>

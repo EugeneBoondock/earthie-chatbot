@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Alert } from '@mui/material';
-import { BarChart3, TrendingUp, Wallet, Users, Search, ChevronLeft, ChevronRight, ArrowUpDown, AlertCircle } from 'lucide-react';
+import { BarChart3, TrendingUp, Wallet, Users, Search, ChevronLeft, ChevronRight, ArrowUpDown, AlertCircle, Coins } from 'lucide-react';
 import { Bar } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -773,7 +773,7 @@ const EssenceTracker: React.FC = () => {
       )}
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
         {/* Price Card */}
         <div className="rounded-xl bg-gradient-to-br from-earthie-dark/80 to-earthie-dark-light/70 border border-earthie-mint/30 p-3 sm:p-4 backdrop-blur-sm">
           <div className="flex items-start sm:items-center gap-2 sm:gap-3">
@@ -825,6 +825,21 @@ const EssenceTracker: React.FC = () => {
               <p className="text-xs sm:text-sm text-cyan-200/70">Market Cap</p>
               <p className="text-base sm:text-xl font-semibold text-white truncate">
                 {loadingStats ? '...' : `$${formatNumber(stats?.market_cap || 0)}`}
+              </p>
+          </div>
+          </div>
+          </div>
+
+        {/* Circulating Supply Card */}
+        <div className="rounded-xl bg-gradient-to-br from-earthie-dark/80 to-earthie-dark-light/70 border border-earthie-mint/30 p-3 sm:p-4 backdrop-blur-sm">
+          <div className="flex items-start sm:items-center gap-2 sm:gap-3">
+            <div className="p-1.5 sm:p-2 rounded-lg bg-earthie-mint/20">
+              <Coins className="h-4 w-4 sm:h-5 sm:w-5 text-earthie-mint" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs sm:text-sm text-cyan-200/70">Circulating Supply</p>
+              <p className="text-base sm:text-xl font-semibold text-white truncate">
+                {loadingStats ? '...' : (stats?.circulating_supply !== undefined ? formatNumber(stats.circulating_supply) : '...')} ESS
               </p>
           </div>
           </div>

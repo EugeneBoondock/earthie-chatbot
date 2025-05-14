@@ -13,7 +13,8 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   MessageSquare,
-  Coins
+  Coins,
+  FileText
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -50,6 +51,7 @@ export default function Sidebar({ className }: SidebarProps) {
     { href: '/hub', label: 'Hub Home', icon: LayoutDashboard },
     { href: '/hub/profile', label: 'My Profile', icon: UserCircle },
     { href: '/hub/essence', label: 'Essence Tracker', icon: Coins },
+    { href: '/hub/essence-report', label: 'Essence Report', icon: FileText },
     { href: '/hub/lobbyist', label: 'My Lobbyist', icon: MessageSquare },
     { href: '/hub/e2pedia', label: 'E2Pedia', icon: Newspaper },
   ];
