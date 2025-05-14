@@ -18,6 +18,7 @@ interface Point {
 export default function SplashScreen() {
   const [show, setShow] = useState(true);
   const [fadeOut, setFadeOut] = useState(false);
+  const [showLogo, setShowLogo] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // Animation state
@@ -28,6 +29,11 @@ export default function SplashScreen() {
   const colors = ['#50E3C1', '#38bdf8', '#818cf8', '#3b82f6'];
 
   useEffect(() => {
+    // Delay showing the logo for 300ms to ensure the solid background is visible first
+    const logoTimer = setTimeout(() => {
+      setShowLogo(true);
+    }, 300);
+    
     // Start fade out after 2.2 seconds
     const fadeTimer = setTimeout(() => {
       setFadeOut(true);
@@ -56,7 +62,7 @@ export default function SplashScreen() {
 
       // Animation function
       const animate = () => {
-        if (!ctx || !canvas) return;
+        if (!ctx || !canvas || !showLogo) return; // Don't start animation until logo is shown
 
         // Create new points
         const centerX = canvas.width / 2;
@@ -157,16 +163,18 @@ export default function SplashScreen() {
         if (animationFrameRef.current) {
           cancelAnimationFrame(animationFrameRef.current);
         }
+        clearTimeout(logoTimer);
         clearTimeout(fadeTimer);
         clearTimeout(hideTimer);
       };
     }
 
     return () => {
+      clearTimeout(logoTimer);
       clearTimeout(fadeTimer);
       clearTimeout(hideTimer);
     };
-  }, []);
+  }, [showLogo]);
 
   if (!show) return null;
 
@@ -176,25 +184,29 @@ export default function SplashScreen() {
         ref={canvasRef}
         className="absolute inset-0"
       />
-      <div className="relative z-10 flex flex-col items-center">
-        <div className="relative w-32 h-32 mb-4 logo-container">
-          <div className="absolute inset-0 rounded-full blur-sm bg-earthie-mint/30"></div>
-          <div className="relative w-full h-full rounded-full overflow-hidden glow">
-            <Image
-              src="/images/earthie_logo.png"
-              alt="Earthie"
-              fill
-              sizes="(max-width: 768px) 100vw, 33vw"
-              priority
-              className="object-contain scale-90"
-            />
+      {showLogo && (
+        <div className="relative z-10 flex flex-col items-center">
+          <div className="relative w-32 h-32 mb-4 logo-container">
+            <div className="absolute inset-0 rounded-full blur-sm bg-earthie-mint/30"></div>
+            <div className="relative w-full h-full rounded-full overflow-hidden glow">
+              <Image
+                src="/images/earthie_logo.png"
+                alt="Earthie"
+                fill
+                sizes="(max-width: 768px) 100vw, 33vw"
+                priority
+                className="object-contain scale-90"
+                quality={90}
+                loading="eager"
+              />
+            </div>
           </div>
+          <h1 className="text-3xl font-bold mt-4 tracking-wider text-gradient">
+            EARTHIE
+          </h1>
+          <p className="text-gradient-subtle mt-2 text-sm font-medium">Your Earth2 AI Companion</p>
         </div>
-        <h1 className="text-3xl font-bold mt-4 tracking-wider text-gradient">
-          EARTHIE
-        </h1>
-        <p className="text-gradient-subtle mt-2 text-sm font-medium">Your Earth2 AI Companion</p>
-      </div>
+      )}
 
       <style jsx>{`
         .glow {
