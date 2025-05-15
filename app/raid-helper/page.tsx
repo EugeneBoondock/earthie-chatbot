@@ -32,11 +32,17 @@ interface RaidNotificationRow {
     source_property_id: string;
     source_property_desc: string;
     source_location: string;
+    source_tile_count?: string;
+    source_tier?: string;
+    source_class?: string;
     target_property_id: string;
     target_property_desc: string;
     target_location: string;
     target_owner_id: string;
     target_owner_username: string;
+    target_tile_count?: string;
+    target_tier?: string;
+    target_class?: string;
 }
 interface PropertySummary {
     id: string;
@@ -210,15 +216,17 @@ export default function RaidHelperPage() {
             const columns = [
                 'notification_id', 'event_type', 'timestamp', 'ether_amount',
                 'cydroids_sent', 'source_property_id', 'source_property_desc',
-                'source_location', 'target_property_id', 'target_property_desc',
-                'target_location', 'target_owner_id', 'target_owner_username'
+                'source_location', 'source_tile_count', 'source_tier', 'source_class',
+                'target_property_id', 'target_property_desc', 'target_location',
+                'target_owner_id', 'target_owner_username', 'target_tile_count',
+                'target_tier', 'target_class'
             ];
             const records: RaidNotificationRow[] = parse(fileContent, {
                 columns: columns, skip_empty_lines: true, trim: true, from_line: 2,
                 cast: (value, context) => {
                     if (context.column && typeof context.column === 'string') {
                         if (['ether_amount'].includes(context.column)) return parseFloat(value) || 0;
-                        if (['cydroids_sent'].includes(context.column)) return parseInt(value, 10) || 0;
+                        if (['cydroids_sent', 'source_tile_count', 'target_tile_count'].includes(context.column)) return parseInt(value, 10) || 0;
                         if (context.column === 'event_type' && !['DROID_RAID_SUCCESSFUL', 'DROID_RAID_FAILED'].includes(value)) throw new Error(`Invalid event_type "${value}"`);
                         if (context.column === 'timestamp') { try { parseISO(value); return value; } catch(e){ throw new Error(`Invalid timestamp format "${value}"`); } }
                     }
