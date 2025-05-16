@@ -36,6 +36,7 @@ interface PropertyData {
   owner?: {
     country?: string;
   };
+  center?: string; // Add this line to include center field
 }
 
 // Types for location info
@@ -214,7 +215,8 @@ export default function KnowYourLandPage() {
                       ...prop,
                       country: data.country || undefined,
                       description: data.description || data.location || prop.description || "Unknown Property",
-                      location: data.location || prop.location || "Unknown Location"
+                      location: data.location || prop.location || "Unknown Location",
+                      center: data.center // Add this line to ensure center is saved
                     };
                   }
                 } catch {}
@@ -243,7 +245,8 @@ export default function KnowYourLandPage() {
       ...property,
       country: property.country || undefined, // Ensure country is present (undefined if missing)
       description: property.description || property.location || "Unknown Property",
-      location: property.location || "Unknown Location"
+      location: property.location || "Unknown Location",
+      center: property.center // Add this line to ensure center is saved
     };
     
     // Get existing or initialize empty array
@@ -291,9 +294,10 @@ export default function KnowYourLandPage() {
         // Parse coordinates from format like "(25.540295, -33.936097)"
         const coordsMatch = data.center.match(/\(([^,]+),\s*([^)]+)\)/);
         if (coordsMatch && coordsMatch.length === 3) {
-          latitude = parseFloat(coordsMatch[1]);
-          longitude = parseFloat(coordsMatch[2]);
-          console.log("Parsed coordinates:", { latitude, longitude });
+          // Invert: (longitude, latitude)
+          longitude = parseFloat(coordsMatch[1]);
+          latitude = parseFloat(coordsMatch[2]);
+          console.log("Parsed coordinates (inverted):", { latitude, longitude });
         }
       }
       
@@ -311,7 +315,8 @@ export default function KnowYourLandPage() {
           longitude
         } : undefined,
         locationParts,
-        owner: data.owner ? { country: data.owner.country } : undefined
+        owner: data.owner ? { country: data.owner.country } : undefined,
+        center: data.center // Add this line to ensure center is included
       };
       
       console.log("Processed property data:", property);
@@ -1152,6 +1157,9 @@ export default function KnowYourLandPage() {
 
   // Additional location data fetching
   const fetchAdditionalLocationData = async (locationName: string, coordinates: { latitude: number, longitude: number }) => {
+    // Define constants at the top so they're in scope for the whole function
+    const MAX_LANDMARK_DISTANCE_KM = 10;
+    const MAX_LANDMARKS = 12;
     console.log("fetchAdditionalLocationData called with:", { locationName, coordinates });
     try {
       const weatherApiKey = process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY || 'placeholder';
@@ -1160,72 +1168,116 @@ export default function KnowYourLandPage() {
         .then(res => res.ok ? res.json() : null);
 
       // --- OSM Overpass API for landmarks ---
-      const overpassRadius = 5000; // meters
+      const overpassRadius = 10000; // meters (10km)
       const overpassQuery = `
         [out:json];
         (
-          node(around:${overpassRadius},${coordinates.latitude},${coordinates.longitude})[tourism];
-          node(around:${overpassRadius},${coordinates.latitude},${coordinates.longitude})[historic];
-          node(around:${overpassRadius},${coordinates.latitude},${coordinates.longitude})[natural];
-          node(around:${overpassRadius},${coordinates.latitude},${coordinates.longitude})[leisure=park];
+          node(around:${overpassRadius},${coordinates.longitude},${coordinates.latitude})[tourism];
+          way(around:${overpassRadius},${coordinates.longitude},${coordinates.latitude})[tourism];
+          relation(around:${overpassRadius},${coordinates.longitude},${coordinates.latitude})[tourism];
+          node(around:${overpassRadius},${coordinates.longitude},${coordinates.latitude})[historic];
+          way(around:${overpassRadius},${coordinates.longitude},${coordinates.latitude})[historic];
+          relation(around:${overpassRadius},${coordinates.longitude},${coordinates.latitude})[historic];
+          node(around:${overpassRadius},${coordinates.longitude},${coordinates.latitude})[natural];
+          way(around:${overpassRadius},${coordinates.longitude},${coordinates.latitude})[natural];
+          relation(around:${overpassRadius},${coordinates.longitude},${coordinates.latitude})[natural];
+          node(around:${overpassRadius},${coordinates.longitude},${coordinates.latitude})[leisure=park];
+          way(around:${overpassRadius},${coordinates.longitude},${coordinates.latitude})[leisure=park];
+          relation(around:${overpassRadius},${coordinates.longitude},${coordinates.latitude})[leisure=park];
+          node(around:${overpassRadius},${coordinates.longitude},${coordinates.latitude})[amenity=place_of_worship];
+          way(around:${overpassRadius},${coordinates.longitude},${coordinates.latitude})[amenity=place_of_worship];
+          relation(around:${overpassRadius},${coordinates.longitude},${coordinates.latitude})[amenity=place_of_worship];
+          node(around:${overpassRadius},${coordinates.longitude},${coordinates.latitude})[building=church];
+          way(around:${overpassRadius},${coordinates.longitude},${coordinates.latitude})[building=church];
+          relation(around:${overpassRadius},${coordinates.longitude},${coordinates.latitude})[building=church];
         );
-        out center 10;
+        out center 20;
       `;
       const overpassUrl = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(overpassQuery)}`;
-      const overpassPromise = fetch(overpassUrl).then(res => res.ok ? res.json() : null);
+      console.log('[KYL] Overpass API URL:', overpassUrl);
+      let overpassData = null;
+      try {
+        const overpassRes = await fetch(overpassUrl);
+        if (!overpassRes.ok) {
+          console.error('[KYL] Overpass API fetch failed:', overpassRes.status, overpassRes.statusText);
+        } else {
+          overpassData = await overpassRes.json();
+          console.log('[KYL] Overpass API response:', overpassData);
+        }
+      } catch (err) {
+        console.error('[KYL] Overpass API fetch error:', err);
+      }
 
       // Wikipedia GeoSearch fallback
       const geoNamesUsername = process.env.NEXT_PUBLIC_GEONAMES_USERNAME || 'demo';
       const wikiGeoUrl = `https://en.wikipedia.org/w/api.php?action=query&list=geosearch&gscoord=${coordinates.latitude}|${coordinates.longitude}&gsradius=5000&gslimit=10&format=json&origin=*`;
       const wikiGeoPromise = fetch(wikiGeoUrl).then(res => res.ok ? res.json() : null);
 
-      const [weatherData, overpassData, wikiGeoData] = await Promise.all([weatherPromise, overpassPromise, wikiGeoPromise]);
+      const [weatherData, wikiGeoData] = await Promise.all([weatherPromise, wikiGeoPromise]);
+
+      // --- Parse OSM landmarks ---
+      let osmLandmarks: any[] = [];
+      if (overpassData && Array.isArray(overpassData.elements) && overpassData.elements.length > 0) {
+        osmLandmarks = overpassData.elements
+          .map((el: any) => {
+            // For nodes, use lat/lon; for ways/relations, use center
+            const lat = el.lat || el.center?.lat;
+            const lon = el.lon || el.center?.lon;
+            if (lat === undefined || lon === undefined) return null;
+            const dist = getDistanceFromLatLonInKm(coordinates.latitude, coordinates.longitude, lat, lon);
+            return {
+              name: el.tags?.name || el.tags?.['name:en'] || el.tags?.tourism || el.tags?.historic || el.tags?.natural || el.tags?.amenity || el.tags?.building || 'Unnamed Landmark',
+              distance: `${Math.round(dist * 10) / 10} km`,
+              description: el.tags?.description || '',
+              coordinates: { latitude: lat, longitude: lon },
+              dist
+            };
+          })
+          .filter((lm: any) => lm && lm.name && lm.coordinates && lm.dist <= MAX_LANDMARK_DISTANCE_KM)
+          .sort((a: any, b: any) => a.dist - b.dist)
+          .slice(0, MAX_LANDMARKS);
+      }
+      // --- Parse Wikipedia GeoSearch landmarks ---
+      let wikiLandmarks: any[] = [];
+      if (wikiGeoData?.query?.geosearch && wikiGeoData.query.geosearch.length > 0) {
+        wikiLandmarks = wikiGeoData.query.geosearch
+          .map((poi: any) => {
+            const dist = getDistanceFromLatLonInKm(coordinates.latitude, coordinates.longitude, poi.lat, poi.lon);
+            return {
+              name: poi.title || 'Unnamed Landmark',
+              distance: `${Math.round(dist * 10) / 10} km`,
+              description: '',
+              coordinates: { latitude: poi.lat, longitude: poi.lon },
+              dist
+            };
+          })
+          .filter((lm: any) => lm.name && lm.coordinates && lm.dist <= MAX_LANDMARK_DISTANCE_KM)
+          .sort((a: any, b: any) => a.dist - b.dist)
+          .slice(0, MAX_LANDMARKS);
+      }
+      // --- Combine, deduplicate, sort, and limit ---
+      const combinedLandmarks = [...osmLandmarks, ...wikiLandmarks]
+        .filter((lm, idx, arr) =>
+          arr.findIndex(other =>
+            other.name === lm.name &&
+            other.coordinates.latitude === lm.coordinates.latitude &&
+            other.coordinates.longitude === lm.coordinates.longitude
+          ) === idx
+        )
+        .sort((a, b) => a.dist - b.dist)
+        .slice(0, MAX_LANDMARKS);
+
       setLocationInfo(prev => {
         if (!prev) return prev;
         let climate = undefined;
-        let landmarks: {name: string, distance?: string, description?: string, coordinates?: {latitude: number, longitude: number}}[] = [];
         if (weatherData) {
           const weather = weatherData;
           climate = `The current weather is ${weather.weather?.[0]?.description || 'not available'}. Temperature is around ${Math.round((weather.main?.temp || 0) - 273.15)}°C.`;
         }
-        // --- OSM Overpass results ---
-        const MAX_LANDMARK_DISTANCE_KM = 10;
-        if (overpassData && Array.isArray(overpassData.elements) && overpassData.elements.length > 0) {
-          landmarks = overpassData.elements
-            .map((el: any) => {
-              const dist = getDistanceFromLatLonInKm(coordinates.latitude, coordinates.longitude, el.lat, el.lon);
-              return {
-                name: el.tags?.name || el.tags?.['name:en'] || el.tags?.tourism || el.tags?.historic || el.tags?.natural || 'Unnamed Landmark',
-                distance: `${Math.round(dist * 10) / 10} km`,
-                description: el.tags?.description || '',
-                coordinates: { latitude: el.lat, longitude: el.lon },
-                dist
-              };
-            })
-            .filter((lm: any) => lm.name && lm.coordinates && lm.dist <= MAX_LANDMARK_DISTANCE_KM)
-            .sort((a: any, b: any) => a.dist - b.dist)
-            .slice(0, 5);
-        } else if (wikiGeoData?.query?.geosearch && wikiGeoData.query.geosearch.length > 0) {
-          // --- Wikipedia GeoSearch fallback ---
-          landmarks = wikiGeoData.query.geosearch
-            .map((poi: any) => {
-              const dist = getDistanceFromLatLonInKm(coordinates.latitude, coordinates.longitude, poi.lat, poi.lon);
-              return {
-                name: poi.title || 'Unnamed Landmark',
-                distance: `${Math.round(dist * 10) / 10} km`,
-                description: '',
-                coordinates: { latitude: poi.lat, longitude: poi.lon },
-                dist
-              };
-            })
-            .filter((lm: any) => lm.name && lm.coordinates && lm.dist <= MAX_LANDMARK_DISTANCE_KM)
-            .sort((a: any, b: any) => a.dist - b.dist)
-            .slice(0, 5);
-        }
         return {
           ...prev,
           climate,
-          landmarks
+          landmarks: combinedLandmarks
         };
       });
     } catch (error) {
@@ -1407,7 +1459,8 @@ export default function KnowYourLandPage() {
             location: data.location || property.location || "Unknown Location",
             coordinates: property.coordinates,
             locationParts: property.locationParts,
-            owner: data.owner ? { country: data.owner.country } : property.owner
+            owner: data.owner ? { country: data.owner.country } : property.owner,
+            center: data.center // Add this line to ensure center is included
           };
           setPropertyData(upgradedProperty);
           saveToRecent(upgradedProperty);
