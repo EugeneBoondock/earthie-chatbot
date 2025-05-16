@@ -568,7 +568,20 @@ export default function KnowYourLandPage() {
       // Fetch videos and notable people in parallel
       Promise.all([
         fetchNotablePeopleData(locationParts || { specificPlace: locationName }, coordinates),
-        searchYouTubeVideos(locationName, locationParts)
+        (async () => {
+          const videos: any[] = [];
+          await searchYouTubeVideos(locationName, locationParts, (video) => {
+            videos.push(video);
+            setLocationInfo(prev => {
+              if (propertyIdForThisFetch && latestPropertyIdRef.current !== propertyIdForThisFetch) return prev;
+              return {
+                ...prev,
+                videos: [...videos],
+              };
+            });
+          });
+          return videos;
+        })()
       ]).then(([notablePeople, videos]) => {
         setLocationInfo(prev => {
           if (propertyIdForThisFetch && latestPropertyIdRef.current !== propertyIdForThisFetch) return prev;
@@ -987,12 +1000,12 @@ export default function KnowYourLandPage() {
     }
   };
 
-  // Update YouTube video fetching to always return 2 relevant videos
+  // Update YouTube video fetching to progressively render videos
   const searchYouTubeVideos = async (
-    locationName: string, 
-    locationParts?: PropertyData['locationParts']
+    locationName: string,
+    locationParts: PropertyData['locationParts'] | undefined,
+    onVideoFetched?: (video: { id: string; title: string; thumbnail: string; channelTitle?: string, source?: string }) => void
   ): Promise<Array<{ id: string; title: string; thumbnail: string; channelTitle?: string, source?: string }>> => {
-    // Use the new API route that returns up to 2 videos
     const query = [
       locationParts?.specificPlace || locationName,
       locationParts?.city,
@@ -1009,14 +1022,22 @@ export default function KnowYourLandPage() {
       if (!data.videos || !Array.isArray(data.videos) || data.videos.length === 0) {
         return [];
       }
-      // Map to frontend format
-      return data.videos.slice(0, 2).map((v: any) => ({
+      // Progressive rendering: as each video is ready, call onVideoFetched
+      const videos = data.videos.slice(0, 2).map((v: any) => ({
         id: v.videoId,
         title: v.videoData?.title || '',
         thumbnail: v.videoData?.thumbnails?.[0]?.url || '',
         channelTitle: v.videoData?.author || '',
         source: 'youtube',
       }));
+      if (onVideoFetched) {
+        for (const video of videos) {
+          onVideoFetched(video);
+          // Optionally, add a small delay to allow UI to update (not required, but can help UX)
+          // await new Promise(res => setTimeout(res, 50));
+        }
+      }
+      return videos;
     } catch (error) {
       console.error('[YouTube API] Error fetching videos:', error);
       return [];
