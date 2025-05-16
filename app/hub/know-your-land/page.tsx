@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -123,6 +123,20 @@ const getApproxTimeZone = (lng: number): string => {
   return `UTC${sign}${hours}`;
 };
 
+// Utility to clean Wikipedia cite error messages from HTML
+function cleanWikipediaCiteErrors(html: string): string {
+  if (!html) return html;
+  // Remove cite error blocks (common patterns)
+  // Remove <cite ...>...</cite> blocks with cite error
+  html = html.replace(/<cite[^>]*cite error[^>]*>[\s\S]*?<\/cite>/gi, '');
+  // Remove divs/spans with cite error
+  html = html.replace(/<div[^>]*cite error[^>]*>[\s\S]*?<\/div>/gi, '');
+  html = html.replace(/<span[^>]*cite error[^>]*>[\s\S]*?<\/span>/gi, '');
+  // Remove the specific error message text if present
+  html = html.replace(/Cite error: There are[\s\S]*?help page\)\./gi, '');
+  return html;
+}
+
 export default function KnowYourLandPage() {
   const [propertyId, setPropertyId] = useState("");
   const [propertyData, setPropertyData] = useState<PropertyData | null>(null);
@@ -136,6 +150,7 @@ export default function KnowYourLandPage() {
   const [showMoreOverview, setShowMoreOverview] = useState(false);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [currentTvStation, setCurrentTvStation] = useState<string | null>(null);
+  const latestPropertyIdRef = useRef<string | null>(null);
 
   // Use the global audio player context
   const {
@@ -153,15 +168,43 @@ export default function KnowYourLandPage() {
     const storedProps = localStorage.getItem('recentViewedProperties');
     if (storedProps) {
       try {
-        const props = JSON.parse(storedProps);
+        let props = JSON.parse(storedProps);
         if (Array.isArray(props)) {
           // Ensure all properties have required fields
-          const validProps = props.slice(0, 5).map(prop => ({
-            ...prop,
-            description: prop.description || prop.location || "Unknown Property",
-            location: prop.location || "Unknown Location"
-          }));
-          setRecentProperties(validProps);
+          let needsUpgrade = false;
+          const validProps = props.slice(0, 5).map(prop => {
+            if (!prop.country) needsUpgrade = true;
+            return {
+              ...prop,
+              description: prop.description || prop.location || "Unknown Property",
+              location: prop.location || "Unknown Location"
+            };
+          });
+          if (!needsUpgrade) {
+            setRecentProperties(validProps);
+          } else {
+            // If any property is missing country, fetch from API and upgrade
+            Promise.all(validProps.map(async (prop) => {
+              if (!prop.country && prop.id) {
+                try {
+                  const response = await fetch(`/api/e2/property/${prop.id}`);
+                  if (response.ok) {
+                    const data = await response.json();
+                    return {
+                      ...prop,
+                      country: data.country || undefined,
+                      description: data.description || data.location || prop.description || "Unknown Property",
+                      location: data.location || prop.location || "Unknown Location"
+                    };
+                  }
+                } catch {}
+              }
+              return prop;
+            })).then((upgradedProps) => {
+              localStorage.setItem('recentViewedProperties', JSON.stringify(upgradedProps));
+              setRecentProperties(upgradedProps);
+            });
+          }
         } else {
           setRecentProperties([]);
         }
@@ -175,10 +218,10 @@ export default function KnowYourLandPage() {
   // Save property to recent list
   const saveToRecent = (property: PropertyData) => {
     if (!property.id) return;
-    
-    // Ensure property has all required fields
+    // Always include country field
     const propertyToSave = {
       ...property,
+      country: property.country || undefined, // Ensure country is present (undefined if missing)
       description: property.description || property.location || "Unknown Property",
       location: property.location || "Unknown Location"
     };
@@ -207,19 +250,16 @@ export default function KnowYourLandPage() {
   // Fetch property info from Earth2 API
   const fetchPropertyInfo = async (id: string) => {
     if (!id.trim()) return;
-    
+    latestPropertyIdRef.current = id;
     setIsLoadingProperty(true);
     setError(null);
     setLocationInfo(null);
-    
     try {
       const response = await fetch(`/api/e2/property/${id}`);
-      
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || `Failed to fetch property (${response.status})`);
       }
-      
       const data = await response.json();
       
       // Add debugging
@@ -260,11 +300,10 @@ export default function KnowYourLandPage() {
       
       // Now fetch location info with the coordinates, using the freshly constructed property object
       if (property.coordinates?.latitude !== undefined && property.coordinates?.longitude !== undefined) {
-        console.log("Calling fetchLocationInfo with coordinates (immediate):", property.coordinates);
         fetchLocationInfo(property.location, {
           latitude: property.coordinates.latitude,
           longitude: property.coordinates.longitude
-        }, property.locationParts);
+        }, property.locationParts, property.id, property.country);
       } else {
         console.log("No valid coordinates found in property data");
       }
@@ -311,7 +350,15 @@ export default function KnowYourLandPage() {
   };
 
   // Fetch location info using Wikipedia and other APIs
-  const fetchLocationInfo = async (locationName: string, coordinates: { latitude?: number, longitude?: number }, locationParts?: PropertyData['locationParts']) => {
+  const fetchLocationInfo = async (
+    locationName: string,
+    coordinates: { latitude?: number, longitude?: number },
+    locationParts?: PropertyData['locationParts'],
+    propertyIdForThisFetch?: string,
+    countryCodeArg?: string
+  ) => {
+    console.log('[KYL] fetchLocationInfo START', { locationName, coordinates, locationParts, propertyIdForThisFetch, latestPropertyId: latestPropertyIdRef.current });
+    setLocationInfo(null); // Always reset at the start of a fetch
     setIsLoadingLocation(true);
     const hasValidCoords = coordinates?.latitude !== undefined && coordinates?.longitude !== undefined;
     const coordsText = hasValidCoords 
@@ -332,6 +379,8 @@ export default function KnowYourLandPage() {
       // Add first word (e.g., 'Mashonaland')
       const firstWord = mainQuery.split(/\s+/)[0];
       if (firstWord.length > 2 && !queries.includes(firstWord)) queries.push(firstWord);
+      // Add country as last fallback
+      if (locationParts?.country && !queries.includes(locationParts.country)) queries.push(locationParts.country);
       // Try each query in order until we get a summary
       let foundSummary = '';
       let foundTitle = '';
@@ -340,6 +389,7 @@ export default function KnowYourLandPage() {
       let foundType = '';
       let foundHistoryHtml = '';
       let usedFallback = false;
+      let summary404 = false;
       for (let i = 0; i < queries.length; ++i) {
         const q = queries[i];
         try {
@@ -364,10 +414,17 @@ export default function KnowYourLandPage() {
               foundHistoryHtml = await fetchWikipediaHistorySection(foundTitle) || '';
               break;
             }
+          } else if (wikiResponse.status === 404) {
+            summary404 = true;
+            continue; // Try next fallback
           }
         } catch (err) {
           // Ignore and try next fallback
         }
+      }
+      // If all queries failed (404), show a friendly message
+      if (!foundSummary && summary404) {
+        foundSummary = `No Wikipedia summary found for this location.`;
       }
       // If the summary is short (<=5 sentences) and we have a next fallback, try to prepend it
       let finalSummary = foundSummary;
@@ -402,7 +459,7 @@ export default function KnowYourLandPage() {
           } catch (err) {}
         }
       }
-      // Set the basic info we already have
+      // Set the basic info we already have (show summary as soon as it's available)
       let facts: Record<string, string> = {
         "Location Type": foundType || "Geographic Location",
         "Coordinates": coordsText
@@ -442,53 +499,114 @@ export default function KnowYourLandPage() {
         }
       }
       // Get country code for IPTV and other data
-      const countryCode = getCountryCodeFromLocation(locationName, coordinates);
-      // Calculate actual functions in parallel
-      const [
-        notablePeoplePromise, 
-        videoSearchPromise, 
-        tvChannelsPromise, 
-        radioStationsPromise,
-        historyPromise // Added historyPromise
-      ] = await Promise.allSettled([
+      const countryCode = countryCodeArg;
+      // Set summary/facts immediately
+      setLocationInfo(prev => {
+        if (propertyIdForThisFetch && latestPropertyIdRef.current !== propertyIdForThisFetch) {
+          return prev;
+        }
+        return {
+          ...prev,
+          title: foundTitle || locationName,
+          summary: finalSummary || `This location is situated at ${coordsText}. While detailed information is limited, you can explore this area's unique characteristics through its geographical position and natural features.`,
+          image: foundImage,
+          url: foundUrl,
+          facts: facts,
+          history: finalHistoryHtml,
+          videos: prev?.videos || [], // Preserve videos if already set
+        };
+      });
+      // Fetch radio and TV in parallel, update as soon as each is ready
+      if (countryCode && countryCode.length === 2) {
+        const radioUrl = `https://de1.api.radio-browser.info/json/stations/bycountrycodeexact/${countryCode}?limit=30&order=clickcount&reverse=true&hidebroken=true`;
+        console.log('[KYL] Fetching radio stations for country:', countryCode, 'URL:', radioUrl);
+        fetchRadioBrowserStations(countryCode, locationParts?.region).then(radioStations => {
+          setLocationInfo(prev => {
+            if (propertyIdForThisFetch && latestPropertyIdRef.current !== propertyIdForThisFetch) return prev;
+            return {
+              ...prev,
+              entertainment: {
+                ...prev?.entertainment,
+                radioStations: radioStations && radioStations.length > 0 ? radioStations : [],
+                tvStations: prev?.entertainment?.tvStations || [],
+              },
+              videos: prev?.videos || [],
+            };
+          });
+        });
+        fetchIPTVChannels(countryCode).then(tvStations => {
+          setLocationInfo(prev => {
+            if (propertyIdForThisFetch && latestPropertyIdRef.current !== propertyIdForThisFetch) return prev;
+            return {
+              ...prev,
+              entertainment: {
+                ...prev?.entertainment,
+                tvStations: tvStations && tvStations.length > 0 ? tvStations : [],
+                radioStations: prev?.entertainment?.radioStations || [],
+              },
+              videos: prev?.videos || [],
+            };
+          });
+        });
+      } else {
+        // No valid country code, show message
+        setLocationInfo(prev => {
+          if (propertyIdForThisFetch && latestPropertyIdRef.current !== propertyIdForThisFetch) return prev;
+          return {
+            ...prev,
+            entertainment: {
+              ...prev?.entertainment,
+              radioStations: [],
+              tvStations: [],
+            },
+            videos: prev?.videos || [],
+          };
+        });
+      }
+      // Fetch videos and notable people in parallel
+      Promise.all([
         fetchNotablePeopleData(locationParts || { specificPlace: locationName }, coordinates),
-        searchYouTubeVideos(locationName, locationParts),
-        fetchIPTVChannels(countryCode),
-        fetchRadioBrowserStations(propertyData?.country, propertyData?.locationParts?.region),
-        Promise.resolve(finalHistoryHtml) // Use our composed history
-      ]);
-      setLocationInfo({
-        title: foundTitle || locationName,
-        summary: finalSummary || `This location is situated at ${coordsText}. While detailed information is limited, you can explore this area's unique characteristics through its geographical position and natural features.`,
-        image: foundImage,
-        url: foundUrl,
-        facts: facts,
-        history: historyPromise.status === 'fulfilled' && historyPromise.value ? historyPromise.value : undefined,
-        people: {
-          demographics: generateDemographics(foundTitle || locationName, finalSummary),
-          notablePeople: notablePeoplePromise.status === 'fulfilled' ? notablePeoplePromise.value : [],
-          indigenousGroups: generateIndigenousGroups(coordinates)
-        },
-        entertainment: {
-          radioStations: radioStationsPromise.status === 'fulfilled' ? radioStationsPromise.value : await fetchRadioBrowserStations(propertyData?.country, propertyData?.locationParts?.region),
-          tvStations: tvChannelsPromise.status === 'fulfilled' ? tvChannelsPromise.value : await fetchIPTVChannels(countryCode)
-        },
-        videos: videoSearchPromise.status === 'fulfilled' ? videoSearchPromise.value : []
+        searchYouTubeVideos(locationName, locationParts)
+      ]).then(([notablePeople, videos]) => {
+        setLocationInfo(prev => {
+          if (propertyIdForThisFetch && latestPropertyIdRef.current !== propertyIdForThisFetch) return prev;
+          return {
+            ...prev,
+            people: {
+              demographics: generateDemographics(foundTitle || locationName, finalSummary),
+              notablePeople: notablePeople,
+              indigenousGroups: generateIndigenousGroups(coordinates)
+            },
+            videos: videos,
+            entertainment: {
+              ...prev?.entertainment,
+            },
+          };
+        });
       });
     } catch (error) {
       setError(error instanceof Error ? error.message : "Failed to fetch location information");
-      setLocationInfo({
-        title: locationName,
-        summary: `This location is situated at ${coordsText}. While detailed information is limited, you can explore this area's unique characteristics through its geographical position and natural features.`,
-        facts: {
-          "Location Type": "Geographic Area",
-          "Coordinates": coordsText,
-          "Continent": hasValidCoords ? getContinent(coordinates.latitude!, coordinates.longitude!) : "Unknown",
-          "Approximate Time Zone": hasValidCoords ? getApproxTimeZone(coordinates.longitude!) : "Unknown"
+      setLocationInfo(prev => {
+        if (propertyIdForThisFetch && latestPropertyIdRef.current !== propertyIdForThisFetch) {
+          return prev;
         }
+        const info = {
+          title: locationName,
+          summary: `This location is situated at ${coordsText}. While detailed information is limited, you can explore this area's unique characteristics through its geographical position and natural features.`,
+          facts: {
+            "Location Type": "Geographic Area",
+            "Coordinates": coordsText,
+            "Continent": hasValidCoords ? getContinent(coordinates.latitude!, coordinates.longitude!) : "Unknown",
+            "Approximate Time Zone": hasValidCoords ? getApproxTimeZone(coordinates.longitude!) : "Unknown"
+          }
+        };
+        return info;
       });
     } finally {
-      setIsLoadingLocation(false);
+      if (!propertyIdForThisFetch || latestPropertyIdRef.current === propertyIdForThisFetch) {
+        setIsLoadingLocation(false);
+      }
+      // else: do not set, let the latest fetch handle it
     }
   };
 
@@ -872,117 +990,51 @@ export default function KnowYourLandPage() {
     locationName: string, 
     locationParts?: PropertyData['locationParts']
   ): Promise<Array<{ id: string; title: string; thumbnail: string; channelTitle?: string }>> => {
-    console.log(`[YouTube] Initiating search for \"${locationName}\"`, "Parts:", locationParts);
-    
-    // --- Define types for YouTube API items ---
-    interface YouTubeThumbnail {
-      url: string;
-      width?: number;
-      height?: number;
-    }
-
-    interface YouTubeThumbnails {
-      default?: YouTubeThumbnail;
-      medium?: YouTubeThumbnail;
-      high?: YouTubeThumbnail;
-      standard?: YouTubeThumbnail;
-      maxres?: YouTubeThumbnail;
-    }
-
-    interface YouTubeSearchItemSnippet {
-      publishedAt?: string;
-      channelId?: string;
-      title: string;
-      description?: string;
-      thumbnails: YouTubeThumbnails;
-      channelTitle?: string;
-      liveBroadcastContent?: string;
-    }
-
-    interface YouTubeSearchItemId {
-      kind?: string;
-      videoId: string; // videoId is essential
-      channelId?: string;
-      playlistId?: string;
-    }
-
-    interface YouTubeSearchItem {
-      kind?: string;
-      etag?: string;
-      id: YouTubeSearchItemId;
-      snippet: YouTubeSearchItemSnippet;
-    }
-    
-    interface ProcessedYouTubeVideo {
-        id: string;
-        title: string;
-        thumbnail: string;
-        channelTitle?: string;
-        relevance: number;
-    }
-    // --- End of YouTube types ---
-
-    // Build a single, more focused query
+    const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY || '';
     const query = [
       locationParts?.specificPlace || locationName,
       locationParts?.city,
       locationParts?.country,
       'travel guide'
     ].filter(Boolean).join(' ');
-    
+    console.log(`[YouTube] Fetching videos for query: "${query}"`);
+    if (!apiKey) {
+      console.error('[YouTube] No API key set!');
+      return [];
+    }
     try {
       const apiUrl = new URL('https://www.googleapis.com/youtube/v3/search');
       apiUrl.searchParams.append('part', 'snippet');
       apiUrl.searchParams.append('q', query);
       apiUrl.searchParams.append('type', 'video');
-      apiUrl.searchParams.append('maxResults', '10'); // Increased from 5 to get more options
+      apiUrl.searchParams.append('maxResults', '10');
       apiUrl.searchParams.append('videoEmbeddable', 'true');
       apiUrl.searchParams.append('relevanceLanguage', 'en');
-      apiUrl.searchParams.append('videoDuration', 'medium'); // Favor medium-length videos
-      apiUrl.searchParams.append('order', 'relevance'); // Sort by relevance
-      apiUrl.searchParams.append('key', process.env.NEXT_PUBLIC_YOUTUBE_API_KEY || '');
-      
-      console.log(`[YouTube] Fetching videos for query: "${query}"`);
+      apiUrl.searchParams.append('videoDuration', 'medium');
+      apiUrl.searchParams.append('order', 'relevance');
+      apiUrl.searchParams.append('key', apiKey);
       const response = await fetch(apiUrl.toString());
-      
       if (!response.ok) {
         const errorText = await response.text();
         console.error(`[YouTube] API error for query "${query}". Status: ${response.status}. Response:`, errorText);
         throw new Error(`YouTube API error: ${response.status}`);
       }
-      
       const data = await response.json();
-      
+      console.log('[YouTube] API response:', data);
       if (!data.items || data.items.length === 0) {
         console.warn(`[YouTube] No videos found for query "${query}"`);
         return [];
       }
-      
-      // Filter and select the most relevant videos
-      const videos = (data.items as YouTubeSearchItem[])
-        .filter((item: YouTubeSearchItem) => item.id?.videoId)
-        .map((item: YouTubeSearchItem): ProcessedYouTubeVideo => ({
+      const videos = (data.items as any[])
+        .filter((item: any) => item.id?.videoId)
+        .map((item: any) => ({
           id: item.id.videoId,
           title: item.snippet.title,
           thumbnail: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url || '',
-          channelTitle: item.snippet.channelTitle,
-          // Add a relevance score based on title and description
-          relevance: (item.snippet.title.toLowerCase().includes('travel') ? 1 : 0) + 
-                     (item.snippet.title.toLowerCase().includes('guide') ? 1 : 0) + 
-                     (item.snippet.title.toLowerCase().includes('tour') ? 1 : 0)
-        }))
-        .sort((a: ProcessedYouTubeVideo, b: ProcessedYouTubeVideo) => b.relevance - a.relevance) // Sort by relevance
-        .slice(0, 2) // Take top 2 most relevant videos
-        .map((video: ProcessedYouTubeVideo) => ({ // No need to re-type video here if correctly typed before
-          id: video.id,
-          title: video.title,
-          thumbnail: video.thumbnail,
-          channelTitle: video.channelTitle
+          channelTitle: item.snippet.channelTitle
         }));
-      
       console.log(`[YouTube] Found ${videos.length} relevant videos for "${locationName}"`);
       return videos;
-      
     } catch (error) {
       console.error(`[YouTube] Error fetching videos for query "${query}":`, error);
       return [];
@@ -1233,14 +1285,44 @@ export default function KnowYourLandPage() {
   };
 
   // Handle selecting a recent property
-  const handleSelectRecent = (property: PropertyData) => {
+  const handleSelectRecent = async (property: PropertyData) => {
     setPropertyId(property.id);
     setPropertyData(property);
+    latestPropertyIdRef.current = property.id;
+    // If country is missing, fetch from API first
+    if (!property.country) {
+      try {
+        const response = await fetch(`/api/e2/property/${property.id}`);
+        if (response.ok) {
+          const data = await response.json();
+          const upgradedProperty: PropertyData = {
+            ...property,
+            country: data.country || undefined,
+            description: data.description || data.location || property.description || "Unknown Property",
+            location: data.location || property.location || "Unknown Location",
+            coordinates: property.coordinates,
+            locationParts: property.locationParts,
+            owner: data.owner ? { country: data.owner.country } : property.owner
+          };
+          setPropertyData(upgradedProperty);
+          saveToRecent(upgradedProperty);
+          if (upgradedProperty.coordinates?.latitude !== undefined && upgradedProperty.coordinates?.longitude !== undefined) {
+            fetchLocationInfo(upgradedProperty.location, {
+              latitude: upgradedProperty.coordinates.latitude,
+              longitude: upgradedProperty.coordinates.longitude
+            }, upgradedProperty.locationParts, upgradedProperty.id, upgradedProperty.country);
+          } else {
+            fetchPropertyInfo(upgradedProperty.id);
+          }
+          return;
+        }
+      } catch {}
+    }
     if (property.coordinates?.latitude !== undefined && property.coordinates?.longitude !== undefined) {
       fetchLocationInfo(property.location, {
         latitude: property.coordinates.latitude,
         longitude: property.coordinates.longitude
-      });
+      }, property.locationParts, property.id, property.country);
     } else {
       fetchPropertyInfo(property.id);
     }
@@ -1545,7 +1627,7 @@ export default function KnowYourLandPage() {
                         {showMoreHistory && (
                           <div
                             className="prose prose-sm prose-invert max-w-none text-gray-200 leading-relaxed kyl-html-content"
-                            dangerouslySetInnerHTML={{ __html: locationInfo.history }}
+                            dangerouslySetInnerHTML={{ __html: cleanWikipediaCiteErrors(locationInfo.history) }}
                           />
                         )}
                         {/* Button to toggle visibility */}
@@ -1737,7 +1819,6 @@ export default function KnowYourLandPage() {
                             </div>
                           </div>
                         ))}
-                        
                         <div className="flex justify-center pt-4">
                           <Link
                             href={`https://www.youtube.com/results?search_query=${encodeURIComponent(locationInfo.title || propertyData?.location || "travel")}`}
@@ -1753,8 +1834,7 @@ export default function KnowYourLandPage() {
                     ) : (
                       <div className="bg-gray-800/50 rounded-md border border-gray-700/50 p-8 text-center">
                         <PlayCircle className="h-12 w-12 mx-auto text-gray-500 mb-4" />
-                        <p className="text-gray-400 mb-6">Searching for videos about this location...</p>
-                        
+                        <p className="text-gray-400 mb-6">{isLoadingLocation ? "Searching for videos about this location..." : "No videos found for this location."}</p>
                         <Link
                           href={`https://www.youtube.com/results?search_query=${encodeURIComponent(locationInfo?.title || propertyData?.location || 'travel')}`}
                           target="_blank"
@@ -1779,7 +1859,7 @@ export default function KnowYourLandPage() {
                       <h4 className="text-base font-medium text-gray-200 flex items-center gap-2">
                         <Radio className="h-4 w-4 text-earthie-mint" />
                         Radio Stations
-                        <span className="text-xs text-gray-400">(powered by Radio Garden)</span>
+                        <span className="text-xs text-gray-400">(powered by Radio-Browser)</span>
                       </h4>
                       
                       {locationInfo.entertainment?.radioStations && locationInfo.entertainment.radioStations.length > 0 ? (
