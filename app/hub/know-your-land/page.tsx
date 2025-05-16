@@ -139,6 +139,24 @@ function cleanWikipediaCiteErrors(html: string): string {
   return html;
 }
 
+// Helper to extract a short preview from HTML (first paragraph or first 300 chars)
+function getHistoryPreview(html: string, maxLength = 300): string {
+  if (!html) return '';
+  // Try to extract the first <p>...</p>
+  const match = html.match(/<p>([\s\S]*?)<\/p>/i);
+  let text = '';
+  if (match && match[1]) {
+    text = match[1].replace(/<[^>]+>/g, '').trim();
+  } else {
+    // Fallback: strip all HTML and take the first maxLength chars
+    text = html.replace(/<[^>]+>/g, '').trim();
+  }
+  if (text.length > maxLength) {
+    text = text.substring(0, maxLength) + '...';
+  }
+  return text;
+}
+
 export default function KnowYourLandPage() {
   const [propertyId, setPropertyId] = useState("");
   const [propertyData, setPropertyData] = useState<PropertyData | null>(null);
@@ -1656,12 +1674,16 @@ export default function KnowYourLandPage() {
                         <h3 className="flex items-center gap-2 text-lg font-medium text-white mb-3">
                           <History className="h-5 w-5 text-earthie-mint" /> Historical Background
                         </h3>
-                        {/* Render HTML if showMoreHistory is true */}
-                        {showMoreHistory && (
+                        {/* Render preview or full HTML depending on showMoreHistory */}
+                        {showMoreHistory ? (
                           <div
                             className="prose prose-sm prose-invert max-w-none text-gray-200 leading-relaxed kyl-html-content"
                             dangerouslySetInnerHTML={{ __html: cleanWikipediaCiteErrors(locationInfo.history) }}
                           />
+                        ) : (
+                          <div className="text-gray-200 leading-relaxed kyl-html-content">
+                            {getHistoryPreview(cleanWikipediaCiteErrors(locationInfo.history))}
+                          </div>
                         )}
                         {/* Button to toggle visibility */}
                         <Button 
