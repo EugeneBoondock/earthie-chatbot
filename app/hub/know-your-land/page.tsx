@@ -308,350 +308,171 @@ export default function KnowYourLandPage() {
 
   // Fetch location info using Wikipedia and other APIs
   const fetchLocationInfo = async (locationName: string, coordinates: { latitude?: number, longitude?: number }, locationParts?: PropertyData['locationParts']) => {
-    console.log("fetchLocationInfo called with:", { locationName, coordinates, locationParts });
     setIsLoadingLocation(true);
-    
-    // Check if we have valid coordinates
     const hasValidCoords = coordinates?.latitude !== undefined && coordinates?.longitude !== undefined;
-    console.log("hasValidCoords:", hasValidCoords);
     const coordsText = hasValidCoords 
       ? `${coordinates.latitude!.toFixed(4)}°, ${coordinates.longitude!.toFixed(4)}°`
       : "unknown coordinates";
-    
     try {
-      // Fix common typos in location names
-      let correctedLocation = locationName.replace("Elizaberth", "Elizabeth");
-      
-      // Create a prioritized list of search queries based on location parts
-      const searchQueries = [];
-      
-      // If we have parsed location parts, use them for more specific searches
-      if (locationParts) {
-        if (locationParts.specificPlace) searchQueries.push(locationParts.specificPlace);
-        if (locationParts.city) searchQueries.push(locationParts.city);
-        if (locationParts.region) searchQueries.push(locationParts.region);
+      // Helper to count sentences
+      const countSentences = (text: string) => (text.match(/[.!?](\s|$)/g) || []).length;
+      // Build fallback queries: full, no country, first word
+      const queries: string[] = [];
+      let mainQuery = locationName.replace("Elizaberth", "Elizabeth").trim();
+      queries.push(mainQuery);
+      // Remove country if present (e.g., 'Mashonaland West, Zimbabwe' -> 'Mashonaland West')
+      if (mainQuery.includes(",")) {
+        const noCountry = mainQuery.split(",")[0].trim();
+        if (noCountry && !queries.includes(noCountry)) queries.push(noCountry);
       }
-      
-      // Add the full location and fallbacks
-      searchQueries.push(correctedLocation);
-      
-      // Split location parts (usually in format "City, State, Country")
-      const locationPartsFallback = correctedLocation.split(',').map(part => part.trim());
-      const cityName = locationPartsFallback[0];
-      const countryName = locationPartsFallback.length > 2 ? locationPartsFallback[2] : (propertyData?.country || "");
-      
-      // Add these as additional fallbacks if not already in the list
-      if (!searchQueries.includes(cityName)) searchQueries.push(cityName);
-      if (countryName && !searchQueries.includes(countryName)) searchQueries.push(countryName);
-      
-      console.log("Search queries priority:", searchQueries);
-      
-      let wikiData = null;
-      
-      for (const searchQuery of searchQueries) {
-        if (!searchQuery.trim()) continue;
-        
-        console.log("Trying Wikipedia search query:", searchQuery);
-        
-        const wikiQuery = encodeURIComponent(searchQuery);
-        const wikiUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${wikiQuery}`;
-        console.log("Wikipedia API URL:", wikiUrl);
-        
+      // Add first word (e.g., 'Mashonaland')
+      const firstWord = mainQuery.split(/\s+/)[0];
+      if (firstWord.length > 2 && !queries.includes(firstWord)) queries.push(firstWord);
+      // Try each query in order until we get a summary
+      let foundSummary = '';
+      let foundTitle = '';
+      let foundImage = '';
+      let foundUrl = '';
+      let foundType = '';
+      let foundHistoryHtml = '';
+      let usedFallback = false;
+      for (let i = 0; i < queries.length; ++i) {
+        const q = queries[i];
         try {
-          const wikiResponse = await fetch(wikiUrl, {
+          const wikiQuery = encodeURIComponent(q);
+          const wikiUrlApi = `https://en.wikipedia.org/api/rest_v1/page/summary/${wikiQuery}`;
+          const wikiResponse = await fetch(wikiUrlApi, {
             headers: {
               'Accept': 'application/json',
               'Content-Type': 'application/json',
             },
             mode: 'cors',
           });
-          console.log("Wikipedia API response status:", wikiResponse.status);
-          
           if (wikiResponse.ok) {
-            wikiData = await wikiResponse.json();
-            console.log("Wikipedia API data found for:", searchQuery);
-            break; // We found data, stop trying other queries
+            const wikiData = await wikiResponse.json();
+            if (wikiData.extract) {
+              foundSummary = wikiData.extract;
+              foundTitle = wikiData.title || q;
+              foundImage = wikiData.thumbnail?.source || '';
+              foundUrl = wikiData.content_urls?.desktop?.page || '';
+              foundType = wikiData.type || '';
+              // Try to fetch history for this title
+              foundHistoryHtml = await fetchWikipediaHistorySection(foundTitle) || '';
+              break;
+            }
           }
         } catch (err) {
-          console.error(`Error fetching Wikipedia data for "${searchQuery}":`, err);
+          // Ignore and try next fallback
         }
       }
-      
-      // If we got Wikipedia data, process it
-      if (wikiData) {
-        console.log("Wikipedia API data:", wikiData);
-        
-        // Try to get more detailed information from the full Wikipedia API
-        const wikiTitle = wikiData.title;
-        let geoInfoPromise = null;
-        
-        try {
-          geoInfoPromise = fetch(
-            `https://en.wikipedia.org/w/api.php?action=query&prop=extracts|coordinates|pageimages&exintro=1&titles=${encodeURIComponent(wikiTitle)}&format=json&origin=*`,
-            {
+      // If the summary is short (<=5 sentences) and we have a next fallback, try to prepend it
+      let finalSummary = foundSummary;
+      let finalHistoryHtml = foundHistoryHtml;
+      if (finalSummary && countSentences(finalSummary) <= 5) {
+        // Try next fallback (if not already used)
+        for (let i = 1; i < queries.length; ++i) {
+          const q = queries[i];
+          if (q === foundTitle) continue;
+          try {
+            const wikiQuery = encodeURIComponent(q);
+            const wikiUrlApi = `https://en.wikipedia.org/api/rest_v1/page/summary/${wikiQuery}`;
+            const wikiResponse = await fetch(wikiUrlApi, {
               headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
               },
               mode: 'cors',
-            }
-          ).then(res => {
-            console.log("Full Wikipedia API response status:", res.status);
-            return res.ok ? res.json() : null;
-          });
-        } catch (err) {
-          console.error("Error fetching additional Wikipedia data:", err);
-          geoInfoPromise = null;
-        }
-        
-        // Set the basic info we already have
-        let facts: Record<string, string> = {
-          "Location Type": wikiData.type || "Geographic Location",
-          "Coordinates": coordsText
-        };
-        
-        // Add population if it's mentioned in the extract
-        const populationMatch = wikiData.extract?.match(/population of (\d[\d,]+)/i);
-        if (populationMatch) {
-          facts["Estimated Population"] = populationMatch[1];
-        }
-        
-        // Add more facts based on the location type
-        if (wikiData.title) {
-          // Try to extract the continent
-          const continentMatches = wikiData.extract?.match(/(Africa|Europe|Asia|North America|South America|Australia|Antarctica)/gi);
-          if (continentMatches && continentMatches.length > 0) {
-            facts["Continent"] = continentMatches[0];
-          } else if (coordinates?.latitude !== undefined && coordinates?.longitude !== undefined) {
-            facts["Continent"] = getContinent(coordinates.latitude, coordinates.longitude);
-          }
-          
-          // Languages - common languages based on region or explicitly mentioned
-          const languageMatches = wikiData.extract?.match(/languages? (is|are|include) ([^\.]+)/i);
-          if (languageMatches && languageMatches.length > 2) {
-            facts["Languages"] = languageMatches[2];
-          }
-          
-          // Currency - if mentioned
-          const currencyMatches = wikiData.extract?.match(/currency is ([^\.]+)/i);
-          if (currencyMatches && currencyMatches.length > 1) {
-            facts["Currency"] = currencyMatches[1];
-          }
-          
-          // Time Zone based on longitude
-          if (coordinates?.longitude !== undefined) {
-            facts["Approximate Time Zone"] = getApproxTimeZone(coordinates.longitude);
-          }
-          
-          // Area size if mentioned
-          const areaMatches = wikiData.extract?.match(/area of ([\d,]+) (km²|square kilometers|sq km)/i);
-          if (areaMatches && areaMatches.length > 1) {
-            facts["Area"] = `${areaMatches[1]} ${areaMatches[2]}`;
-          }
-        }
-        
-        // Get country code for IPTV and other data
-        const countryCode = getCountryCodeFromLocation(locationName, coordinates);
-        
-        // Calculate actual functions in parallel
-        const [
-          notablePeoplePromise, 
-          videoSearchPromise, 
-          tvChannelsPromise, 
-          radioStationsPromise,
-          historyPromise // Added historyPromise
-        ] = await Promise.allSettled([
-          fetchNotablePeopleData(locationParts || { specificPlace: locationName }, coordinates),
-          searchYouTubeVideos(locationName, locationParts),
-          fetchIPTVChannels(countryCode),
-          fetchRadioBrowserStations(countryCode, coordinates),
-          fetchWikipediaHistorySection(wikiData.title) // Fetch history
-        ]);
-        
-        // Set location info
-        setLocationInfo({
-          title: wikiData.title,
-          summary: wikiData.extract,
-          image: wikiData.thumbnail?.source,
-          url: wikiData.content_urls?.desktop?.page,
-          facts: facts,
-          history: historyPromise.status === 'fulfilled' && historyPromise.value ? historyPromise.value : undefined, // Populate history, convert null to undefined
-          people: {
-            demographics: generateDemographics(wikiData.title, wikiData.extract),
-            notablePeople: notablePeoplePromise.status === 'fulfilled' ? notablePeoplePromise.value : [],
-            indigenousGroups: generateIndigenousGroups(coordinates)
-          },
-          entertainment: {
-            radioStations: radioStationsPromise.status === 'fulfilled' ? radioStationsPromise.value : await fetchRadioBrowserStations(countryCode, coordinates), // Fallback just in case
-            tvStations: tvChannelsPromise.status === 'fulfilled' ? tvChannelsPromise.value : await fetchIPTVChannels(countryCode) // Fallback just in case
-          },
-          videos: videoSearchPromise.status === 'fulfilled' ? videoSearchPromise.value : [] // Default to empty array
-        });
-        
-        // Get additional data about nearby landmarks, climate, etc.
-        if (hasValidCoords) {
-          fetchAdditionalLocationData(wikiData.title || locationName, {
-            latitude: coordinates.latitude!,
-            longitude: coordinates.longitude!
-          });
-        }
-        
-        // Wait for geo info and enhance our data if available
-        if (geoInfoPromise) {
-          try {
-            const geoInfo = await geoInfoPromise;
-            if (geoInfo?.query?.pages) {
-              const pageId = Object.keys(geoInfo.query.pages)[0];
-              const page = geoInfo.query.pages[pageId];
-              
-              // Update with more detailed extract if available
-              if (page.extract) {
-                setLocationInfo(prev => prev ? {
-                  ...prev,
-                  summary: page.extract.replace(/<\/?[^>]+(>|$)/g, ""), // Strip HTML
-                  image: page.thumbnail?.source || prev.image
-                } : prev);
-              }
-            }
-          } catch (e) {
-            console.error("Error fetching additional Wikipedia data:", e);
-          }
-        }
-      } else {
-        // Wikipedia failed, try GeoNames if we have coordinates
-        if (hasValidCoords) {
-          // Try GeoNames search
-          try {
-            const geoNamesUrl = `https://secure.geonames.org/findNearbyPlaceNameJSON?lat=${coordinates.latitude!}&lng=${coordinates.longitude!}&username=${process.env.NEXT_PUBLIC_GEONAMES_USERNAME || 'demo'}`;
-            console.log("GeoNames API URL:", geoNamesUrl);
-            const geoResponse = await fetch(geoNamesUrl);
-            console.log("GeoNames API response status:", geoResponse.status);
-            
-            if (geoResponse.ok) {
-              const geoData = await geoResponse.json();
-              console.log("GeoNames API data:", geoData);
-              if (geoData.geonames && geoData.geonames.length > 0) {
-                const place = geoData.geonames[0];
-                
-                // Get country code for IPTV and other data
-                const countryCode = place.countryCode || getCountryCodeFromLocation(locationName, coordinates);
-                
-                // Calculate actual functions in parallel
-                const [
-                  notablePeoplePromise, 
-                  videoSearchPromise, 
-                  tvChannelsPromise, 
-                  radioStationsPromise,
-                  historyPromise // Added historyPromise
-                ] = await Promise.allSettled([
-                  fetchNotablePeopleData({ city: place.name, country: place.countryName }, coordinates),
-                  searchYouTubeVideos(place.name, { specificPlace: place.name, city: place.name, country: place.countryName }),
-                  fetchIPTVChannels(countryCode),
-                  fetchRadioBrowserStations(countryCode, coordinates),
-                  fetchWikipediaHistorySection(place.name || locationName) // Fetch history using place.name
-                ]);
-                
-                // Set location info based on GeoNames data
-                setLocationInfo({
-                  title: place.name || locationName,
-                  summary: `${place.name} is located in ${place.countryName}${place.adminName1 ? `, ${place.adminName1}` : ''}. This area is known for its ${hasValidCoords && Math.abs(coordinates.latitude!) > 60 ? 'cold climate' : hasValidCoords && Math.abs(coordinates.latitude!) < 30 ? 'warm climate' : 'temperate climate'}.`,
-                  facts: {
-                    "Location Type": "Geographic Area",
-                    "Coordinates": coordsText,
-                    "Country": place.countryName || "Unknown",
-                    "Region": place.adminName1 || "Unknown",
-                    "Population": place.population ? place.population.toLocaleString() : "Unknown"
-                  },
-                  history: historyPromise.status === 'fulfilled' && historyPromise.value ? historyPromise.value : undefined, // Populate history
-                  people: {
-                    demographics: `${place.name} is part of ${place.countryName}${place.adminName1 ? `, in the ${place.adminName1} region` : ''}. The area has a diverse population with rich cultural heritage and traditions.`,
-                    notablePeople: notablePeoplePromise.status === 'fulfilled' ? notablePeoplePromise.value : [],
-                    indigenousGroups: generateIndigenousGroups(coordinates)
-                  },
-                  entertainment: {
-                    radioStations: radioStationsPromise.status === 'fulfilled' ? radioStationsPromise.value : await fetchRadioBrowserStations(countryCode, coordinates),
-                    tvStations: tvChannelsPromise.status === 'fulfilled' ? tvChannelsPromise.value : await fetchIPTVChannels(countryCode)
-                  },
-                  videos: videoSearchPromise.status === 'fulfilled' ? videoSearchPromise.value : []
-                });
-                
-                // Still get additional data
-                if (hasValidCoords) {
-                  fetchAdditionalLocationData(place.name || locationName, {
-                    latitude: coordinates.latitude!,
-                    longitude: coordinates.longitude!
-                  });
+            });
+            if (wikiResponse.ok) {
+              const wikiData = await wikiResponse.json();
+              if (wikiData.extract && wikiData.extract !== finalSummary) {
+                finalSummary = wikiData.extract + (finalSummary ? '\n\n' + finalSummary : '');
+                // Also try to fetch history for this fallback
+                const extraHistory = await fetchWikipediaHistorySection(wikiData.title || q) || '';
+                if (extraHistory) {
+                  finalHistoryHtml = extraHistory + (finalHistoryHtml ? '<hr/>' + finalHistoryHtml : '');
                 }
-                
-                return;
+                break;
               }
             }
-          } catch (e) {
-            console.error("Error fetching GeoNames data:", e);
-          }
-        }
-        
-        // If all else fails, use our fallback
-        console.log("Using fallback location data");
-        
-        // Get country code for IPTV and other data
-        const countryCode = getCountryCodeFromLocation(locationName, coordinates);
-        
-        // Calculate actual functions in parallel  
-        const [
-          notablePeoplePromise, 
-          videoSearchPromise, 
-          tvChannelsPromise, 
-          radioStationsPromise,
-          historyPromise // Added historyPromise
-        ] = await Promise.allSettled([
-          fetchNotablePeopleData(locationParts || { specificPlace: locationName }, coordinates),
-          searchYouTubeVideos(locationName, locationParts),
-          fetchIPTVChannels(countryCode),
-          fetchRadioBrowserStations(countryCode, coordinates),
-          fetchWikipediaHistorySection(locationName) // Fetch history using locationName
-        ]);
-        
-        const fallbackLocationInfo: LocationInfo = {
-          title: locationName,
-          summary: `This location is situated at ${coordsText}. While detailed information is limited, you can explore this area's unique characteristics through its geographical position and natural features.`,
-          facts: {
-            "Location Type": "Geographic Area",
-            "Coordinates": coordsText,
-          } as Record<string, string>,
-          history: historyPromise.status === 'fulfilled' && historyPromise.value ? historyPromise.value : undefined, // Populate history
-          people: {
-            demographics: `This region has a population with diverse cultural backgrounds and traditions.`,
-            notablePeople: notablePeoplePromise.status === 'fulfilled' ? notablePeoplePromise.value : [],
-            indigenousGroups: generateIndigenousGroups(coordinates)
-          },
-          entertainment: {
-            radioStations: radioStationsPromise.status === 'fulfilled' ? radioStationsPromise.value : await fetchRadioBrowserStations(countryCode, coordinates),
-            tvStations: tvChannelsPromise.status === 'fulfilled' ? tvChannelsPromise.value : await fetchIPTVChannels(countryCode)
-          },
-          videos: videoSearchPromise.status === 'fulfilled' ? videoSearchPromise.value : []
-        };
-        
-        // Only add continent and timezone if we have valid coordinates
-        if (hasValidCoords) {
-          fallbackLocationInfo.facts!["Continent"] = getContinent(coordinates.latitude!, coordinates.longitude!);
-          fallbackLocationInfo.facts!["Approximate Time Zone"] = getApproxTimeZone(coordinates.longitude!);
-        }
-        
-        setLocationInfo(fallbackLocationInfo);
-        
-        // Also add some simulated additional data if we have coordinates
-        if (hasValidCoords) {
-          fetchAdditionalLocationData(locationName, {
-            latitude: coordinates.latitude!,
-            longitude: coordinates.longitude!
-          });
+          } catch (err) {}
         }
       }
+      // Set the basic info we already have
+      let facts: Record<string, string> = {
+        "Location Type": foundType || "Geographic Location",
+        "Coordinates": coordsText
+      };
+      // Add population if it's mentioned in the extract
+      const populationMatch = finalSummary?.match(/population of (\d[\d,]+)/i);
+      if (populationMatch) {
+        facts["Estimated Population"] = populationMatch[1];
+      }
+      // Add more facts based on the location type
+      if (foundTitle) {
+        // Try to extract the continent
+        const continentMatches = finalSummary?.match(/(Africa|Europe|Asia|North America|South America|Australia|Antarctica)/gi);
+        if (continentMatches && continentMatches.length > 0) {
+          facts["Continent"] = continentMatches[0];
+        } else if (coordinates?.latitude !== undefined && coordinates?.longitude !== undefined) {
+          facts["Continent"] = getContinent(coordinates.latitude, coordinates.longitude);
+        }
+        // Languages - common languages based on region or explicitly mentioned
+        const languageMatches = finalSummary?.match(/languages? (is|are|include) ([^\.]+)/i);
+        if (languageMatches && languageMatches.length > 2) {
+          facts["Languages"] = languageMatches[2];
+        }
+        // Currency - if mentioned
+        const currencyMatches = finalSummary?.match(/currency is ([^\.]+)/i);
+        if (currencyMatches && currencyMatches.length > 1) {
+          facts["Currency"] = currencyMatches[1];
+        }
+        // Time Zone based on longitude
+        if (coordinates?.longitude !== undefined) {
+          facts["Approximate Time Zone"] = getApproxTimeZone(coordinates.longitude);
+        }
+        // Area size if mentioned
+        const areaMatches = finalSummary?.match(/area of ([\d,]+) (km²|square kilometers|sq km)/i);
+        if (areaMatches && areaMatches.length > 1) {
+          facts["Area"] = `${areaMatches[1]} ${areaMatches[2]}`;
+        }
+      }
+      // Get country code for IPTV and other data
+      const countryCode = getCountryCodeFromLocation(locationName, coordinates);
+      // Calculate actual functions in parallel
+      const [
+        notablePeoplePromise, 
+        videoSearchPromise, 
+        tvChannelsPromise, 
+        radioStationsPromise,
+        historyPromise // Added historyPromise
+      ] = await Promise.allSettled([
+        fetchNotablePeopleData(locationParts || { specificPlace: locationName }, coordinates),
+        searchYouTubeVideos(locationName, locationParts),
+        fetchIPTVChannels(countryCode),
+        fetchRadioBrowserStations(countryCode, coordinates),
+        Promise.resolve(finalHistoryHtml) // Use our composed history
+      ]);
+      setLocationInfo({
+        title: foundTitle || locationName,
+        summary: finalSummary || `This location is situated at ${coordsText}. While detailed information is limited, you can explore this area's unique characteristics through its geographical position and natural features.`,
+        image: foundImage,
+        url: foundUrl,
+        facts: facts,
+        history: historyPromise.status === 'fulfilled' && historyPromise.value ? historyPromise.value : undefined,
+        people: {
+          demographics: generateDemographics(foundTitle || locationName, finalSummary),
+          notablePeople: notablePeoplePromise.status === 'fulfilled' ? notablePeoplePromise.value : [],
+          indigenousGroups: generateIndigenousGroups(coordinates)
+        },
+        entertainment: {
+          radioStations: radioStationsPromise.status === 'fulfilled' ? radioStationsPromise.value : await fetchRadioBrowserStations(countryCode, coordinates),
+          tvStations: tvChannelsPromise.status === 'fulfilled' ? tvChannelsPromise.value : await fetchIPTVChannels(countryCode)
+        },
+        videos: videoSearchPromise.status === 'fulfilled' ? videoSearchPromise.value : []
+      });
     } catch (error) {
-      console.error("Error fetching location info:", error);
       setError(error instanceof Error ? error.message : "Failed to fetch location information");
-      // Fall back to placeholder data if APIs fail
       setLocationInfo({
         title: locationName,
         summary: `This location is situated at ${coordsText}. While detailed information is limited, you can explore this area's unique characteristics through its geographical position and natural features.`,
