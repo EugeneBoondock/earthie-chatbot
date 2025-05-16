@@ -1267,19 +1267,25 @@ export default function KnowYourLandPage() {
         .sort((a, b) => a.dist - b.dist)
         .slice(0, MAX_LANDMARKS);
 
+      // After parsing and combining landmarks, set them in locationInfo immediately
       setLocationInfo(prev => {
         if (!prev) return prev;
-        let climate = undefined;
-        if (weatherData) {
-          const weather = weatherData;
-          climate = `The current weather is ${weather.weather?.[0]?.description || 'not available'}. Temperature is around ${Math.round((weather.main?.temp || 0) - 273.15)}°C.`;
-        }
         return {
           ...prev,
-          climate,
           landmarks: combinedLandmarks
         };
       });
+      // Then continue with weather and other updates as needed
+      if (weatherData) {
+        const weather = weatherData;
+        setLocationInfo(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            climate: `The current weather is ${weather.weather?.[0]?.description || 'not available'}. Temperature is around ${Math.round((weather.main?.temp || 0) - 273.15)}°C.`
+          };
+        });
+      }
     } catch (error) {
       console.error("Error fetching additional location data:", error);
       setLocationInfo(prev => prev ? { ...prev, climate: undefined, landmarks: [] } : prev);
@@ -1616,8 +1622,9 @@ export default function KnowYourLandPage() {
               {/* Map View Card */}
               <div className="pt-2">
                 <h4 className="text-sm font-medium text-gray-300 mb-2">Map View</h4>
-                {propertyData.coordinates?.latitude && propertyData.coordinates?.longitude ? (
+                {propertyData.coordinates?.latitude !== undefined && propertyData.coordinates?.longitude !== undefined && (
                   <div className="relative h-[200px] w-full overflow-hidden rounded-md border border-gray-700/50">
+                    {/* Explicitly use longitude first, then latitude */}
                     <Image 
                       src={`https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/static/${propertyData.coordinates.longitude},${propertyData.coordinates.latitude},10,0/600x400@2x?access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN || 'pk.eyJ1IjoiZWFydGgyZ2FtZSIsImEiOiJja2t5OWQxMmgwdWNiMnVxbXN3YnM0NDV5In0.sfQHXPkZpNNrT2ancTXj_A'}`}
                       alt={`Map of ${propertyData.location}`}
@@ -1633,10 +1640,6 @@ export default function KnowYourLandPage() {
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                       <div className="w-4 h-4 rounded-full bg-earthie-mint shadow-lg shadow-earthie-mint/50 animate-pulse"></div>
                     </div>
-                  </div>
-                ) : (
-                  <div className="h-[200px] w-full flex items-center justify-center bg-gray-800/50 rounded-md border border-gray-700/50">
-                    <p className="text-sm text-gray-400">Map data not available</p>
                   </div>
                 )}
               </div>
