@@ -33,6 +33,9 @@ interface PropertyData {
     region?: string;
     country?: string;
   };
+  owner?: {
+    country?: string;
+  };
 }
 
 // Types for location info
@@ -247,7 +250,8 @@ export default function KnowYourLandPage() {
           latitude,
           longitude
         } : undefined,
-        locationParts
+        locationParts,
+        owner: data.owner ? { country: data.owner.country } : undefined
       };
       
       console.log("Processed property data:", property);
@@ -450,7 +454,7 @@ export default function KnowYourLandPage() {
         fetchNotablePeopleData(locationParts || { specificPlace: locationName }, coordinates),
         searchYouTubeVideos(locationName, locationParts),
         fetchIPTVChannels(countryCode),
-        fetchRadioBrowserStations(countryCode, coordinates),
+        fetchRadioBrowserStations(propertyData?.country, propertyData?.locationParts?.region),
         Promise.resolve(finalHistoryHtml) // Use our composed history
       ]);
       setLocationInfo({
@@ -466,7 +470,7 @@ export default function KnowYourLandPage() {
           indigenousGroups: generateIndigenousGroups(coordinates)
         },
         entertainment: {
-          radioStations: radioStationsPromise.status === 'fulfilled' ? radioStationsPromise.value : await fetchRadioBrowserStations(countryCode, coordinates),
+          radioStations: radioStationsPromise.status === 'fulfilled' ? radioStationsPromise.value : await fetchRadioBrowserStations(propertyData?.country, propertyData?.locationParts?.region),
           tvStations: tvChannelsPromise.status === 'fulfilled' ? tvChannelsPromise.value : await fetchIPTVChannels(countryCode)
         },
         videos: videoSearchPromise.status === 'fulfilled' ? videoSearchPromise.value : []
@@ -985,62 +989,54 @@ export default function KnowYourLandPage() {
     }
   };
 
-  // Function to fetch radio stations using Radio Garden API
-  const fetchRadioBrowserStations = async (countryCode?: string, coordinates?: { latitude?: number, longitude?: number }): Promise<RadioStation[]> => {
+  // Function to fetch radio stations using Radio Browser API
+  // Uses owner.country (ISO 3166-1 alpha-2) as the country code
+  const fetchRadioBrowserStations = async (countryCode?: string, stateOrRegion?: string): Promise<RadioStation[]> => {
     try {
       let url = '';
-      // Fetch more stations initially to have a larger pool for deduplication
-      const requestLimit = 30; // Increased from implicit small limit + slice(0,8)
+      const requestLimit = 30;
+      let stationsFromApi: any[] = [];
+      let tried = [];
+      // Only try by country code (and optionally state)
       if (countryCode) {
-        // Note: Radio Browser API's bycountrycodeexact might not support a limit parameter directly in the path
-        // It usually returns all stations for the country code. We'll fetch all and then process.
         url = `https://de1.api.radio-browser.info/json/stations/bycountrycodeexact/${countryCode}?limit=${requestLimit}&order=clickcount&reverse=true&hidebroken=true`;
-      } else if (coordinates) {
-        // Fallback to top clicked stations if no country code, as geo search isn't direct
-        url = `https://de1.api.radio-browser.info/json/stations/topclick/${requestLimit}?hidebroken=true`;
-      } else {
-        // Default fallback
-        url = `https://de1.api.radio-browser.info/json/stations/topclick/${requestLimit / 2}?hidebroken=true`; // Fetch slightly fewer if no context
+        if (stateOrRegion) {
+          url += `&state=${encodeURIComponent(stateOrRegion)}`;
+        }
+        const response = await fetch(url);
+        tried.push(url);
+        if (response.ok) {
+          stationsFromApi = await response.json();
+        }
       }
-      const response = await fetch(url);
-      if (!response.ok) {
-        console.error(`[RadioBrowser] API error: ${response.status} for URL: ${url}`);
-        return [];
-      }
-      const stationsFromApi = await response.json();
-
       if (!Array.isArray(stationsFromApi)) {
-        console.error('[RadioBrowser] API response is not an array:', stationsFromApi);
+        console.error('[RadioBrowser] API response is not an array:', stationsFromApi, 'Tried:', tried);
         return [];
       }
-
-      // Filter for working streams and basic info, then map to our RadioStation type
       const allFetchedStations: RadioStation[] = stationsFromApi
-        .filter((s: any) => s.url_resolved && s.name && s.name.trim() !== "" && s.codec === "MP3") // Ensure stream URL and name exist, prefer MP3
+        .filter((s: any) => s.url_resolved && s.name && s.name.trim() !== "" && s.codec === "MP3")
         .map((s: any) => ({
           id: s.stationuuid,
-          name: s.name.trim(), // Trim whitespace from name for better deduplication
+          name: s.name.trim(),
           url: s.homepage || s.url_resolved,
-          streamUrl: s.url_resolved, // Use url_resolved as it's more likely to be the direct stream
+          streamUrl: s.url_resolved,
           description: s.tags || '',
-          genre: s.tags?.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag)[0] || '', // Clean up genre
+          genre: s.tags?.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag)[0] || '',
           image: s.favicon || undefined,
           country: s.countrycode || countryCode || '',
         }));
-
-      // Deduplicate stations by name
       const uniqueStationsByName: RadioStation[] = [];
       const seenNames = new Set<string>();
       for (const station of allFetchedStations) {
-        if (!seenNames.has(station.name.toLowerCase())) { // Case-insensitive check for name
+        if (!seenNames.has(station.name.toLowerCase())) {
           seenNames.add(station.name.toLowerCase());
           uniqueStationsByName.push(station);
         }
       }
-      
-      // Return the top 8 unique stations
+      if (uniqueStationsByName.length === 0) {
+        console.warn('[RadioBrowser] No stations found for', countryCode, stateOrRegion, 'Tried:', tried);
+      }
       return uniqueStationsByName.slice(0, 8);
-
     } catch (e) {
       console.error('Error fetching from Radio-Browser API:', e);
       return [];
