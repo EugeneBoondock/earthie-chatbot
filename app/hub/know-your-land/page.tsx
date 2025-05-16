@@ -49,12 +49,15 @@ interface LocationInfo {
   facts?: Record<string, string>;
   landmarks?: Array<{
     name: string;
+    type?: string;
     distance?: string;
     description?: string;
     coordinates?: {
       latitude: number;
       longitude: number;
     };
+    dist?: number;
+    rawType?: string;
   }>;
   climate?: string;
   history?: string;
@@ -167,6 +170,13 @@ export default function KnowYourLandPage() {
   const [error, setError] = useState<string | null>(null);
   const [recentProperties, setRecentProperties] = useState<PropertyData[]>([]);
   const [activeTab, setActiveTab] = useState("overview");
+
+  // Debug logging for landmarks tab
+  useEffect(() => {
+    if (activeTab === "landmarks") {
+      console.log('[KYL] Landmarks tab active, locationInfo:', locationInfo);
+    }
+  }, [activeTab, locationInfo]);
   const [showMoreHistory, setShowMoreHistory] = useState(false);
   const [showMoreOverview, setShowMoreOverview] = useState(false);
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -294,10 +304,10 @@ export default function KnowYourLandPage() {
         // Parse coordinates from format like "(25.540295, -33.936097)"
         const coordsMatch = data.center.match(/\(([^,]+),\s*([^)]+)\)/);
         if (coordsMatch && coordsMatch.length === 3) {
-          // Invert: (longitude, latitude)
-          longitude = parseFloat(coordsMatch[1]);
-          latitude = parseFloat(coordsMatch[2]);
-          console.log("Parsed coordinates (inverted):", { latitude, longitude });
+          // Parse as (latitude, longitude)
+          latitude = parseFloat(coordsMatch[1]);
+          longitude = parseFloat(coordsMatch[2]);
+          console.log("Parsed coordinates:", { latitude, longitude });
         }
       }
       
@@ -1158,7 +1168,7 @@ export default function KnowYourLandPage() {
   // Additional location data fetching
   const fetchAdditionalLocationData = async (locationName: string, coordinates: { latitude: number, longitude: number }) => {
     // Define constants at the top so they're in scope for the whole function
-    const MAX_LANDMARK_DISTANCE_KM = 10;
+    const MAX_LANDMARK_DISTANCE_KM = 1000000; // Increased from 10km to 10,000km to include all landmarks
     const MAX_LANDMARKS = 12;
     console.log("fetchAdditionalLocationData called with:", { locationName, coordinates });
     try {
@@ -1216,26 +1226,107 @@ export default function KnowYourLandPage() {
       const [weatherData, wikiGeoData] = await Promise.all([weatherPromise, wikiGeoPromise]);
 
       // --- Parse OSM landmarks ---
+      console.log('[KYL] Parsing Overpass data:', overpassData);
       let osmLandmarks: any[] = [];
       if (overpassData && Array.isArray(overpassData.elements) && overpassData.elements.length > 0) {
         osmLandmarks = overpassData.elements
           .map((el: any) => {
-            // For nodes, use lat/lon; for ways/relations, use center
-            const lat = el.lat || el.center?.lat;
-            const lon = el.lon || el.center?.lon;
-            if (lat === undefined || lon === undefined) return null;
-            const dist = getDistanceFromLatLonInKm(coordinates.latitude, coordinates.longitude, lat, lon);
-            return {
-              name: el.tags?.name || el.tags?.['name:en'] || el.tags?.tourism || el.tags?.historic || el.tags?.natural || el.tags?.amenity || el.tags?.building || 'Unnamed Landmark',
-              distance: `${Math.round(dist * 10) / 10} km`,
-              description: el.tags?.description || '',
-              coordinates: { latitude: lat, longitude: lon },
-              dist
-            };
+            try {
+              // For nodes, use lat/lon; for ways/relations, use center
+              const lat = el.lat || el.center?.lat;
+              const lon = el.lon || el.center?.lon;
+              if (lat === undefined || lon === undefined) {
+                console.log('[KYL] Skipping element with missing coordinates:', el);
+                return null;
+              }
+              
+              // Calculate distance
+              let dist = 0;
+              try {
+                dist = getDistanceFromLatLonInKm(coordinates.latitude, coordinates.longitude, lat, lon);
+              } catch (e) {
+                console.error('[KYL] Error calculating distance:', e);
+                // Don't filter out if distance calculation fails
+                dist = 0;
+              }
+              
+              const name = el.tags?.name || el.tags?.['name:en'] || el.tags?.tourism || 
+                         el.tags?.historic || el.tags?.natural || el.tags?.amenity || 
+                         el.tags?.building || 'Unnamed Landmark';
+                          
+              const description = [];
+              if (el.tags?.description) description.push(el.tags.description);
+              if (el.tags?.tourism) description.push(`Tourism: ${el.tags.tourism}`);
+              if (el.tags?.historic) description.push(`Historic: ${el.tags.historic}`);
+              if (el.tags?.natural) description.push(`Natural: ${el.tags.natural}`);
+              if (el.tags?.amenity) description.push(`Amenity: ${el.tags.amenity}`);
+              if (el.tags?.building) description.push(`Building: ${el.tags.building}`);
+              
+              // Map OSM tags to more user-friendly display names
+              const getLandmarkType = (tags: any): { displayType: string; rawType: string } => {
+                if (!tags) {
+                  return { displayType: 'Point of Interest', rawType: 'landmark' };
+                }
+                
+                // Check each tag category in order of priority
+                if (tags.tourism) {
+                  const typeMap: Record<string, string> = {
+                    'viewpoint': 'Viewpoint',
+                    'attraction': 'Attraction',
+                    'hotel': 'Hotel',
+                    'museum': 'Museum',
+                    'information': 'Information',
+                    'gallery': 'Art Gallery'
+                    // Add more mappings as needed
+                  };
+                  const rawType = tags.tourism;
+                  const displayType = typeMap[rawType] || 
+                    rawType.charAt(0).toUpperCase() + rawType.slice(1);
+                  return { displayType, rawType };
+                }
+                
+                if (tags.historic) return { displayType: 'Historic Site', rawType: 'historic' };
+                if (tags.natural) return { displayType: 'Natural Feature', rawType: 'natural' };
+                if (tags.amenity) return { displayType: 'Amenity', rawType: 'amenity' };
+                if (tags.building) return { displayType: 'Building', rawType: 'building' };
+                
+                return { displayType: 'Point of Interest', rawType: 'landmark' };
+              };
+              
+              // Get the type information
+              const { displayType, rawType } = getLandmarkType(el.tags || {});
+                               
+              return {
+                name: name.trim(),
+                type: displayType,
+                description: description.join(' • '),
+                coordinates: { latitude: lat, longitude: lon },
+                dist, // Keep distance for sorting
+                rawType // Keep original type for reference
+              };
+            } catch (e) {
+              console.error('[KYL] Error processing landmark:', e, el);
+              return null;
+            }
           })
-          .filter((lm: any) => lm && lm.name && lm.coordinates && lm.dist <= MAX_LANDMARK_DISTANCE_KM)
-          .sort((a: any, b: any) => a.dist - b.dist)
+          .filter((lm: any) => {
+            const hasRequiredFields = lm && lm.name && lm.coordinates;
+            if (!hasRequiredFields) {
+              console.log('[KYL] Filtering out invalid landmark (missing required fields):', lm);
+              return false;
+            }
+            
+            // Only log if we're filtering due to distance
+            if (lm.dist !== undefined && lm.dist > MAX_LANDMARK_DISTANCE_KM) {
+              console.log(`[KYL] Landmark '${lm.name}' is ${lm.dist.toFixed(1)}km away (max: ${MAX_LANDMARK_DISTANCE_KM}km)`);
+              return false;
+            }
+            
+            return true;
+          })
+          .sort((a: any, b: any) => (a.dist || 0) - (b.dist || 0))
           .slice(0, MAX_LANDMARKS);
+        console.log('[KYL] Parsed landmarks:', osmLandmarks);
       }
       // --- Parse Wikipedia GeoSearch landmarks ---
       let wikiLandmarks: any[] = [];
@@ -1268,12 +1359,22 @@ export default function KnowYourLandPage() {
         .slice(0, MAX_LANDMARKS);
 
       // After parsing and combining landmarks, set them in locationInfo immediately
+      console.log('[KYL] Setting landmarks:', combinedLandmarks);
       setLocationInfo(prev => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          landmarks: combinedLandmarks
-        };
+        const updatedInfo = prev ? { ...prev } : {};
+        if (combinedLandmarks.length > 0) {
+          console.log('[KYL] Setting landmarks in locationInfo');
+          return {
+            ...updatedInfo,
+            landmarks: combinedLandmarks
+          };
+        } else {
+          console.log('[KYL] No landmarks found, setting empty array');
+          return {
+            ...updatedInfo,
+            landmarks: []
+          };
+        }
       });
       // Then continue with weather and other updates as needed
       if (weatherData) {
@@ -1622,9 +1723,8 @@ export default function KnowYourLandPage() {
               {/* Map View Card */}
               <div className="pt-2">
                 <h4 className="text-sm font-medium text-gray-300 mb-2">Map View</h4>
-                {propertyData.coordinates?.latitude !== undefined && propertyData.coordinates?.longitude !== undefined && (
+                {propertyData.coordinates?.longitude !== undefined && propertyData.coordinates?.latitude !== undefined && (
                   <div className="relative h-[200px] w-full overflow-hidden rounded-md border border-gray-700/50">
-                    {/* Explicitly use longitude first, then latitude */}
                     <Image 
                       src={`https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/static/${propertyData.coordinates.longitude},${propertyData.coordinates.latitude},10,0/600x400@2x?access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN || 'pk.eyJ1IjoiZWFydGgyZ2FtZSIsImEiOiJja2t5OWQxMmgwdWNiMnVxbXN3YnM0NDV5In0.sfQHXPkZpNNrT2ancTXj_A'}`}
                       alt={`Map of ${propertyData.location}`}
@@ -1821,15 +1921,20 @@ export default function KnowYourLandPage() {
                       <Landmark className="h-5 w-5 text-earthie-mint" /> Nearby Points of Interest
                     </h3>
                     
-                    {locationInfo.landmarks && locationInfo.landmarks.length > 0 ? (
+                    {isLoadingLocation ? (
+                      <div className="py-10 text-center">
+                        <Loader2 className="h-10 w-10 mx-auto text-earthie-mint animate-spin mb-4" />
+                        <p className="text-gray-400">Loading nearby landmarks...</p>
+                      </div>
+                    ) : locationInfo?.landmarks && locationInfo.landmarks.length > 0 ? (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {locationInfo.landmarks.map((landmark, index) => (
-                          <Card key={index} className="bg-gray-800/50 border-gray-700/50">
+                          <Card key={`${landmark.name}-${index}`} className="bg-gray-800/50 border-gray-700/50">
                             <CardHeader className="pb-2">
                               <CardTitle className="text-base">{landmark.name}</CardTitle>
-                              {landmark.distance && (
-                                <CardDescription className="flex items-center gap-1">
-                                  <MapPin className="h-3 w-3" /> {landmark.distance} away
+                              {landmark.type && (
+                                <CardDescription className="flex items-center gap-1 text-xs text-gray-400">
+                                  <MapPin className="h-3 w-3" /> {landmark.type}
                                 </CardDescription>
                               )}
                             </CardHeader>

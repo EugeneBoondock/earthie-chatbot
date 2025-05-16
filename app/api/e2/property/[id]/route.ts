@@ -17,7 +17,7 @@ interface E2PropertyDetails {
     landfieldTier?: number | null;
     currentValue?: number | string | null;
     purchaseValue?: number | string | null;
-    epl?: string | null;
+  epl?: string | null;
     center?: string | null;
     // Add other fields as needed
 }
@@ -59,9 +59,9 @@ export async function GET(
     const data: E2PropertyDetails = await response.json();
 
     if (!data || !data.id) {
-      return NextResponse.json({ error: 'Received malformed data from Earth2 API.' }, { status: 500 });
+        return NextResponse.json({ error: 'Received malformed data from Earth2 API.' }, { status: 500 });
     }
-
+    
     // Return the flat property data
     return NextResponse.json(data);
 
