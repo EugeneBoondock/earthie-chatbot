@@ -254,9 +254,9 @@ export default function KnowYourLandPage() {
       setPropertyData(property);
       saveToRecent(property);
       
-      // Now fetch location info with the coordinates
+      // Now fetch location info with the coordinates, using the freshly constructed property object
       if (property.coordinates?.latitude !== undefined && property.coordinates?.longitude !== undefined) {
-        console.log("Calling fetchLocationInfo with coordinates:", property.coordinates);
+        console.log("Calling fetchLocationInfo with coordinates (immediate):", property.coordinates);
         fetchLocationInfo(property.location, {
           latitude: property.coordinates.latitude,
           longitude: property.coordinates.longitude
