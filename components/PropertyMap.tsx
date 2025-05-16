@@ -37,7 +37,11 @@ export function PropertyMap({ coordinates, locationName }: PropertyMapProps) {
   }
 
   const { longitude, latitude } = coordinates;
-  const mapUrl = `https://api.mapbox.com/styles/v1/mapbox/streets-v11/static/pin-s+ff0000(${longitude},${latitude})/${longitude},${latitude},14/600x400@2x?access_token=${mapboxToken}&attribution=false&logo=false`;
+  console.log('Map coordinates:', { longitude, latitude });
+  // Note: For satellite view with a pin, we need to use the correct format
+  const pinIcon = `pin-s+ff0000(${longitude},${latitude})`;
+  const mapUrl = `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/${pinIcon}/${latitude},${longitude},14,0/600x400@2x?access_token=${mapboxToken}&attribution=false&logo=false`;
+  console.log('Map URL:', mapUrl);
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     console.error('Failed to load map image:', e);
