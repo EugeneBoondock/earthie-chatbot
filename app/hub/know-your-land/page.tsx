@@ -90,6 +90,7 @@ interface LocationInfo {
     title: string;
     thumbnail: string;
     channelTitle?: string;
+    source?: string;
   }>;
 }
 
@@ -103,6 +104,7 @@ interface RadioStation {
   genre?: string;
   image?: string;
   country?: string;
+  codec?: string; // Add codec
 }
 
 // Move getContinent and getApproxTimeZone to the top level, outside any function
@@ -989,57 +991,66 @@ export default function KnowYourLandPage() {
   const searchYouTubeVideos = async (
     locationName: string, 
     locationParts?: PropertyData['locationParts']
-  ): Promise<Array<{ id: string; title: string; thumbnail: string; channelTitle?: string }>> => {
-    const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY || '';
+  ): Promise<Array<{ id: string; title: string; thumbnail: string; channelTitle?: string, source?: string }>> => {
+    // Use the new API route that returns up to 2 videos
     const query = [
       locationParts?.specificPlace || locationName,
       locationParts?.city,
       locationParts?.country,
       'travel guide'
     ].filter(Boolean).join(' ');
-    console.log(`[YouTube] Fetching videos for query: "${query}"`);
-    if (!apiKey) {
-      console.error('[YouTube] No API key set!');
-      return [];
-    }
     try {
-      const apiUrl = new URL('https://www.googleapis.com/youtube/v3/search');
-      apiUrl.searchParams.append('part', 'snippet');
-      apiUrl.searchParams.append('q', query);
-      apiUrl.searchParams.append('type', 'video');
-      apiUrl.searchParams.append('maxResults', '10');
-      apiUrl.searchParams.append('videoEmbeddable', 'true');
-      apiUrl.searchParams.append('relevanceLanguage', 'en');
-      apiUrl.searchParams.append('videoDuration', 'medium');
-      apiUrl.searchParams.append('order', 'relevance');
-      apiUrl.searchParams.append('key', apiKey);
-      const response = await fetch(apiUrl.toString());
+      const response = await fetch(`/api/invidious-search?q=${encodeURIComponent(query)}`);
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`[YouTube] API error for query "${query}". Status: ${response.status}. Response:`, errorText);
-        throw new Error(`YouTube API error: ${response.status}`);
-      }
-      const data = await response.json();
-      console.log('[YouTube] API response:', data);
-      if (!data.items || data.items.length === 0) {
-        console.warn(`[YouTube] No videos found for query "${query}"`);
+        console.error('[YouTube API] Error:', response.status);
         return [];
       }
-      const videos = (data.items as any[])
-        .filter((item: any) => item.id?.videoId)
-        .map((item: any) => ({
-          id: item.id.videoId,
-          title: item.snippet.title,
-          thumbnail: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url || '',
-          channelTitle: item.snippet.channelTitle
-        }));
-      console.log(`[YouTube] Found ${videos.length} relevant videos for "${locationName}"`);
-      return videos;
+      const data = await response.json();
+      if (!data.videos || !Array.isArray(data.videos) || data.videos.length === 0) {
+        return [];
+      }
+      // Map to frontend format
+      return data.videos.slice(0, 2).map((v: any) => ({
+        id: v.videoId,
+        title: v.videoData?.title || '',
+        thumbnail: v.videoData?.thumbnails?.[0]?.url || '',
+        channelTitle: v.videoData?.author || '',
+        source: 'youtube',
+      }));
     } catch (error) {
-      console.error(`[YouTube] Error fetching videos for query "${query}":`, error);
+      console.error('[YouTube API] Error fetching videos:', error);
       return [];
     }
   };
+
+  // Invidious fallback function
+  async function searchInvidiousVideos(query: string) {
+    // Use local API route to avoid CORS
+    const localApiUrl = `/api/invidious-search?q=${encodeURIComponent(query)}`;
+    try {
+      const response = await fetch(localApiUrl);
+      if (!response.ok) {
+        console.error('[Invidious] API error:', response.status);
+        return [];
+      }
+      const data = await response.json();
+      if (!Array.isArray(data) || data.length === 0) {
+        console.warn('[Invidious] No videos found for query:', query);
+        return [];
+      }
+      // Map Invidious results to the same format
+      return data.filter((v: any) => v.type === 'video').slice(0, 4).map((v: any) => ({
+        id: v.videoId,
+        title: v.title,
+        thumbnail: v.videoThumbnails?.[0]?.url || '',
+        channelTitle: v.author,
+        source: 'invidious',
+      }));
+    } catch (e) {
+      console.error('[Invidious] Error fetching videos:', e);
+      return [];
+    }
+  }
 
   // Function to fetch radio stations using Radio Browser API
   // Uses owner.country (ISO 3166-1 alpha-2) as the country code
@@ -1066,7 +1077,7 @@ export default function KnowYourLandPage() {
         return [];
       }
       const allFetchedStations: RadioStation[] = stationsFromApi
-        .filter((s: any) => s.url_resolved && s.name && s.name.trim() !== "" && s.codec === "MP3")
+        .filter((s: any) => s.url_resolved && s.name && s.name.trim() !== "" && ["MP3", "AAC", "OGG"].includes((s.codec || '').toUpperCase()))
         .map((s: any) => ({
           id: s.stationuuid,
           name: s.name.trim(),
@@ -1076,6 +1087,7 @@ export default function KnowYourLandPage() {
           genre: s.tags?.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag)[0] || '',
           image: s.favicon || undefined,
           country: s.countrycode || countryCode || '',
+          codec: s.codec || '', // Add codec to RadioStation type
         }));
       const uniqueStationsByName: RadioStation[] = [];
       const seenNames = new Set<string>();
@@ -1797,9 +1809,23 @@ export default function KnowYourLandPage() {
                     <h3 className="flex items-center gap-2 text-lg font-medium text-white mb-3">
                       <PlayCircle className="h-5 w-5 text-earthie-mint" /> Location Videos
                     </h3>
-                    
-                    {locationInfo?.videos && locationInfo.videos.length > 0 ? (
+                    {isLoadingLocation && (!locationInfo?.videos || locationInfo.videos.length === 0) ? (
                       <div className="space-y-6">
+                        {[1, 2].map((_, idx) => (
+                          <div key={idx} className="bg-gray-800/50 rounded-md border border-gray-700/50 overflow-hidden">
+                            <Skeleton className="aspect-video w-full bg-gray-800/70" />
+                            <div className="p-4">
+                              <Skeleton className="h-5 w-1/2 bg-gray-800/70 mb-2" />
+                              <Skeleton className="h-4 w-1/3 bg-gray-800/70" />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : locationInfo?.videos && locationInfo.videos.length > 0 ? (
+                      <div className="space-y-6">
+                        {locationInfo.videos.some(v => v.source === 'invidious') && (
+                          <div className="text-xs text-yellow-400 pb-2">Results provided by Invidious (YouTube fallback, may be less accurate)</div>
+                        )}
                         {locationInfo.videos.map((video, index) => (
                           <div key={index} className="bg-gray-800/50 rounded-md border border-gray-700/50 overflow-hidden">
                             <div className="aspect-video w-full">
@@ -1809,6 +1835,7 @@ export default function KnowYourLandPage() {
                                 title={video.title}
                                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                                 allowFullScreen
+                                loading="lazy"
                               ></iframe>
                             </div>
                             <div className="p-4">
@@ -1873,6 +1900,11 @@ export default function KnowYourLandPage() {
                                     {station.country && (
                                       <Badge variant="outline" className="bg-gray-800/80 text-gray-300 border-gray-600 text-xs">
                                         {station.country}
+                                      </Badge>
+                                    )}
+                                    {station.codec && (
+                                      <Badge variant="outline" className="bg-gray-700/80 text-gray-200 border-gray-600 text-xs ml-1">
+                                        {station.codec.toUpperCase()}
                                       </Badge>
                                     )}
                                   </span>
