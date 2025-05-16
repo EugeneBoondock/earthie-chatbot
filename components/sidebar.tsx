@@ -50,6 +50,7 @@ export default function Sidebar({ className }: SidebarProps) {
   const navItems = [
     { href: '/hub', label: 'Hub Home', icon: LayoutDashboard },
     { href: '/hub/profile', label: 'My Profile', icon: UserCircle },
+    { href: '/hub/know-your-land', label: 'Know Your Land', icon: FileText },
     { href: '/hub/essence', label: 'Essence Tracker', icon: Coins },
     { href: '/hub/essence-report', label: 'Essence Report', icon: FileText },
     { href: '/hub/lobbyist', label: 'My Lobbyist', icon: MessageSquare },

@@ -12,6 +12,14 @@ export default function HubPage() {
       borderColor: "border-sky-400/30"
     },
     {
+      title: "Know Your Land",
+      description: "Explore detailed information and insights about your land assets.",
+      icon: <Book className="h-8 w-8 text-earthie-mint" />,
+      link: "/hub/know-your-land",
+      gradient: "from-green-900/50 to-emerald-900/50",
+      borderColor: "border-green-400/30"
+    },
+    {
       title: "E2pedia",
       description: "Access Earth2 announcements and knowledge base",
       icon: <Book className="h-8 w-8 text-earthie-mint" />,

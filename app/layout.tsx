@@ -16,6 +16,8 @@ import PWAInstallButton from "@/components/PWAInstallButton"
 import SplashScreenProvider from "@/components/SplashScreenProvider"
 import { Analytics } from "@vercel/analytics/react"
 import { PriceProvider } from "@/contexts/PriceContext"
+import { AudioProvider } from "@/contexts/AudioContext"
+import GlobalRadioPlayer from "@/components/GlobalRadioPlayer"
 
 // Imports for server-side Supabase and conditional layout
 import { cookies } from 'next/headers';
@@ -105,15 +107,18 @@ export default async function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} forcedTheme="dark">
           <TopographicBackground />
           <SplashScreenProvider>
-            <div className="grid grid-rows-[auto_1fr_auto] min-h-screen relative z-0">
-              <PriceProvider>
-                <Navbar />
-                <ConditionalLayoutRenderer initialSession={session}>
-                  {children}
-                </ConditionalLayoutRenderer>
-                <Footer />
-              </PriceProvider>
-            </div>
+            <AudioProvider>
+              <div className="grid grid-rows-[auto_1fr_auto] min-h-screen relative z-0">
+                <PriceProvider>
+                  <Navbar />
+                  <ConditionalLayoutRenderer initialSession={session}>
+                    {children}
+                  </ConditionalLayoutRenderer>
+                  <Footer />
+                </PriceProvider>
+              </div>
+              <GlobalRadioPlayer />
+            </AudioProvider>
           </SplashScreenProvider>
         </ThemeProvider>
         <ServiceWorkerRegister />
