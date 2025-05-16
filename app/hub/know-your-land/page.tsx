@@ -1,19 +1,30 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { MapPin, Search, Globe, History, Book, Landmark, Camera, AlertCircle, Loader2, X, ChevronDown, ChevronUp, ExternalLink, Info, Users, Radio, Tv, Music, PlayCircle } from "lucide-react";
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { cn } from "@/lib/utils";
-import Image from 'next/image';
-import Link from 'next/link';
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { 
+  Loader2, MapPin, Landmark, Globe, Mountain, Map, ArrowLeft, ExternalLink, 
+  ChevronUp, ChevronDown, Search, Camera, Book, Users, Radio, Tv, Music, PlayCircle, X, Info, AlertCircle, Clock, History
+} from "lucide-react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import Image from "next/image";
+import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PropertyMap } from "@/components/PropertyMap";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useAudioPlayer } from "@/contexts/AudioContext"; // Import the global audio player hook
 
 // Types for property data
@@ -179,7 +190,7 @@ export default function KnowYourLandPage() {
   }, [activeTab, locationInfo]);
   const [showMoreHistory, setShowMoreHistory] = useState(false);
   const [showMoreOverview, setShowMoreOverview] = useState(false);
-  const [mapLoaded, setMapLoaded] = useState(false);
+  // Map loading state is now managed by PropertyMap component
   const [currentTvStation, setCurrentTvStation] = useState<string | null>(null);
   const latestPropertyIdRef = useRef<string | null>(null);
 
@@ -1683,9 +1694,9 @@ export default function KnowYourLandPage() {
 
       {/* Property & Location Information */}
       {propertyData && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
           {/* Property Info Card */}
-          <Card className="backdrop-blur-md bg-gradient-to-br from-gray-900/70 to-gray-800/60 border border-sky-400/20 shadow-lg lg:col-span-1">
+          <Card className="backdrop-blur-md bg-gradient-to-br from-gray-900/70 to-gray-800/60 border border-sky-400/20 shadow-lg lg:col-span-2">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <MapPin className="h-5 w-5 text-earthie-mint" />
@@ -1721,41 +1732,35 @@ export default function KnowYourLandPage() {
               )}
               
               {/* Map View Card */}
-              <div className="pt-2">
-                <h4 className="text-sm font-medium text-gray-300 mb-2">Map View</h4>
-                {propertyData.coordinates?.longitude !== undefined && propertyData.coordinates?.latitude !== undefined && (
-                  <div className="relative h-[200px] w-full overflow-hidden rounded-md border border-gray-700/50">
-                    <Image 
-                      src={`https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/static/${propertyData.coordinates.longitude},${propertyData.coordinates.latitude},10,0/600x400@2x?access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN || 'pk.eyJ1IjoiZWFydGgyZ2FtZSIsImEiOiJja2t5OWQxMmgwdWNiMnVxbXN3YnM0NDV5In0.sfQHXPkZpNNrT2ancTXj_A'}`}
-                      alt={`Map of ${propertyData.location}`}
-                      fill
-                      className="object-cover"
-                      onLoad={() => setMapLoaded(true)}
-                    />
-                    {!mapLoaded && (
-                      <div className="absolute inset-0 bg-gray-900/80 flex items-center justify-center">
-                        <Loader2 className="h-8 w-8 text-earthie-mint animate-spin" />
-                      </div>
+              <Card className="bg-gray-800/50 border-gray-700/50">
+                <CardContent className="p-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <h4 className="text-sm font-medium text-gray-300">Map View</h4>
+                    {propertyData.coordinates && (
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${propertyData.coordinates.longitude},${propertyData.coordinates.latitude}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-earthie-mint hover:underline flex items-center gap-1"
+                      >
+                        Open in Google Maps
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
                     )}
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      <div className="w-4 h-4 rounded-full bg-earthie-mint shadow-lg shadow-earthie-mint/50 animate-pulse"></div>
-                    </div>
                   </div>
-                )}
-              </div>
-              
-              {/* Property ID */}
-              <div className="pt-2">
-                <h4 className="text-sm font-medium text-gray-300 mb-2">Property ID</h4>
-                <div className="flex items-center justify-between text-sm bg-gray-800/50 p-2 rounded-md border border-gray-700/50 font-mono">
-                  <span className="text-gray-400">{propertyData.id}</span>
-                </div>
-              </div>
+                  <div className="relative aspect-video rounded-md overflow-hidden bg-gray-700/50 border border-gray-600/50">
+                    <PropertyMap 
+                      coordinates={propertyData.coordinates || null} 
+                      locationName={propertyData.location || 'Property location'}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
             </CardContent>
           </Card>
-
+          
           {/* Location Information */}
-          <Card className="backdrop-blur-md bg-gradient-to-br from-gray-900/70 to-gray-800/60 border border-sky-400/20 shadow-lg lg:col-span-2">
+          <Card className="backdrop-blur-md bg-gradient-to-br from-gray-900/70 to-gray-800/60 border border-sky-400/20 shadow-lg lg:col-span-3 h-full">
             <CardHeader>
               <div className="flex justify-between items-center">
                 <CardTitle className="flex items-center gap-2">
@@ -1803,16 +1808,34 @@ export default function KnowYourLandPage() {
                   </div>
                 </>
               ) : locationInfo ? (
-                <Tabs defaultValue="overview" className="w-full" onValueChange={setActiveTab}>
-                  <TabsList className="grid grid-cols-7 bg-gray-800/50">
-                    <TabsTrigger value="overview">Overview</TabsTrigger>
-                    <TabsTrigger value="history">History</TabsTrigger>
-                    <TabsTrigger value="landmarks">Landmarks</TabsTrigger>
-                    <TabsTrigger value="people">People</TabsTrigger>
-                    <TabsTrigger value="videos">Videos</TabsTrigger>
-                    <TabsTrigger value="entertainment">Entertainment</TabsTrigger>
-                    <TabsTrigger value="facts">Facts</TabsTrigger>
-                  </TabsList>
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                  <div className="hidden md:block">
+                    <TabsList className="w-full grid grid-cols-7 bg-gray-800/30 rounded-lg p-1">
+                      <TabsTrigger value="overview" className="py-2 text-sm">Overview</TabsTrigger>
+                      <TabsTrigger value="history" className="py-2 text-sm">History</TabsTrigger>
+                      <TabsTrigger value="landmarks" className="py-2 text-sm">Landmarks</TabsTrigger>
+                      <TabsTrigger value="people" className="py-2 text-sm">People</TabsTrigger>
+                      <TabsTrigger value="videos" className="py-2 text-sm">Videos</TabsTrigger>
+                      <TabsTrigger value="entertainment" className="py-2 text-sm">Entertainment</TabsTrigger>
+                      <TabsTrigger value="facts" className="py-2 text-sm">Facts</TabsTrigger>
+                    </TabsList>
+                  </div>
+                  <div className="md:hidden mb-4">
+                    <Select onValueChange={(value) => setActiveTab(value)} defaultValue="overview">
+                      <SelectTrigger className="w-full bg-gray-800/30 border-gray-600">
+                        <SelectValue placeholder="Select a section" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-gray-800 border-gray-600">
+                        <SelectItem value="overview">Overview</SelectItem>
+                        <SelectItem value="history">History</SelectItem>
+                        <SelectItem value="landmarks">Landmarks</SelectItem>
+                        <SelectItem value="people">People</SelectItem>
+                        <SelectItem value="videos">Videos</SelectItem>
+                        <SelectItem value="entertainment">Entertainment</SelectItem>
+                        <SelectItem value="facts">Facts</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                   
                   {/* Overview Tab */}
                   <TabsContent value="overview" className="space-y-4">
@@ -1882,7 +1905,7 @@ export default function KnowYourLandPage() {
                     {locationInfo.history ? (
                       <div className="pt-2">
                         <h3 className="flex items-center gap-2 text-lg font-medium text-white mb-3">
-                          <History className="h-5 w-5 text-earthie-mint" /> Historical Background
+                          <Clock className="h-5 w-5 text-earthie-mint" /> Historical Background
                         </h3>
                         {/* Render preview or full HTML depending on showMoreHistory */}
                         {showMoreHistory ? (
@@ -1992,7 +2015,7 @@ export default function KnowYourLandPage() {
                                   <CardHeader className="pb-2">
                                     <CardTitle className="text-base flex items-center gap-2">
                                       {group.name}
-                                      <Badge variant="outline" className="bg-amber-950/30 text-amber-400 border-amber-700/50 text-xs">
+                                      <Badge className="bg-amber-950/30 text-amber-400 border-amber-700/50 text-xs">
                                         Indigenous
                                       </Badge>
                                     </CardTitle>
@@ -2412,4 +2435,4 @@ export default function KnowYourLandPage() {
       </Card>
     </div>
   );
-} 
+}
