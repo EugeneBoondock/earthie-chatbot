@@ -617,6 +617,10 @@ export default function KnowYourLandPage() {
           };
         });
       });
+      // Fetch landmarks if coordinates are valid
+      if (hasValidCoords) {
+        fetchAdditionalLocationData(locationName, { latitude: coordinates.latitude!, longitude: coordinates.longitude! });
+      }
     } catch (error) {
       setError(error instanceof Error ? error.message : "Failed to fetch location information");
       setLocationInfo(prev => {
@@ -1154,15 +1158,28 @@ export default function KnowYourLandPage() {
       const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${coordinates.latitude}&lon=${coordinates.longitude}&appid=${weatherApiKey}`;
       const weatherPromise = fetch(weatherUrl)
         .then(res => res.ok ? res.json() : null);
+
+      // --- OSM Overpass API for landmarks ---
+      const overpassRadius = 5000; // meters
+      const overpassQuery = `
+        [out:json];
+        (
+          node(around:${overpassRadius},${coordinates.latitude},${coordinates.longitude})[tourism];
+          node(around:${overpassRadius},${coordinates.latitude},${coordinates.longitude})[historic];
+          node(around:${overpassRadius},${coordinates.latitude},${coordinates.longitude})[natural];
+          node(around:${overpassRadius},${coordinates.latitude},${coordinates.longitude})[leisure=park];
+        );
+        out center 10;
+      `;
+      const overpassUrl = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(overpassQuery)}`;
+      const overpassPromise = fetch(overpassUrl).then(res => res.ok ? res.json() : null);
+
+      // Wikipedia GeoSearch fallback
       const geoNamesUsername = process.env.NEXT_PUBLIC_GEONAMES_USERNAME || 'demo';
-      const geoNamesUrl = `https://secure.geonames.org/findNearbyWikipediaJSON?lat=${coordinates.latitude}&lng=${coordinates.longitude}&username=${geoNamesUsername}&radius=10`;
-      const geoNamesPromise = fetch(geoNamesUrl).then(res => res.ok ? res.json() : null);
-      const commonsUrl = `https://commons.wikimedia.org/w/api.php?action=query&list=geosearch&gscoord=${coordinates.latitude}|${coordinates.longitude}&gsradius=5000&gslimit=10&format=json&origin=*`;
-      const commonsPromise = fetch(commonsUrl, {
-        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-        mode: 'cors',
-      }).then(res => res.ok ? res.json() : null);
-      const [weatherData, geoNamesData] = await Promise.all([weatherPromise, geoNamesPromise]);
+      const wikiGeoUrl = `https://en.wikipedia.org/w/api.php?action=query&list=geosearch&gscoord=${coordinates.latitude}|${coordinates.longitude}&gsradius=5000&gslimit=10&format=json&origin=*`;
+      const wikiGeoPromise = fetch(wikiGeoUrl).then(res => res.ok ? res.json() : null);
+
+      const [weatherData, overpassData, wikiGeoData] = await Promise.all([weatherPromise, overpassPromise, wikiGeoPromise]);
       setLocationInfo(prev => {
         if (!prev) return prev;
         let climate = undefined;
@@ -1171,13 +1188,39 @@ export default function KnowYourLandPage() {
           const weather = weatherData;
           climate = `The current weather is ${weather.weather?.[0]?.description || 'not available'}. Temperature is around ${Math.round((weather.main?.temp || 0) - 273.15)}°C.`;
         }
-        if (geoNamesData?.geonames) {
-          landmarks = geoNamesData.geonames.slice(0, 5).map((poi: any) => ({
-            name: poi.title || 'Unnamed Landmark',
-            distance: poi.distance ? `${Math.round(poi.distance * 10) / 10} km` : undefined,
-            description: poi.summary || '',
-            coordinates: { latitude: poi.lat, longitude: poi.lng }
-          }));
+        // --- OSM Overpass results ---
+        const MAX_LANDMARK_DISTANCE_KM = 10;
+        if (overpassData && Array.isArray(overpassData.elements) && overpassData.elements.length > 0) {
+          landmarks = overpassData.elements
+            .map((el: any) => {
+              const dist = getDistanceFromLatLonInKm(coordinates.latitude, coordinates.longitude, el.lat, el.lon);
+              return {
+                name: el.tags?.name || el.tags?.['name:en'] || el.tags?.tourism || el.tags?.historic || el.tags?.natural || 'Unnamed Landmark',
+                distance: `${Math.round(dist * 10) / 10} km`,
+                description: el.tags?.description || '',
+                coordinates: { latitude: el.lat, longitude: el.lon },
+                dist
+              };
+            })
+            .filter((lm: any) => lm.name && lm.coordinates && lm.dist <= MAX_LANDMARK_DISTANCE_KM)
+            .sort((a: any, b: any) => a.dist - b.dist)
+            .slice(0, 5);
+        } else if (wikiGeoData?.query?.geosearch && wikiGeoData.query.geosearch.length > 0) {
+          // --- Wikipedia GeoSearch fallback ---
+          landmarks = wikiGeoData.query.geosearch
+            .map((poi: any) => {
+              const dist = getDistanceFromLatLonInKm(coordinates.latitude, coordinates.longitude, poi.lat, poi.lon);
+              return {
+                name: poi.title || 'Unnamed Landmark',
+                distance: `${Math.round(dist * 10) / 10} km`,
+                description: '',
+                coordinates: { latitude: poi.lat, longitude: poi.lon },
+                dist
+              };
+            })
+            .filter((lm: any) => lm.name && lm.coordinates && lm.dist <= MAX_LANDMARK_DISTANCE_KM)
+            .sort((a: any, b: any) => a.dist - b.dist)
+            .slice(0, 5);
         }
         return {
           ...prev,
@@ -1190,6 +1233,17 @@ export default function KnowYourLandPage() {
       setLocationInfo(prev => prev ? { ...prev, climate: undefined, landmarks: [] } : prev);
     }
   };
+  // Helper to calculate distance between two lat/lon points in km
+  function getDistanceFromLatLonInKm(lat1: number, lon1: number, lat2: number, lon2: number) {
+    const R = 6371; // Radius of the earth in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a =
+      0.5 - Math.cos(dLat)/2 +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      (1 - Math.cos(dLon))/2;
+    return R * 2 * Math.asin(Math.sqrt(a));
+  }
 
   // Helper function to generate demographics text based on location
   const generateDemographics = (locationName: string, extract?: string) => {
