@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Loader2 } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Loader2, ZoomIn, ZoomOut } from 'lucide-react';
 
 interface PropertyMapProps {
   coordinates: { longitude: number; latitude: number } | null;
@@ -11,7 +11,16 @@ interface PropertyMapProps {
 export function PropertyMap({ coordinates, locationName }: PropertyMapProps) {
   const [mapLoaded, setMapLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [zoom, setZoom] = useState(14);
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+
+  const handleZoomIn = useCallback(() => {
+    setZoom(prev => Math.min(prev + 1, 20));
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    setZoom(prev => Math.max(prev - 1, 1));
+  }, []);
 
   useEffect(() => {
     // Reset states when coordinates change
@@ -37,10 +46,10 @@ export function PropertyMap({ coordinates, locationName }: PropertyMapProps) {
   }
 
   const { longitude, latitude } = coordinates;
-  console.log('Map coordinates:', { longitude, latitude });
+  console.log('Map coordinates:', { longitude, latitude, zoom });
   // Note: For satellite view with a pin, we need to use the correct format
   const pinIcon = `pin-s+ff0000(${longitude},${latitude})`;
-  const mapUrl = `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/${pinIcon}/${latitude},${longitude},14,0/600x400@2x?access_token=${mapboxToken}&attribution=false&logo=false`;
+  const mapUrl = `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/${pinIcon}/${latitude},${longitude},${zoom},0/600x400@2x?access_token=${mapboxToken}&attribution=false&logo=false`;
   console.log('Map URL:', mapUrl);
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
@@ -50,8 +59,26 @@ export function PropertyMap({ coordinates, locationName }: PropertyMapProps) {
 
   return (
     <div className="relative w-full h-full">
-      <div className="absolute top-2 left-2 z-10 bg-black/50 text-white text-xs p-1 rounded">
-        {longitude.toFixed(6)}, {latitude.toFixed(6)}
+      <div className="absolute top-2 left-2 z-10 flex flex-col space-y-2">
+        <div className="bg-black/50 text-white text-xs p-1 rounded">
+          {longitude.toFixed(6)}, {latitude.toFixed(6)}
+        </div>
+        <div className="flex flex-col space-y-1">
+          <button 
+            onClick={handleZoomIn}
+            className="bg-black/50 hover:bg-black/70 text-white p-1 rounded-t-sm flex items-center justify-center w-6 h-6"
+            aria-label="Zoom in"
+          >
+            <ZoomIn className="h-3 w-3" />
+          </button>
+          <button 
+            onClick={handleZoomOut}
+            className="bg-black/50 hover:bg-black/70 text-white p-1 rounded-b-sm flex items-center justify-center w-6 h-6"
+            aria-label="Zoom out"
+          >
+            <ZoomOut className="h-3 w-3" />
+          </button>
+        </div>
       </div>
       
       <img
