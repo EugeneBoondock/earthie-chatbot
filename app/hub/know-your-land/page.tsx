@@ -3,6 +3,7 @@
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
@@ -16,11 +17,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
   Loader2, MapPin, Landmark, Globe, Mountain, Map, ArrowLeft, ExternalLink, 
-  ChevronUp, ChevronDown, Search, Camera, Book, Users, Radio, Tv, Music, PlayCircle, X, Info, AlertCircle, Clock, History
+  ChevronUp, ChevronDown, Search, Camera, Book, Users, Radio, Tv, Music, PlayCircle, X, Info, AlertCircle, Clock, History,
+  Volume2, Youtube, Pause, Play, Sun, FileText, ArrowUpRight, Badge as LucideBadge, RefreshCw, Maximize2
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import Hls from 'hls.js';
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PropertyMap } from "@/components/PropertyMap";
@@ -120,6 +123,20 @@ interface RadioStation {
   image?: string;
   country?: string;
   codec?: string; // Add codec
+}
+
+interface IPTVStream {
+  channel: string;
+  url: string;
+  // Add other properties that the stream objects might have
+  [key: string]: any;
+}
+
+interface IPTVChannel {
+  id: string;
+  country?: string;
+  name: string;
+  [key: string]: any;
 }
 
 // Move getContinent and getApproxTimeZone to the top level, outside any function
@@ -988,56 +1005,180 @@ export default function KnowYourLandPage() {
     }
   };
 
-  // Update fetchIPTVChannels to handle m3u/m3u8 playlists
+  // Update fetchIPTVChannels to handle m3u/m3u8 playlists with better country code handling
   const fetchIPTVChannels = async (countryCode: string): Promise<NonNullable<NonNullable<LocationInfo['entertainment']>['tvStations']>> => {
-    console.log(`[IPTV] Fetching channels for country code: "${countryCode}"`);
+    if (!countryCode) {
+      console.log('[IPTV] No country code provided, cannot fetch channels');
+      return [];
+    }
+    
+    // Map of common country codes to match IPTV-org's format
+    const countryCodeMap: Record<string, string> = {
+      'US': 'USA',
+      'GB': 'UK',
+      'FR': 'FRA',
+      'DE': 'DEU',
+      'IT': 'ITA',
+      'ES': 'ESP',
+      'JP': 'JPN',
+      'CA': 'CAN',
+      'AU': 'AUS',
+      'BR': 'BRA',
+      'IN': 'IND',
+      'CN': 'CHN',
+      'RU': 'RUS',
+      'MX': 'MEX',
+      'ZA': 'ZAF',
+      'NG': 'NGA',
+      'ET': 'ETH',
+      'EG': 'EGY',
+      'KE': 'KEN',
+      'MA': 'MAR',
+      'DZ': 'DZA',
+      'TZ': 'TZA',
+      'GH': 'GHA',
+      'UG': 'UGA',
+      'MZ': 'MOZ',
+      'MG': 'MDG',
+      'CM': 'CMR',
+      'CI': 'CIV',
+      'NE': 'NER',
+      'BF': 'BFA',
+      'ML': 'MLI',
+      'MW': 'MWI',
+      'ZM': 'ZMB',
+      'SN': 'SEN',
+      'TD': 'TCD',
+      'SO': 'SOM',
+      'ZW': 'ZWE',
+      'RW': 'RWA',
+      'BJ': 'BEN',
+      'BI': 'BDI',
+      'TN': 'TUN',
+      'SS': 'SSD',
+      'CF': 'CAF',
+      'TG': 'TGO',
+      'LY': 'LBY',
+      'LR': 'LBR',
+      'CG': 'COG',
+      'CD': 'COD',
+      'GA': 'GAB',
+      'ER': 'ERI',
+      'SL': 'SLE',
+      'AO': 'AGO',
+      'GM': 'GMB',
+      'GW': 'GNB',
+      'MR': 'MRT',
+      'NA': 'NAM',
+      'BW': 'BWA',
+      'LS': 'LSO',
+      'GQ': 'GNQ',
+      'SC': 'SYC',
+      'DJ': 'DJI',
+      'KM': 'COM',
+      'CV': 'CPV',
+      'ST': 'STP',
+      'EH': 'ESH',
+    };
+
+    // Get the mapped country code or use the original
+    const mappedCountryCode = countryCodeMap[countryCode] || countryCode;
+    
     try {
       const [channelsResponse, streamsResponse] = await Promise.all([
         fetch('https://iptv-org.github.io/api/channels.json'),
         fetch('https://iptv-org.github.io/api/streams.json')
       ]);
+      
       if (!channelsResponse.ok || !streamsResponse.ok) {
+        console.error('[IPTV] Failed to fetch IPTV data:', { 
+          channelsStatus: channelsResponse.status, 
+          streamsStatus: streamsResponse.status 
+        });
         return [];
       }
-      const channels = await channelsResponse.json();
-      const streams = await streamsResponse.json();
-      let filteredChannels = channels.filter((channel: any) => channel.country === countryCode && channel.name);
-      if (filteredChannels.length === 0 && countryCode !== 'INT') {
-        filteredChannels = channels.filter((channel: any) => (channel.country === undefined || channel.country === "INT") && channel.name);
+      
+      const channels = await channelsResponse.json() as IPTVChannel[];
+      const streams = await streamsResponse.json() as IPTVStream[];
+      
+      // Create Map with explicit type parameters
+      const streamMap = new globalThis.Map<string, IPTVStream>();
+      streams.forEach((stream: IPTVStream) => {
+        streamMap.set(stream.channel, stream);
+      });
+      const tvStations: NonNullable<LocationInfo['entertainment']>['tvStations'] = [];
+      const seenChannels = new Set<string>();
+
+      console.log(`[IPTV] Found ${channels.length} total channels, ${streams.length} streams`);
+      
+      // First pass: Try exact country code match
+      for (const channel of channels) {
+        if (!channel.country) continue;
+        
+        // Check if channel's country code matches (case insensitive)
+        if (channel.country.toLowerCase() === mappedCountryCode.toLowerCase()) {
+          const stream = streamMap.get(channel.id);
+          if (stream?.url) {
+            const channelKey = `${channel.name}_${channel.country}`.toLowerCase();
+            if (!seenChannels.has(channelKey)) {
+              seenChannels.add(channelKey);
+              tvStations.push({
+                name: channel.name,
+                description: channel.name,
+                genre: channel.categories?.[0] || "General",
+                image: channel.logo || `https://via.placeholder.com/150?text=${encodeURIComponent(channel.name)}`,
+                url: channel.website || stream.url,
+                embedUrl: stream.url,
+                country: channel.country,
+                streamType: stream.url.endsWith('.m3u8') ? 'hls' : 'http',
+              });
+            }
+          }
+        }
       }
-      if (filteredChannels.length === 0) return [];
-      let tvStations: any[] = [];
-      for (const channel of filteredChannels.slice(0, 6)) {
-        const channelStreams = streams.filter((stream: any) => stream.channel === channel.id && stream.url);
-        for (const stream of channelStreams) {
-          if (stream.url.endsWith('.m3u') || stream.url.endsWith('.m3u8')) {
-            // Parse playlist and add all HLS streams
-            const urls = await parsePlaylist(stream.url);
-            for (const hlsUrl of urls) {
-              if (hlsUrl.endsWith('.m3u8')) {
+
+      // If we found channels, return them
+      if (tvStations.length > 0) {
+        console.log(`[IPTV] Found ${tvStations.length} channels for country code: ${mappedCountryCode}`);
+        return tvStations;
+      }
+
+      // Second pass: If no channels found, try with the original country code (if different)
+      if (mappedCountryCode !== countryCode) {
+        for (const channel of channels) {
+          if (channel.country?.toLowerCase() === countryCode.toLowerCase()) {
+            const stream = streamMap.get(channel.id);
+            if (stream?.url) {
+              const channelKey = `${channel.name}_${channel.country}`.toLowerCase();
+              if (!seenChannels.has(channelKey)) {
+                seenChannels.add(channelKey);
+                tvStations.push({
+                  name: channel.name,
+                  description: channel.name,
+                  genre: channel.categories?.[0] || "General",
+                  image: channel.logo || `https://via.placeholder.com/150?text=${encodeURIComponent(channel.name)}`,
+                  url: channel.website || stream.url,
+                  embedUrl: stream.url,
+                  country: channel.country,
+                  streamType: 'hls',
+                });
+              }
+            } else if (stream?.url?.startsWith('http')) {
+              const channelKey = `${channel.name}_${channel.country}`.toLowerCase();
+              if (!seenChannels.has(channelKey)) {
+                seenChannels.add(channelKey);
                 tvStations.push({
                   name: channel.name,
                   description: channel.categories?.join(", ") || "TV Channel",
                   genre: channel.categories?.[0] || "General",
                   image: channel.logo || `https://via.placeholder.com/150?text=${encodeURIComponent(channel.name)}`,
-                  url: channel.website || hlsUrl,
-                  embedUrl: hlsUrl,
+                  url: channel.website || stream.url,
+                  embedUrl: stream.url,
                   country: channel.country || "International",
-                  streamType: 'hls',
+                  streamType: stream.url.endsWith('.m3u8') ? 'hls' : 'http',
                 });
               }
             }
-          } else if (stream.url.startsWith('http')) {
-            tvStations.push({
-              name: channel.name,
-              description: channel.categories?.join(", ") || "TV Channel",
-              genre: channel.categories?.[0] || "General",
-              image: channel.logo || `https://via.placeholder.com/150?text=${encodeURIComponent(channel.name)}`,
-              url: channel.website || stream.url,
-              embedUrl: stream.url,
-              country: channel.country || "International",
-              streamType: stream.url.endsWith('.m3u8') ? 'hls' : 'http',
-            });
           }
         }
       }
@@ -1519,31 +1660,427 @@ export default function KnowYourLandPage() {
     globalPlayRadioStation(station);
   };
 
+  // State for the TV player
+  const [currentStream, setCurrentStream] = useState<{
+    url: string;
+    type: string;
+    name: string;
+    error: boolean;
+    loading: boolean;
+  } | null>(null);
+
   // Function to handle TV station playing
   const handleShowTV = (stationId: string, embedUrl?: string, streamType?: string) => {
+    if (!embedUrl) {
+      toast.error('No stream available for this station');
+      return;
+    }
+
+    // If clicking the same station, toggle the player
     if (currentTvStation === stationId) {
       setCurrentTvStation(null);
+      setCurrentStream(null);
       return;
     }
     
     console.log("Playing TV station:", stationId, embedUrl, streamType);
     
-    if (!embedUrl) {
-      alert('No stream available for this station');
+    // Set loading state
+    setCurrentTvStation(stationId);
+    setCurrentStream({
+      url: embedUrl,
+      type: streamType || 'unknown',
+      name: stationId,
+      error: false,
+      loading: true
+    });
+
+    // For HLS streams, we'll handle them in the component
+    if (streamType === 'hls' || embedUrl.endsWith('.m3u8')) {
+      // The actual playback will be handled by the HLS.js in the component
       return;
     }
     
-    if (streamType === 'hls' && embedUrl.endsWith('.m3u8')) {
-      // For HLS streams, open in a player that supports HLS
-      window.open(`https://iptv-org.github.io/player/?url=${encodeURIComponent(embedUrl)}`, '_blank');
-    } else if (streamType === 'youtube' || streamType === 'twitch') {
-      // For YouTube or Twitch, we can embed
-      setCurrentTvStation(stationId);
-    } else {
-      // For other types, open in new window
-      window.open(embedUrl, '_blank');
+    // For YouTube or Twitch, we'll embed them directly
+    if (streamType === 'youtube' || streamType === 'twitch') {
+      setCurrentStream(prev => prev ? { ...prev, loading: false } : null);
+      return;
     }
+    
+    // For other types, open in new window
+    window.open(embedUrl, '_blank');
+    setCurrentTvStation(null);
+    setCurrentStream(null);
   };
+
+  // HLS Player component with improved error handling and performance optimizations
+  const HLSPlayer = React.useCallback(({ url, onError }: { url: string; onError: () => void }) => {
+    // Helper function to format time (mm:ss)
+    const formatTime = useCallback((seconds: number): string => {
+      const mins = Math.floor(seconds / 60);
+      const secs = Math.floor(seconds % 60);
+      return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }, []);
+    
+    const videoRef = React.useRef<HTMLVideoElement>(null);
+    const [error, setError] = React.useState(false);
+    const [loading, setLoading] = React.useState(true);
+    const [hlsInstance, setHlsInstance] = React.useState<Hls | null>(null);
+    const [retryCount, setRetryCount] = React.useState(0);
+    const [errorMessage, setErrorMessage] = React.useState('');
+    const maxRetries = 3;
+    const retryDelay = 1000; // 1 second initial delay
+
+    // Handle HLS initialization and error recovery
+    const initHLS = useCallback(() => {
+      if (!videoRef.current) return () => {};
+
+      const video = videoRef.current;
+      let hls: Hls | null = null;
+      
+      // Try to use native HLS first (Safari, iOS)
+      const canPlayNativeHLS = video.canPlayType('application/vnd.apple.mpegurl');
+      
+      if (canPlayNativeHLS) {
+        console.log('Using native HLS playback');
+        video.src = url;
+        setLoading(false);
+        
+        // Handle native HLS errors
+        const handleError = () => {
+          console.error('Native HLS playback error');
+          setError(true);
+          setErrorMessage('Failed to load stream using native player');
+          onError();
+        };
+        
+        video.addEventListener('error', handleError);
+        return () => video.removeEventListener('error', handleError);
+      }
+      
+      // Fallback to HLS.js
+      if (Hls.isSupported()) {
+        console.log('Using HLS.js for playback');
+        
+        // Create HLS instance with minimal configuration
+        // Using type assertion to avoid TypeScript errors with HLS.js types
+        hls = new Hls({
+          // Basic settings
+          maxBufferSize: 60 * 1000 * 1000, // 60MB
+          maxBufferLength: 30, // 30 seconds
+          maxMaxBufferLength: 60, // 60 seconds
+          
+          // Network settings
+          xhrSetup: (xhr: XMLHttpRequest) => {
+            xhr.withCredentials = false; // Handle CORS if needed
+          },
+          
+          // Error handling
+          fragLoadingMaxRetry: 6,
+          fragLoadingMaxRetryTimeout: 64000,
+          fragLoadingRetryDelay: 1000,
+          
+          // Performance
+          enableWorker: true,
+          enableSoftwareAES: true,
+          startLevel: -1, // Auto quality
+        } as any); // Using 'any' to bypass TypeScript errors with HLS.js types
+        
+        // Handle successful manifest parsing
+        hls.on(Hls.Events.MANIFEST_PARSED, (event: any, data: any) => {
+          console.log('Manifest parsed, available quality levels:', data.levels);
+          setLoading(false);
+          
+          // Try to play the video
+          const playPromise = video.play();
+          
+          if (playPromise !== undefined) {
+            playPromise.catch((e: Error) => {
+              console.error('Error playing video:', e);
+              handlePlaybackError('playback_failed', e.message);
+            });
+          }
+        });
+        
+        // Handle fragment loading
+        hls.on(Hls.Events.FRAG_LOADED, (event: any, data: any) => {
+          console.debug('Fragment loaded:', data.frag.url);
+        });
+        
+        // Handle HLS errors
+        hls.on(Hls.Events.ERROR, (event: any, data: any) => {
+          console.error('HLS Error:', data);
+          
+          if (data.fatal) {
+            handleFatalError(data);
+          } else {
+            console.warn('Non-fatal HLS error:', data);
+          }
+        });
+        
+        // Handle quality level changes
+        hls.on(Hls.Events.LEVEL_SWITCHED, (event: any, data: any) => {
+          console.log('Quality level changed to:', data.level);
+        });
+        
+        // Start loading the source
+        try {
+          hls.loadSource(url);
+          hls.attachMedia(video);
+          setHlsInstance(hls);
+        } catch (e) {
+          const errorMessage = e instanceof Error ? e.message : 'Unknown error';
+          console.error('Error initializing HLS:', errorMessage);
+          handleFatalError({ type: 'init_error', details: errorMessage, fatal: true });
+        }
+      } else {
+        // HLS not supported
+        console.error('HLS not supported in this browser');
+        setError(true);
+        setErrorMessage('Your browser does not support HLS streaming');
+        onError();
+      }
+      
+      // Cleanup function
+      return () => {
+        if (hls) {
+          console.log('Destroying HLS instance');
+          hls.destroy();
+        }
+      };
+    }, [url, retryCount]);
+    
+    // Handle fatal HLS errors
+    const handleFatalError = useCallback((errorData: any) => {
+      console.error('Fatal HLS error:', errorData);
+      
+      // Set appropriate error message
+      let errorMsg = 'Failed to load stream';
+      
+      switch (errorData.type) {
+        case Hls.ErrorTypes.NETWORK_ERROR:
+          errorMsg = 'Network error. Please check your connection.';
+          if (retryCount < maxRetries) {
+            const delay = retryDelay * (retryCount + 1);
+            console.log(`Retrying in ${delay}ms... (${retryCount + 1}/${maxRetries})`);
+            setTimeout(() => {
+              setRetryCount(prev => prev + 1);
+            }, delay);
+            return; // Don't show error UI yet
+          }
+          break;
+          
+        case Hls.ErrorTypes.MEDIA_ERROR:
+          errorMsg = 'Media error. The stream may be corrupted or unsupported.';
+          // Try to recover from media errors
+          if (hlsInstance) {
+            console.log('Attempting to recover from media error...');
+            hlsInstance.recoverMediaError();
+            return;
+          }
+          break;
+          
+        case Hls.ErrorTypes.OTHER_ERROR:
+          errorMsg = 'An unexpected error occurred';
+          break;
+      }
+      
+      setError(true);
+      setErrorMessage(errorMsg);
+      onError();
+    }, [hlsInstance, retryCount]);
+    
+    // Handle playback errors (e.g., autoplay blocked)
+    const handlePlaybackError = useCallback((errorType: string, message: string) => {
+      console.error('Playback error:', message);
+      
+      if (errorType === 'autoplay_denied') {
+        setErrorMessage('Autoplay was blocked. Please click play to start the stream.');
+        setLoading(false);
+        return;
+      }
+      
+      if (retryCount < maxRetries) {
+        const delay = retryDelay * (retryCount + 1);
+        console.log(`Retrying playback in ${delay}ms... (${retryCount + 1}/${maxRetries})`);
+        setTimeout(() => {
+          setRetryCount(prev => prev + 1);
+          videoRef.current?.load();
+          videoRef.current?.play().catch(console.error);
+        }, delay);
+      } else {
+        setError(true);
+        setErrorMessage('Failed to play the stream. Please try again later.');
+        onError();
+      }
+    }, [retryCount]);
+    
+    // Initialize HLS when component mounts or URL changes
+    React.useEffect(() => {
+      const cleanup = initHLS();
+      return () => {
+        cleanup?.();
+        if (hlsInstance) {
+          hlsInstance.destroy();
+          setHlsInstance(null);
+        }
+      };
+    }, [url, retryCount]);
+
+    if (error) {
+      return (
+        <div className="aspect-video bg-gray-800 rounded-md flex items-center justify-center">
+          <div className="text-center p-4 max-w-md">
+            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-3" />
+            <h3 className="text-lg font-medium text-gray-100 mb-1">Stream Unavailable</h3>
+            <p className="text-gray-300 text-sm mb-4">
+              {errorMessage || 'Failed to load the stream. Please try again later.'}
+            </p>
+            <div className="flex gap-3 justify-center">
+              <Button 
+                variant="outline" 
+                className="text-earthie-mint border-earthie-mint/30 hover:bg-earthie-mint/10"
+                onClick={() => {
+                  setError(false);
+                  setRetryCount(0);
+                }}
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Retry
+              </Button>
+              <Button 
+                variant="ghost" 
+                className="text-gray-300 hover:bg-gray-700/50"
+                onClick={() => {
+                  window.open(url, '_blank');
+                }}
+              >
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Open in New Tab
+              </Button>
+            </div>
+            {retryCount > 0 && (
+              <p className="text-xs text-gray-500 mt-3">
+                Attempt {Math.min(retryCount, maxRetries)} of {maxRetries}
+              </p>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="relative aspect-video bg-black rounded-md overflow-hidden group">
+        {/* Loading overlay */}
+        {loading && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-900/80 z-10">
+            <Loader2 className="h-10 w-10 animate-spin text-earthie-mint mb-3" />
+            <p className="text-gray-300 text-sm">
+              {retryCount > 0 
+                ? `Attempting to connect (${retryCount}/${maxRetries})...` 
+                : 'Loading stream...'}
+            </p>
+            {retryCount > 0 && (
+              <button 
+                onClick={() => setRetryCount(0)}
+                className="mt-2 text-xs text-gray-400 hover:text-white transition-colors"
+              >
+                Cancel
+              </button>
+            )}
+          </div>
+        )}
+        
+        {/* Video element */}
+        <video
+          ref={videoRef}
+          className="w-full h-full"
+          controls
+          autoPlay
+          playsInline
+          disablePictureInPicture
+          disableRemotePlayback
+          preload="auto"
+          onError={(e) => {
+            console.error('Video element error:', e);
+            handlePlaybackError('video_error', 'Video playback failed');
+          }}
+          onWaiting={() => setLoading(true)}
+          onPlaying={() => setLoading(false)}
+          onCanPlay={() => {
+            console.log('Video can play');
+            setLoading(false);
+          }}
+          onStalled={() => {
+            console.warn('Video stalled, attempting to recover...');
+            setLoading(true);
+          }}
+          onEmptied={() => {
+            console.warn('Video emptied, attempting to recover...');
+            setLoading(true);
+          }}
+        />
+        
+        {/* Custom controls overlay */}
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center space-x-2">
+              <button 
+                onClick={() => videoRef.current?.paused 
+                  ? videoRef.current?.play().catch(console.error) 
+                  : videoRef.current?.pause()}
+                className="p-1.5 rounded-full bg-black/50 hover:bg-black/70 transition-colors"
+                aria-label={videoRef.current?.paused ? 'Play' : 'Pause'}
+              >
+                {videoRef.current?.paused ? (
+                  <Play className="h-5 w-5 text-white" />
+                ) : (
+                  <Pause className="h-5 w-5 text-white" />
+                )}
+              </button>
+              <span className="text-xs text-gray-300">
+                {videoRef.current?.currentTime 
+                  ? formatTime(videoRef.current.currentTime) 
+                  : '00:00'}
+              </span>
+            </div>
+            
+            <div className="flex items-center space-x-3">
+              <button 
+                onClick={() => {
+                  if (videoRef.current) {
+                    videoRef.current.muted = !videoRef.current.muted;
+                  }
+                }}
+                className="text-gray-300 hover:text-white transition-colors"
+                aria-label={videoRef.current?.muted ? 'Unmute' : 'Mute'}
+              >
+                <Volume2 className="h-5 w-5" />
+              </button>
+              
+              <button 
+                onClick={() => {
+                  if (videoRef.current?.requestFullscreen) {
+                    videoRef.current.requestFullscreen().catch(console.error);
+                  } else if ((videoRef.current as any)?.webkitRequestFullscreen) {
+                    (videoRef.current as any).webkitRequestFullscreen();
+                  } else if ((videoRef.current as any)?.msRequestFullscreen) {
+                    (videoRef.current as any).msRequestFullscreen();
+                  }
+                }}
+                className="text-gray-300 hover:text-white transition-colors"
+                aria-label="Enter fullscreen"
+              >
+                <Maximize2 className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+    
+    // Format time for display (mm:ss)
+  }, []);
 
   // Helper function to get an indigenous group for a location
   const getIndigenousGroup = (coordinates: { latitude: number; longitude: number }) => {
@@ -2338,15 +2875,44 @@ export default function KnowYourLandPage() {
                                 </div>
                                 
                                 {/* Show embedded player when expanded */}
-                                {currentTvStation === station.name && station.embedUrl && 
-                                  (station.streamType === 'youtube' || station.streamType === 'twitch') && (
-                                  <div className="mt-2 aspect-video w-full rounded-md overflow-hidden">
-                                    <iframe
-                                      src={station.embedUrl}
-                                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                      allowFullScreen
-                                      className="w-full h-full"
-                                    ></iframe>
+                                {currentTvStation === station.name && station.embedUrl && (
+                                  <div className="mt-2 w-full rounded-md overflow-hidden">
+                                    {station.streamType === 'hls' || station.embedUrl.endsWith('.m3u8') ? (
+                                      <HLSPlayer 
+                                        url={station.embedUrl} 
+                                        onError={() => {
+                                          toast.error(`Failed to load stream: ${station.name}`);
+                                          setCurrentTvStation(null);
+                                        }}
+                                      />
+                                    ) : station.streamType === 'youtube' || station.streamType === 'twitch' ? (
+                                      <div className="aspect-video w-full rounded-md overflow-hidden">
+                                        <iframe
+                                          src={station.embedUrl}
+                                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                          allowFullScreen
+                                          className="w-full h-full"
+                                          onError={() => {
+                                            toast.error(`Failed to load ${station.streamType} stream`);
+                                            setCurrentTvStation(null);
+                                          }}
+                                        ></iframe>
+                                      </div>
+                                    ) : (
+                                      <div className="aspect-video bg-gray-800 rounded-md flex items-center justify-center">
+                                        <div className="text-center p-4">
+                                          <AlertCircle className="h-12 w-12 text-yellow-500 mx-auto mb-2" />
+                                          <p className="text-gray-300">This stream type requires external player</p>
+                                          <Button 
+                                            variant="outline" 
+                                            className="mt-2 text-earthie-mint border-earthie-mint/30 hover:bg-earthie-mint/10"
+                                            onClick={() => window.open(station.embedUrl, '_blank')}
+                                          >
+                                            Open in New Tab
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    )}
                                   </div>
                                 )}
                                 
