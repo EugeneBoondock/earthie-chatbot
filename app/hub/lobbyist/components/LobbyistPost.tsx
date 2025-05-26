@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/lib/supabase';
+import React from 'react';
 
 // Post types
 export type PostType = 'text' | 'image' | 'link' | 'trade' | 'poll' | 'dev_diary' | 'raid' | 'showcase';
@@ -92,6 +93,185 @@ const formatDate = (dateString: string) => {
     year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
   });
 };
+
+// Helper: detect URLs in text
+const urlRegex = /(https?:\/\/[\w\-._~:/?#[\]@!$&'()*+,;=%]+)|(www\.[\w\-._~:/?#[\]@!$&'()*+,;=%]+)/gi;
+
+// Helper: YouTube embed
+function getYouTubeEmbed(url: string) {
+  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|v\/|shorts\/))([\w-]{11})/);
+  if (match && match[1]) {
+    return `https://www.youtube.com/embed/${match[1]}`;
+  }
+  return null;
+}
+
+// Helper: Twitter embed (simple blockquote for now)
+function getTwitterEmbed(url: string) {
+  if (url.includes('twitter.com') && url.match(/status\/(\d+)/)) {
+    return url;
+  }
+  return null;
+}
+
+// Helper: Detect Twitch channel link and extract username
+function getTwitchChannel(url: string): string | null {
+  const match = url.match(/^https?:\/\/(www\.)?twitch\.tv\/([a-zA-Z0-9_]+)\/?$/i);
+  return match ? match[2] : null;
+}
+
+// Helper: fetch Open Graph data for a URL (using microlink.io)
+function useOpenGraph(url: string) {
+  const [og, setOg] = useState<{
+    image?: string;
+    title?: string;
+    description?: string;
+    logo?: string;
+    site?: string;
+    url?: string;
+    favicon?: string;
+  } | null>(null);
+  const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    if (!url) return;
+    setLoading(true);
+    fetch(`https://api.microlink.io/?url=${encodeURIComponent(url)}`)
+      .then(res => res.json())
+      .then(data => {
+        if (!cancelled && data.status === 'success') {
+          setOg({
+            image: data.data.image?.url,
+            title: data.data.title,
+            description: data.data.description,
+            logo: data.data.logo?.url,
+            site: data.data.publisher || data.data.site,
+            url: data.data.url,
+            favicon: data.data.logo?.url || data.data.screenshot?.url,
+          });
+        }
+      })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [url]);
+  return { og, loading };
+}
+
+// Child component for link preview embed
+function LinkPreviewEmbed({ url }: { url: string }) {
+  const { og, loading } = useOpenGraph(url.startsWith('http') ? url : `https://${url}`);
+  return (
+    <a
+      href={url.startsWith('http') ? url : `https://${url}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="block border border-sky-400/10 rounded-lg bg-earthie-dark-light/40 hover:bg-sky-900/10 transition-all overflow-hidden"
+      style={{ textDecoration: 'none' }}
+    >
+      {/* Site info */}
+      <div className="flex items-center gap-2 px-4 pt-3">
+        {og?.logo && (
+          <img src={og.logo} alt="favicon" className="w-5 h-5 rounded" />
+        )}
+        <span className="text-xs text-sky-300 font-medium truncate">{og?.site || og?.title || url.replace(/^https?:\/\//, '').split('/')[0]}</span>
+      </div>
+      {/* Banner image */}
+      {loading && <div className="w-full h-32 bg-sky-900/20 animate-pulse" />}
+      {og?.image && (
+        <img src={og.image} alt="Preview" className="w-full h-32 object-cover" />
+      )}
+      {/* Title/desc */}
+      <div className="px-4 py-3">
+        <div className="text-base text-sky-200 font-semibold truncate mb-1">{og?.title || url}</div>
+        {og?.description && <div className="text-xs text-gray-300 mb-2 line-clamp-2">{og.description}</div>}
+        <div className="text-xs text-sky-400 break-all">{url}</div>
+      </div>
+    </a>
+  );
+}
+
+// Twitch embed component
+function TwitchEmbed({ username, fallbackUrl }: { username: string, fallbackUrl: string }) {
+  const [embedUrl, setEmbedUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    const parent = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+    setLoading(true);
+    setError(null);
+    fetch(`/api/twitch-embed?username=${encodeURIComponent(username)}&parent=${parent}`)
+      .then(res => res.json())
+      .then(data => {
+        if (cancelled) return;
+        if (data.embedUrl) {
+          setEmbedUrl(data.embedUrl);
+        } else {
+          setError(data.error || 'No stream or VOD found');
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setError('Failed to load Twitch embed');
+      })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [username]);
+
+  if (loading) {
+    return <div className="w-full aspect-video bg-sky-900/20 animate-pulse rounded-lg" />;
+  }
+  if (embedUrl) {
+    return (
+      <div className="aspect-video rounded-lg overflow-hidden border border-sky-400/10 bg-black">
+        <iframe
+          src={embedUrl}
+          allowFullScreen
+          className="w-full h-full"
+          title="Twitch stream embed"
+          frameBorder="0"
+        />
+      </div>
+    );
+  }
+  // If error, fallback to LinkPreviewEmbed
+  return <LinkPreviewEmbed url={fallbackUrl} />;
+}
+
+// Helper: Render embeds for all links in content
+function renderEmbeds(content: string) {
+  const urls = content.match(urlRegex) || [];
+  if (urls.length === 0) return null;
+  return (
+    <div className="mt-3 space-y-3">
+      {urls.map((url, i) => {
+        // YouTube
+        const yt = getYouTubeEmbed(url);
+        if (yt) {
+          return (
+            <div key={i} className="aspect-video rounded-lg overflow-hidden border border-sky-400/10 bg-black">
+              <iframe src={yt} allow="autoplay; encrypted-media" allowFullScreen className="w-full h-full" title="YouTube video embed" />
+            </div>
+          );
+        }
+        // Twitch channel
+        const twitchUser = getTwitchChannel(url);
+        if (twitchUser) {
+          return <TwitchEmbed key={i} username={twitchUser} fallbackUrl={url} />;
+        }
+        // Twitter
+        const tw = getTwitterEmbed(url);
+        if (tw) {
+          return (
+            <blockquote key={i} className="twitter-tweet"><a href={tw}>{tw}</a></blockquote>
+          );
+        }
+        // Only show rich preview for non-YouTube and non-Twitch links
+        return <LinkPreviewEmbed key={i} url={url} />;
+      })}
+    </div>
+  );
+}
 
 export default function LobbyistPost({ post, onLike, onComment, onEcho, onShare, onTagClick, isBookmarked, onBookmark }: LobbyistPostProps) {
   const { toast } = useToast();
@@ -472,6 +652,8 @@ export default function LobbyistPost({ post, onLike, onComment, onEcho, onShare,
         <div className="text-gray-200 whitespace-pre-wrap break-words">
           {post.content}
         </div>
+        {/* Embeds for links in content */}
+        {renderEmbeds(post.content)}
         {post.images && post.images.length > 0 && (
           <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
             {post.images.map((img, index) => (
