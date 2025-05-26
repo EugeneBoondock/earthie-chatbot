@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AlertCircle, Video, Radio, UploadCloud, X, PlayCircle, User, Eye, Loader2 } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 // Helper: fetch with error handling
 async function fetchJson(url: string, opts?: RequestInit): Promise<any> {
@@ -34,6 +35,16 @@ interface AlertState {
   type: 'info' | 'success' | 'error';
 }
 
+const REACTIONS = [
+  { emoji: '🔥', label: 'Hyped' },
+  { emoji: '💡', label: 'Smart' },
+  { emoji: '💜', label: 'Love' },
+  { emoji: '👀', label: 'Watching' },
+  { emoji: '🪩', label: 'Earthie' },
+  { emoji: '🎉', label: 'Celebrate' },
+  { emoji: '🤯', label: 'Mind-blown' },
+];
+
 export default function LiveStreamModal({ isOpen, onClose, user, selectedStream: selectedStreamProp, setSelectedStream }: LiveStreamModalProps) {
   const [tab, setTab] = useState<'discover'|'golive'|'watch'>('discover');
   const [streams, setStreams] = useState<Stream[]>([]);
@@ -45,6 +56,14 @@ export default function LiveStreamModal({ isOpen, onClose, user, selectedStream:
   const [selectedStream, setSelectedStreamState] = useState<Stream | null>(null);
   const [browserStream, setBrowserStream] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [chatMessages, setChatMessages] = useState<any[]>([]);
+  const [reactions, setReactions] = useState<any[]>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [sending, setSending] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement | null>(null);
+  const [vodStart, setVodStart] = useState<Date | null>(null);
+  const [vodCurrent, setVodCurrent] = useState<number>(0);
+  const vodIntervalRef = useRef<any>(null);
 
   // Sync selectedStream prop to state
   useEffect(() => {
@@ -71,6 +90,113 @@ export default function LiveStreamModal({ isOpen, onClose, user, selectedStream:
       .catch(() => setStreams([]))
       .finally(() => setLoadingStreams(false));
   }, [isOpen, myStream]);
+
+  // Fetch chat and reactions for the stream (live or VOD)
+  useEffect(() => {
+    if (!selectedStream) return;
+    const fetchChatAndReactions = async () => {
+      const { data: chat } = await supabase
+        .from('lobbyist_stream_chats')
+        .select('*')
+        .eq('stream_id', selectedStream.id)
+        .order('created_at', { ascending: true });
+      setChatMessages(chat || []);
+      const { data: reacts } = await supabase
+        .from('lobbyist_stream_reactions')
+        .select('*')
+        .eq('stream_id', selectedStream.id)
+        .order('created_at', { ascending: true });
+      setReactions(reacts || []);
+      // For VOD, set start time
+      if (!selectedStream.isActive && chat && chat.length > 0) {
+        setVodStart(new Date(chat[0].created_at));
+      } else {
+        setVodStart(null);
+      }
+    };
+    fetchChatAndReactions();
+  }, [selectedStream]);
+
+  // Subscribe to realtime chat/reactions for live
+  useEffect(() => {
+    if (!selectedStream || !selectedStream.isActive) return;
+    const chatSub = supabase
+      .channel('lobbyist_stream_chats')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'lobbyist_stream_chats', filter: `stream_id=eq.${selectedStream.id}` }, payload => {
+        setChatMessages(msgs => [...msgs, payload.new]);
+      })
+      .subscribe();
+    const reactSub = supabase
+      .channel('lobbyist_stream_reactions')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'lobbyist_stream_reactions', filter: `stream_id=eq.${selectedStream.id}` }, payload => {
+        setReactions(rs => [...rs, payload.new]);
+      })
+      .subscribe();
+    return () => {
+      supabase.removeChannel(chatSub);
+      supabase.removeChannel(reactSub);
+    };
+  }, [selectedStream]);
+
+  // VOD: Replay chat/reactions in sync with video
+  useEffect(() => {
+    if (!selectedStream || selectedStream.isActive || !vodStart) return;
+    setVodCurrent(0);
+    if (vodIntervalRef.current) clearInterval(vodIntervalRef.current);
+    vodIntervalRef.current = setInterval(() => {
+      const video = document.getElementById('vod-player') as HTMLVideoElement;
+      if (video) setVodCurrent(video.currentTime);
+    }, 500);
+    return () => vodIntervalRef.current && clearInterval(vodIntervalRef.current);
+  }, [selectedStream, vodStart]);
+
+  // Scroll chat to bottom on new message
+  useEffect(() => {
+    if (chatEndRef.current) chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages]);
+
+  // Send chat message
+  const sendChat = async () => {
+    if (!chatInput.trim() || !user || !selectedStream) return;
+    setSending(true);
+    const username = user.name || 'Earth2 Profile Required';
+    const avatar = (user as any).avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${user.name || 'anonymous'}`;
+    await supabase.from('lobbyist_stream_chats').insert({
+      stream_id: selectedStream.id,
+      user_id: user.id,
+      username,
+      avatar,
+      message: chatInput.trim(),
+    });
+    setChatInput('');
+    setSending(false);
+  };
+
+  // Send reaction
+  const sendReaction = async (emoji: string) => {
+    if (!user || !selectedStream) return;
+    await supabase.from('lobbyist_stream_reactions').insert({
+      stream_id: selectedStream.id,
+      user_id: user.id,
+      reaction: emoji,
+    });
+  };
+
+  // Filter chat/reactions for VOD replay
+  let displayedChat = chatMessages;
+  let displayedReactions = reactions;
+  if (selectedStream && !selectedStream.isActive && vodStart) {
+    const vodStartTime = vodStart.getTime();
+    displayedChat = chatMessages.filter(m => (new Date(m.created_at).getTime() - vodStartTime) / 1000 <= vodCurrent);
+    displayedReactions = reactions.filter(r => (new Date(r.created_at).getTime() - vodStartTime) / 1000 <= vodCurrent);
+  }
+
+  // Reaction counts (last 30s for live, all for VOD)
+  const now = Date.now();
+  const reactionCounts = REACTIONS.reduce((acc, r) => {
+    acc[r.emoji] = displayedReactions.filter(rx => r.emoji === rx.reaction && (selectedStream?.isActive ? now - new Date(rx.created_at).getTime() < 30000 : true)).length;
+    return acc;
+  }, {} as Record<string, number>);
 
   // Animated alert
   const showAlert = (msg: string, type: 'info' | 'success' | 'error' = 'info') => {
@@ -208,20 +334,76 @@ export default function LiveStreamModal({ isOpen, onClose, user, selectedStream:
               </div>
             )}
             {tab==='watch' && selectedStream && (
-              <div className="space-y-4">
-                <div className="bg-sky-900/40 border border-sky-400/20 rounded-lg p-4">
-                  <div className="font-bold text-lg mb-2">Now Watching: {selectedStream.name}</div>
-                  <video
-                    src={selectedStream.playbackUrl || selectedStream.playbackUrl || ''}
-                    controls
-                    autoPlay
-                    className="rounded-lg w-full aspect-video bg-black mb-2"
-                  />
-                  <div className="flex items-center gap-2 text-xs text-gray-400">
-                    <User className="w-4 h-4" /> {selectedStream.userId || 'Unknown'}
-                    <Eye className="w-4 h-4 ml-4" /> {selectedStream.viewerCount || 0}
+              <div className="flex flex-col md:flex-row gap-6">
+                <div className="flex-1">
+                  <div className="bg-sky-900/40 border border-sky-400/20 rounded-lg p-4 mb-4">
+                    <div className="font-bold text-lg mb-2">Now Watching: {selectedStream.name}</div>
+                    <video
+                      id={selectedStream.isActive ? undefined : 'vod-player'}
+                      src={selectedStream.playbackUrl || selectedStream.playbackUrl || ''}
+                      controls
+                      autoPlay
+                      className="rounded-lg w-full aspect-video bg-black mb-2"
+                    />
+                    <div className="flex items-center gap-2 text-xs text-gray-400">
+                      <User className="w-4 h-4" /> {selectedStream.userId || 'Unknown'}
+                      <Eye className="w-4 h-4 ml-4" /> {selectedStream.viewerCount || 0}
+                    </div>
                   </div>
-                  <Button onClick={()=>{setTab('discover');if(setSelectedStream){setSelectedStream(null);}setSelectedStreamState(null);}} variant="ghost" className="mt-2">Back to Streams</Button>
+                </div>
+                {/* Chat & Reactions */}
+                <div className="w-full md:w-80 flex flex-col gap-2">
+                  {/* Reactions Bar */}
+                  <div className="flex gap-2 justify-center md:justify-end mb-2">
+                    {REACTIONS.map(r => (
+                      <button
+                        key={r.emoji}
+                        className="relative text-2xl hover:scale-125 transition-transform duration-150"
+                        onClick={() => sendReaction(r.emoji)}
+                        title={r.label}
+                      >
+                        {r.emoji}
+                        {reactionCounts[r.emoji] > 0 && (
+                          <span className="absolute -top-2 -right-2 bg-sky-600 text-white text-xs rounded-full px-1.5 py-0.5 animate-bounce shadow">
+                            {reactionCounts[r.emoji]}
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                  {/* Chat Box */}
+                  <div className="flex-1 bg-sky-900/30 border border-sky-400/10 rounded-lg p-2 flex flex-col overflow-y-auto max-h-80">
+                    {displayedChat.length === 0 ? (
+                      <div className="text-center text-gray-400 py-8">No chat yet. Be the first to say hi!</div>
+                    ) : (
+                      displayedChat.map((msg, idx) => (
+                        <div key={msg.id || idx} className="flex items-start gap-2 mb-2">
+                          <img src={msg.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${msg.username || 'User'}`} alt="avatar" className="w-7 h-7 rounded-full border border-sky-400/20" />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-sky-200 text-sm truncate">{msg.username || 'User'}</span>
+                              <span className="text-xs text-gray-400">{new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            </div>
+                            <div className="text-sm text-white break-words">{msg.message}</div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                    <div ref={chatEndRef} />
+                  </div>
+                  {/* Chat Input */}
+                  <form className="flex gap-2 mt-2" onSubmit={e => { e.preventDefault(); sendChat(); }}>
+                    <input
+                      type="text"
+                      className="flex-1 rounded-lg px-3 py-2 bg-sky-900/40 border border-sky-400/20 text-white focus:outline-none focus:border-sky-400"
+                      placeholder="Type a message..."
+                      value={chatInput}
+                      onChange={e => setChatInput(e.target.value)}
+                      disabled={sending || !user}
+                      maxLength={200}
+                    />
+                    <Button type="submit" disabled={sending || !user} className="bg-sky-600 hover:bg-sky-700">Send</Button>
+                  </form>
                 </div>
               </div>
             )}

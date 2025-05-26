@@ -64,6 +64,7 @@ interface PostData {
 }
 
 const LiveStreamsPanel = dynamic(() => import('./components/LiveStreamsPanel'), { ssr: false });
+const CommunitySentimentPanel = dynamic(() => import('./components/CommunitySentimentPanel'), { ssr: false });
 
 // This page will be enhanced with actual components that we'll create next
 export default function LobbyistPage() {
@@ -652,6 +653,7 @@ export default function LobbyistPage() {
 
         {/* Right Sidebar - Hidden on mobile, shown on lg screens */}
         <div className="hidden lg:block w-1/4 space-y-6">
+          <CommunitySentimentPanel />
           {/* Leaderboard - Only show if real leaderboard data exists */}
           {/* {leaderboard && leaderboard.length > 0 && (
             <Card>...</Card>
