@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
     // Channel is live
     return NextResponse.json({
       type: 'live',
-      embedUrl: `https://player.twitch.tv/?channel=${username}&parent=${parent}`,
+      embedUrl: `https://player.twitch.tv/?channel=${username}&parent=${parent}&autoplay=false`,
     });
   }
 
@@ -57,7 +57,7 @@ export async function GET(req: NextRequest) {
     const vodId = vodData.data[0].id;
     return NextResponse.json({
       type: 'vod',
-      embedUrl: `https://player.twitch.tv/?video=${vodId}&parent=${parent}`,
+      embedUrl: `https://player.twitch.tv/?video=${vodId}&parent=${parent}&autoplay=false`,
     });
   }
 
