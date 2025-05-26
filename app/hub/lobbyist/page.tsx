@@ -33,6 +33,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/lib/supabase';
 import type { User } from '@supabase/supabase-js';
+import dynamic from 'next/dynamic';
 
 interface Reaction {
   reaction_type: string;
@@ -61,6 +62,8 @@ interface PostData {
   reactions: { reaction_type: string }[];
   comments: { count: number }[];
 }
+
+const LiveStreamsPanel = dynamic(() => import('./components/LiveStreamsPanel'), { ssr: false });
 
 // This page will be enhanced with actual components that we'll create next
 export default function LobbyistPage() {
@@ -421,6 +424,8 @@ export default function LobbyistPage() {
               ))}
             </div>
           </Card>
+          {/* Live Streams Panel */}
+          <LiveStreamsPanel user={userProfile} />
         </div>
 
         {/* Main Content */}
