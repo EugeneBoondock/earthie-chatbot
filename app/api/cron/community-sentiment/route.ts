@@ -4,7 +4,6 @@ import { createClient } from '@supabase/supabase-js';
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
-export const schedule = '0 2 * * *'; // Run once per day at 2:00 AM UTC
 
 export async function GET(request: Request) {
   // Secure with CRON secret
