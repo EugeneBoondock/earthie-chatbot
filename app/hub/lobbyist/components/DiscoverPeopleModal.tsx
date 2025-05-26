@@ -42,12 +42,40 @@ export default function DiscoverPeopleModal({ isOpen, onClose }: DiscoverPeopleM
   const [selectedUser, setSelectedUser] = useState<ProfileUser | null>(null);
   const [selectedUserDetails, setSelectedUserDetails] = useState<any | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [followingIds, setFollowingIds] = useState<string[]>([]);
+  const [followLoading, setFollowLoading] = useState(false);
 
   // Fetch users from profiles and user_e2_profiles tables
   useEffect(() => {
     if (isOpen) {
       fetchUsers();
     }
+  }, [isOpen]);
+
+  // Fetch current user and following list
+  useEffect(() => {
+    if (!isOpen) return;
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.id) {
+        setCurrentUserId(session.user.id);
+        // Fetch following list
+        const { data, error } = await supabase
+          .from('socials')
+          .select('following_id')
+          .eq('follower_id', session.user.id)
+          .eq('relationship_type', 'follow');
+        if (!error && Array.isArray(data)) {
+          setFollowingIds(data.map((row: any) => row.following_id));
+        } else {
+          setFollowingIds([]);
+        }
+      } else {
+        setCurrentUserId(null);
+        setFollowingIds([]);
+      }
+    })();
   }, [isOpen]);
 
   const fetchUsers = async () => {
@@ -271,6 +299,34 @@ export default function DiscoverPeopleModal({ isOpen, onClose }: DiscoverPeopleM
         user.username.toLowerCase().includes(searchQuery.toLowerCase())
       )
     : users;
+
+  // Follow/unfollow logic
+  const handleFollowToggle = async (userId: string) => {
+    if (!currentUserId || userId === currentUserId) return;
+    setFollowLoading(true);
+    try {
+      if (followingIds.includes(userId)) {
+        // Unfollow
+        await supabase
+          .from('socials')
+          .delete()
+          .eq('follower_id', currentUserId)
+          .eq('following_id', userId)
+          .eq('relationship_type', 'follow');
+        setFollowingIds(ids => ids.filter(id => id !== userId));
+      } else {
+        // Follow
+        await supabase
+          .from('socials')
+          .insert({ follower_id: currentUserId, following_id: userId, relationship_type: 'follow' });
+        setFollowingIds(ids => [...ids, userId]);
+      }
+    } catch (e) {
+      // Optionally show error
+    } finally {
+      setFollowLoading(false);
+    }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -497,6 +553,18 @@ export default function DiscoverPeopleModal({ isOpen, onClose }: DiscoverPeopleM
                         </Button>
                       </a>
                     </div>
+                  )}
+
+                  {selectedUser && currentUserId && selectedUser.id !== currentUserId && (
+                    <Button
+                      className={`mt-4 w-full ${followingIds.includes(selectedUser.id) ? 'bg-rose-700 hover:bg-rose-800' : 'bg-sky-600 hover:bg-sky-700'} text-white`}
+                      disabled={followLoading}
+                      onClick={() => handleFollowToggle(selectedUser.id)}
+                    >
+                      {followLoading
+                        ? (followingIds.includes(selectedUser.id) ? 'Unfollowing...' : 'Following...')
+                        : (followingIds.includes(selectedUser.id) ? 'Unfollow' : 'Follow')}
+                    </Button>
                   )}
                 </div>
               </div>

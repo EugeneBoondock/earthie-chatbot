@@ -92,6 +92,10 @@ export default function LobbyistPage() {
   const [bookmarkedPostIds, setBookmarkedPostIds] = useState<string[]>([]);
   const [loadingBookmarks, setLoadingBookmarks] = useState(false);
 
+  // Add state for followingIds and loading
+  const [followingIds, setFollowingIds] = useState<string[]>([]);
+  const [loadingFollowing, setLoadingFollowing] = useState(false);
+
   // Get initial session and set up auth listener
   useEffect(() => {
     // Get initial session
@@ -313,11 +317,33 @@ export default function LobbyistPage() {
     }
   };
 
+  // Fetch followingIds when user changes
+  useEffect(() => {
+    if (!user) {
+      setFollowingIds([]);
+      return;
+    }
+    setLoadingFollowing(true);
+    supabase
+      .from('socials')
+      .select('following_id')
+      .eq('follower_id', user.id)
+      .eq('relationship_type', 'follow')
+      .then(({ data, error }) => {
+        if (!error && Array.isArray(data)) {
+          setFollowingIds(data.map((row: any) => row.following_id));
+        } else {
+          setFollowingIds([]);
+        }
+        setLoadingFollowing(false);
+      });
+  }, [user]);
+
   // Tab filtering logic
   let displayedPosts = paginatedPosts;
   if (activeTab === 'following') {
-    // TODO: Filter posts by followed users
-    displayedPosts = [];
+    // Filter posts by followed users
+    displayedPosts = paginatedPosts.filter(post => followingIds.includes(post.user.id));
   } else if (activeTab === 'bookmarks') {
     // Filter posts by bookmarks
     displayedPosts = paginatedPosts.filter(post => bookmarkedPostIds.includes(post.id));
@@ -387,7 +413,7 @@ export default function LobbyistPage() {
                   key={lobby.id}
                   variant="ghost"
                   className={`flex-1 sm:flex-none justify-start text-sm ${activeSubLobby === lobby.id ? 'bg-sky-600/20 text-sky-300' : 'text-gray-300 hover:text-white hover:bg-earthie-dark-light/40'}`}
-                  onClick={() => setActiveSubLobby(lobby.id)}
+                  onClick={() => setActiveSubLobby(activeSubLobby === lobby.id ? null : lobby.id)}
                 >
                   {lobby.icon}
                   <span className="ml-2 truncate">{lobby.name}</span>
@@ -511,16 +537,44 @@ export default function LobbyistPage() {
 
               {/* Following content */}
               {activeTab === 'following' && (
-                <div className="backdrop-blur-md bg-gradient-to-br from-earthie-dark/70 to-earthie-dark-light/60 border border-sky-400/20 rounded-xl p-4 sm:p-6 text-center">
-                  <Users className="h-10 w-10 text-sky-400/50 mx-auto mb-3" />
-                  <h3 className="text-xl font-medium text-white mb-2">No followed posts yet</h3>
-                  <p className="text-gray-300 mb-4">Follow other lobbyists to see their posts here.</p>
-                  <Button 
-                    onClick={() => setIsDiscoverPeopleOpen(true)}
-                    className="bg-sky-600 hover:bg-sky-700"
-                  >
-                    Discover People
-                  </Button>
+                <div className="space-y-6">
+                  {/* Always show Discover People intro at the top, but only show the empty text if no posts */}
+                  <div className="backdrop-blur-md bg-gradient-to-br from-earthie-dark/70 to-earthie-dark-light/60 border border-sky-400/20 rounded-xl p-4 sm:p-6 text-center">
+                    <Users className="h-10 w-10 text-sky-400/50 mx-auto mb-3" />
+                    {displayedPosts.length === 0 && !loadingFollowing && (
+                      <>
+                        <h3 className="text-xl font-medium text-white mb-2">No followed posts yet</h3>
+                        <p className="text-gray-300 mb-4">Follow other lobbyists to see their posts here.</p>
+                      </>
+                    )}
+                    <Button 
+                      onClick={() => setIsDiscoverPeopleOpen(true)}
+                      className="bg-sky-600 hover:bg-sky-700"
+                    >
+                      Discover People
+                    </Button>
+                  </div>
+                  {/* Show posts or loading/empty state below */}
+                  {loadingFollowing ? (
+                    <div className="py-4 space-y-4">
+                      {[...Array(3)].map((_, i) => <PostSkeleton key={i} />)}
+                    </div>
+                  ) : (
+                    displayedPosts.length === 0 ? null : (
+                      <div className="space-y-4">
+                        {displayedPosts.map(post => (
+                          <div key={post.id} className="w-full">
+                            <LobbyistPost
+                              post={post}
+                              onTagClick={handleTagClick}
+                              isBookmarked={bookmarkedPostIds.includes(post.id)}
+                              onBookmark={handleBookmark}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  )}
                 </div>
               )}
               
