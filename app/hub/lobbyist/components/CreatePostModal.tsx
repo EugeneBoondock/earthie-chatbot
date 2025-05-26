@@ -80,6 +80,8 @@ export default function CreatePostModal({ isOpen, onClose, onCreatePost, user }:
   const [followersOnly, setFollowersOnly] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const [uploadError, setUploadError] = useState('');
 
   // Reset form when modal opens/closes
   useEffect(() => {
@@ -127,6 +129,33 @@ export default function CreatePostModal({ isOpen, onClose, onCreatePost, user }:
     setImageUrls(imageUrls.filter(url => url !== urlToRemove));
   };
 
+  // Image upload handler
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setUploadingImages(true);
+    setUploadError('');
+    try {
+      const uploadedUrls: string[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const fileExt = file.name.split('.').pop();
+        const filePath = `post-${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
+        const { data, error } = await supabase.storage.from('lobbyist-posts').upload(filePath, file);
+        if (error) throw error;
+        const { data: publicUrlData } = supabase.storage.from('lobbyist-posts').getPublicUrl(filePath);
+        if (publicUrlData?.publicUrl) {
+          uploadedUrls.push(publicUrlData.publicUrl);
+        }
+      }
+      setImageUrls(prev => [...prev, ...uploadedUrls]);
+    } catch (e: any) {
+      setUploadError(e.message || 'Failed to upload image(s)');
+    } finally {
+      setUploadingImages(false);
+    }
+  };
+
   // Handle form submission
   const handleSubmit = async () => {
     // Validate form
@@ -164,7 +193,7 @@ export default function CreatePostModal({ isOpen, onClose, onCreatePost, user }:
           content,
           post_type: postType,
           tags,
-          image_url: imageUrls[0],
+          image_urls: imageUrls,
           sub_lobby: subLobby,
           is_private: isPrivate,
           followers_only: followersOnly,
@@ -188,7 +217,7 @@ export default function CreatePostModal({ isOpen, onClose, onCreatePost, user }:
         postType: data.post_type,
         createdAt: data.created_at,
         tags: data.tags || [],
-        images: [data.image_url].filter(Boolean) as string[],
+        images: data.image_urls || [],
         user: {
           id: data.user_id,
           name: data.profiles?.username || 'Earth2 Profile Required',
@@ -354,6 +383,24 @@ export default function CreatePostModal({ isOpen, onClose, onCreatePost, user }:
               )}
             </div>
           )}
+
+          {/* Image upload input */}
+          <div className="mb-3">
+            <label className="block text-sm font-medium text-gray-300 mb-1">Upload Images</label>
+            <Input type="file" accept="image/*" multiple onChange={handleImageUpload} disabled={uploadingImages} />
+            {uploadError && <div className="text-xs text-red-400 mt-1">{uploadError}</div>}
+            {uploadingImages && <div className="text-xs text-sky-400 mt-1">Uploading...</div>}
+            {imageUrls.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {imageUrls.map((url, idx) => (
+                  <div key={idx} className="relative w-20 h-20 rounded overflow-hidden border border-sky-400/20">
+                    <img src={url} alt={`Uploaded ${idx + 1}`} className="object-cover w-full h-full" />
+                    <button type="button" onClick={() => handleRemoveImageUrl(url)} className="absolute top-0 right-0 bg-black/60 text-white rounded-bl px-1 text-xs">x</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Tags */}
           <div className="space-y-2">
