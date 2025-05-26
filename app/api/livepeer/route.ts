@@ -14,7 +14,17 @@ export async function GET() {
     },
   });
   const data = await res.json();
-  return NextResponse.json(data);
+  // Map streams to include required fields for UI
+  const streams = (Array.isArray(data) ? data : data.data || []).map((s: any) => ({
+    id: s.id,
+    name: s.name,
+    userId: s.userId || s.user_id || '',
+    isActive: s.isActive || s.isActive === undefined ? !!s.isActive : !!s.isActive,
+    playbackUrl: s.playbackUrl || s.playbackUrl || (s.recordingUrl || (s.playbackIds && s.playbackIds[0]?.id ? `https://livepeercdn.com/hls/${s.playbackIds[0].id}/index.m3u8` : '')),
+    streamKey: s.streamKey || s.stream_key || '',
+    livepeerTvUrl: s.id ? `https://lvpr.tv/broadcast/${s.id}` : '',
+  }));
+  return NextResponse.json(streams);
 }
 
 export async function POST(req: NextRequest) {

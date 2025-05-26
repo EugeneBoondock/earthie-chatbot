@@ -10,6 +10,7 @@ interface Stream {
   isActive?: boolean;
   viewerCount?: number;
   playbackUrl?: string;
+  livepeerTvUrl?: string;
 }
 
 export default function LiveStreamsPanel({ user }: { user: any }) {
@@ -62,6 +63,9 @@ export default function LiveStreamsPanel({ user }: { user: any }) {
                     <User className="w-4 h-4" /> {s.userId || 'Unknown'}
                     <Eye className="w-4 h-4 ml-2" /> {s.viewerCount || 0}
                   </div>
+                  {s.livepeerTvUrl && (
+                    <a href={s.livepeerTvUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-sky-400 underline mt-1 inline-block">Watch on Livepeer.tv</a>
+                  )}
                 </div>
               </div>
             ))}
@@ -90,6 +94,15 @@ export default function LiveStreamsPanel({ user }: { user: any }) {
                   <div className="flex items-center gap-2 text-xs text-gray-400 mt-1">
                     <User className="w-4 h-4" /> {s.userId || 'Unknown'}
                   </div>
+                  {s.playbackUrl && (
+                    <video controls width="100%" height="60" className="rounded mt-2">
+                      <source src={s.playbackUrl} type="application/x-mpegURL" />
+                      Your browser does not support the video tag.
+                    </video>
+                  )}
+                  {s.livepeerTvUrl && (
+                    <a href={s.livepeerTvUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-sky-400 underline mt-1 inline-block">Watch on Livepeer.tv</a>
+                  )}
                 </div>
               </div>
             ))}
