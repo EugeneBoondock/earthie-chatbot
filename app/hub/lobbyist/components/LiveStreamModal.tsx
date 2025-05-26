@@ -316,8 +316,8 @@ export default function LiveStreamModal({ isOpen, onClose, user, selectedStream:
               <div className="space-y-4">
                 <div className="bg-sky-900/40 border border-sky-400/20 rounded-lg p-4">
                   <div className="font-bold text-lg mb-2">RTMP Stream Details</div>
-                  <div className="mb-2"><span className="font-semibold">Ingest URL:</span> <span className="text-sky-300 select-all">{myStream.rtmpIngestUrl || myStream.rtmp?.ingestUrl || '...'}</span></div>
-                  <div className="mb-2"><span className="font-semibold">Stream Key:</span> <span className="text-sky-300 select-all">{myStream.streamKey || myStream.streamKey || '...'}</span></div>
+                  <div className="mb-2"><span className="font-semibold">Ingest URL:</span> <span className="text-sky-300 select-all">rtmp://rtmp.livepeer.com/live</span></div>
+                  <div className="mb-2"><span className="font-semibold">Stream Key:</span> <span className="text-sky-300 select-all">{myStream.streamKey || '...'}</span></div>
                   <div className="mb-2 text-xs text-gray-400">Use OBS, Streamlabs, or any RTMP software. Your stream will appear in the Live grid above when you go live!</div>
                   <Button onClick={()=>{setMyStream(null);setStreamName('');}} variant="ghost" className="mt-2">Done</Button>
                 </div>
