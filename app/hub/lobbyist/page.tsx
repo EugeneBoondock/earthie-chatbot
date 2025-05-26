@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import LobbyistPost from './components/LobbyistPost';
 import CreatePostModal from './components/CreatePostModal';
@@ -72,11 +72,25 @@ export default function LobbyistPage() {
   const [activeSubLobby, setActiveSubLobby] = useState<string | null>(
     searchParams?.get('lobby') || null
   );
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(10);
 
   // User state for modal
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<any | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
+
+  // Feed state
+  const [posts, setPosts] = useState<any[]>([]);
+  const [loadingPosts, setLoadingPosts] = useState(false);
+  const [postsError, setPostsError] = useState<string | null>(null);
+  const [totalPages, setTotalPages] = useState(1);
+
+  // 1. Add state for bookmarks
+  const [bookmarkedPostIds, setBookmarkedPostIds] = useState<string[]>([]);
+  const [loadingBookmarks, setLoadingBookmarks] = useState(false);
 
   // Get initial session and set up auth listener
   useEffect(() => {
@@ -164,17 +178,12 @@ export default function LobbyistPage() {
     loadProfile();
   }, [user]);
 
-  // Feed state
-  const [posts, setPosts] = useState<any[]>([]);
-  const [loadingPosts, setLoadingPosts] = useState(false);
-  const [postsError, setPostsError] = useState<string | null>(null);
-
-  // Fetch posts from Supabase
-  const fetchPosts = async () => {
+  // Fetch posts from Supabase (client-side)
+  const fetchPosts = useCallback(async () => {
     setLoadingPosts(true);
     setPostsError(null);
     try {
-      const { data: posts, error } = await supabase
+      let query = supabase
         .from('lobbyist_posts')
         .select(`
           *,
@@ -184,15 +193,17 @@ export default function LobbyistPage() {
           echoes:lobbyist_echoes!original_post_id(count)
         `)
         .order('created_at', { ascending: false });
-
+      if (activeSubLobby) {
+        query = query.eq('sub_lobby', activeSubLobby);
+      }
+      // Pagination (client-side, not as efficient as server-side, but works for now)
+      const { data: posts, error } = await query;
       if (error) throw error;
-
       // Transform the data
       const transformedPosts = posts.map(post => {
         const postReactions = post.reactions || [];
         const commentCount = post.comments?.[0]?.count || 0;
         const echoCount = post.echoes?.[0]?.count || 0;
-
         return {
           id: post.id,
           title: post.title,
@@ -217,26 +228,116 @@ export default function LobbyistPage() {
           echoCount
         };
       });
-
       setPosts(transformedPosts);
+      // Set totalPages for client-side pagination
+      setTotalPages(Math.max(1, Math.ceil(transformedPosts.length / pageSize)));
     } catch (e: any) {
-      console.error('Error fetching posts:', e);
       setPostsError(e.message || 'Failed to load posts');
     } finally {
       setLoadingPosts(false);
     }
-  };
+  }, [activeSubLobby, pageSize]);
 
   // Fetch posts when component mounts or activeSubLobby changes
   useEffect(() => {
     fetchPosts();
-  }, [activeSubLobby]);
+  }, [fetchPosts]);
 
   // Update handlePostCreated to use the same fetching logic
   const handlePostCreated = async () => {
     setIsCreateModalOpen(false);
+    setPage(1);
     await fetchPosts();
   };
+
+  // Filtering logic (client-side for search and tag)
+  const filteredPosts = posts.filter(post => {
+    // Search filter
+    const matchesSearch =
+      !searchTerm ||
+      post.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      post.content?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (post.tags && post.tags.some((tag: string) => tag.toLowerCase().includes(searchTerm.toLowerCase())));
+    // Tag filter
+    const matchesTag = !activeTag || (post.tags && post.tags.includes(activeTag));
+    return matchesSearch && matchesTag;
+  });
+
+  // Pagination (client-side)
+  const paginatedPosts = filteredPosts.slice((page - 1) * pageSize, page * pageSize);
+
+  // 2. Fetch bookmarks for the current user
+  useEffect(() => {
+    const fetchBookmarks = async () => {
+      setLoadingBookmarks(true);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          setBookmarkedPostIds([]);
+          setLoadingBookmarks(false);
+          return;
+        }
+        const { data, error } = await supabase
+          .from('lobbyist_bookmarks')
+          .select('post_id')
+          .eq('user_id', session.user.id);
+        if (error) throw error;
+        setBookmarkedPostIds(data.map((b: any) => b.post_id));
+      } catch (e) {
+        setBookmarkedPostIds([]);
+      } finally {
+        setLoadingBookmarks(false);
+      }
+    };
+    fetchBookmarks();
+  }, []);
+
+  // 3. Add bookmark/unbookmark logic
+  const handleBookmark = async (postId: string) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    if (bookmarkedPostIds.includes(postId)) {
+      // Remove bookmark
+      await supabase
+        .from('lobbyist_bookmarks')
+        .delete()
+        .eq('user_id', session.user.id)
+        .eq('post_id', postId);
+      setBookmarkedPostIds(ids => ids.filter(id => id !== postId));
+    } else {
+      // Add bookmark
+      await supabase
+        .from('lobbyist_bookmarks')
+        .insert({ user_id: session.user.id, post_id: postId });
+      setBookmarkedPostIds(ids => [...ids, postId]);
+    }
+  };
+
+  // Tab filtering logic
+  let displayedPosts = paginatedPosts;
+  if (activeTab === 'following') {
+    // TODO: Filter posts by followed users
+    displayedPosts = [];
+  } else if (activeTab === 'bookmarks') {
+    // Filter posts by bookmarks
+    displayedPosts = paginatedPosts.filter(post => bookmarkedPostIds.includes(post.id));
+  } else if (activeTab === 'trending') {
+    // Sort by total reactions (descending)
+    displayedPosts = [...paginatedPosts].sort((a, b) => {
+      const aReactions = Object.values(a.reactions || {}).reduce((sum: number, v) => sum + Number(v || 0), 0);
+      const bReactions = Object.values(b.reactions || {}).reduce((sum: number, v) => sum + Number(v || 0), 0);
+      return bReactions - aReactions;
+    });
+  }
+
+  // Tag click handler
+  const handleTagClick = (tag: string) => {
+    setActiveTag(tag);
+    setPage(1);
+  };
+
+  // Clear tag filter
+  const clearTagFilter = () => setActiveTag(null);
 
   // Mock sub-lobbies data
   const SUB_LOBBIES = [
@@ -356,11 +457,13 @@ export default function LobbyistPage() {
                       <Input
                         placeholder="Search posts..."
                         className="pl-10 bg-earthie-dark-light/30 border-sky-400/20 focus:border-sky-400/60 w-full"
+                        value={searchTerm}
+                        onChange={e => { setSearchTerm(e.target.value); setPage(1); }}
                       />
                     </div>
-                    <Button variant="outline" className="border-sky-400/20 bg-earthie-dark-light/30 whitespace-nowrap">
+                    <Button variant="outline" className="border-sky-400/20 bg-earthie-dark-light/30 whitespace-nowrap" onClick={clearTagFilter} disabled={!activeTag}>
                       <Filter className="h-4 w-4 mr-2" />
-                      Filter
+                      {activeTag ? `Clear Tag: #${activeTag}` : 'Filter'}
                     </Button>
                   </div>
 
@@ -376,7 +479,7 @@ export default function LobbyistPage() {
                         <h3 className="text-lg font-medium text-red-200 mb-2">{postsError}</h3>
                         <Button onClick={() => window.location.reload()} className="bg-red-600 hover:bg-red-700 mt-2">Retry</Button>
                       </div>
-                    ) : posts.length === 0 ? (
+                    ) : displayedPosts.length === 0 ? (
                       <div className="backdrop-blur-md bg-gradient-to-br from-earthie-dark/70 to-earthie-dark-light/60 border border-sky-400/20 rounded-xl p-4 mb-6 text-center py-12">
                         <MessageSquare className="h-12 w-12 text-sky-400/30 mx-auto mb-3" />
                         <h3 className="text-xl font-medium text-white mb-2">No posts yet</h3>
@@ -384,13 +487,24 @@ export default function LobbyistPage() {
                       </div>
                     ) : (
                       <div className="space-y-4">
-                        {posts.map(post => (
+                        {displayedPosts.map(post => (
                           <div key={post.id} className="w-full">
-                            <LobbyistPost post={post} />
+                            <LobbyistPost
+                              post={post}
+                              onTagClick={handleTagClick}
+                              isBookmarked={bookmarkedPostIds.includes(post.id)}
+                              onBookmark={handleBookmark}
+                            />
                           </div>
                         ))}
                       </div>
                     )}
+                  </div>
+                  {/* Pagination */}
+                  <div className="flex justify-center mt-6 gap-2">
+                    <Button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>Previous</Button>
+                    <span className="text-gray-300 px-2">Page {page} of {totalPages}</span>
+                    <Button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>Next</Button>
                   </div>
                 </div>
               )}
@@ -412,10 +526,33 @@ export default function LobbyistPage() {
               
               {/* Bookmarks content */}
               {activeTab === 'bookmarks' && (
-                <div className="backdrop-blur-md bg-gradient-to-br from-earthie-dark/70 to-earthie-dark-light/60 border border-sky-400/20 rounded-xl p-4 sm:p-6 text-center">
-                  <Bookmark className="h-10 w-10 text-sky-400/50 mx-auto mb-3" />
-                  <h3 className="text-xl font-medium text-white mb-2">No bookmarks yet</h3>
-                  <p className="text-gray-300 mb-4">Save posts to see them here!</p>
+                <div className="space-y-6">
+                  <div className="w-full">
+                    {loadingBookmarks ? (
+                      <div className="py-4 space-y-4">
+                        {[...Array(3)].map((_, i) => <PostSkeleton key={i} />)}
+                      </div>
+                    ) : displayedPosts.length === 0 ? (
+                      <div className="backdrop-blur-md bg-gradient-to-br from-earthie-dark/70 to-earthie-dark-light/60 border border-sky-400/20 rounded-xl p-4 mb-6 text-center py-12">
+                        <Bookmark className="h-12 w-12 text-sky-400/30 mx-auto mb-3" />
+                        <h3 className="text-xl font-medium text-white mb-2">No bookmarks yet</h3>
+                        <p className="text-gray-300 mb-4">Save posts to see them here!</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {displayedPosts.map(post => (
+                          <div key={post.id} className="w-full">
+                            <LobbyistPost
+                              post={post}
+                              onTagClick={handleTagClick}
+                              isBookmarked={bookmarkedPostIds.includes(post.id)}
+                              onBookmark={handleBookmark}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
               

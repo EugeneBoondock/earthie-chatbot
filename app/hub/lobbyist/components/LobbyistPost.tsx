@@ -16,7 +16,8 @@ import {
   Calendar,
   Users,
   BarChart2,
-  BookOpen
+  BookOpen,
+  Bookmark
 } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import CommentSkeleton from './CommentSkeleton';
@@ -68,6 +69,9 @@ export interface LobbyistPostProps {
   onComment?: (postId: string) => void;
   onEcho?: (postId: string) => void;
   onShare?: (postId: string) => void;
+  onTagClick?: (tag: string) => void;
+  isBookmarked?: boolean;
+  onBookmark?: (postId: string) => void;
 }
 
 // Function to format date
@@ -89,7 +93,7 @@ const formatDate = (dateString: string) => {
   });
 };
 
-export default function LobbyistPost({ post, onLike, onComment, onEcho, onShare }: LobbyistPostProps) {
+export default function LobbyistPost({ post, onLike, onComment, onEcho, onShare, onTagClick, isBookmarked, onBookmark }: LobbyistPostProps) {
   const { toast } = useToast();
   // Local state for reactions
   const [activeReaction, setActiveReaction] = useState<ReactionType | null>(null);
@@ -118,11 +122,12 @@ export default function LobbyistPost({ post, onLike, onComment, onEcho, onShare 
           .from('lobbyist_reactions')
           .select('reaction_type')
           .eq('post_id', post.id)
-          .eq('user_id', session.user.id)
-          .single();
+          .eq('user_id', session.user.id);
         
-        if (data && data.reaction_type) {
-          setActiveReaction(data.reaction_type as ReactionType);
+        if (Array.isArray(data) && data.length > 0 && data[0].reaction_type) {
+          setActiveReaction(data[0].reaction_type as ReactionType);
+        } else {
+          setActiveReaction(null);
         }
       } catch (error) {
         // Silent fail - this is just for UI enhancement
@@ -142,10 +147,9 @@ export default function LobbyistPost({ post, onLike, onComment, onEcho, onShare 
         .from('lobbyist_echoes')
         .select('id')
         .eq('original_post_id', post.id)
-        .eq('user_id', session.user.id)
-        .single();
+        .eq('user_id', session.user.id);
 
-      setIsEchoed(!!data);
+      setIsEchoed(Array.isArray(data) && data.length > 0);
     };
 
     checkEchoStatus();
@@ -446,8 +450,9 @@ export default function LobbyistPost({ post, onLike, onComment, onEcho, onShare 
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="bg-earthie-dark-light border border-sky-400/20">
-            <DropdownMenuItem className="text-gray-300 hover:text-white">
-              Bookmark
+            <DropdownMenuItem className="text-gray-300 hover:text-white" onClick={() => onBookmark && onBookmark(post.id)}>
+              {isBookmarked ? <Bookmark fill="#38bdf8" className="mr-2" /> : <Bookmark className="mr-2" />}
+              {isBookmarked ? 'Remove Bookmark' : 'Bookmark'}
             </DropdownMenuItem>
             <DropdownMenuItem className="text-gray-300 hover:text-white">
               Report
@@ -493,7 +498,8 @@ export default function LobbyistPost({ post, onLike, onComment, onEcho, onShare 
               <Badge 
                 key={tag} 
                 variant="outline" 
-                className="text-xs bg-indigo-950/40 text-indigo-300 border-indigo-400/20 hover:bg-indigo-900/30 cursor-pointer truncate max-w-full"
+                className={`text-xs bg-indigo-950/40 text-indigo-300 border-indigo-400/20 hover:bg-indigo-900/30 cursor-pointer truncate max-w-full${onTagClick ? ' underline' : ''}`}
+                onClick={onTagClick ? () => onTagClick(tag) : undefined}
               >
                 #{tag}
               </Badge>

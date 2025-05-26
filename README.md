@@ -1,4 +1,4 @@
-# Earthie Chatbot: Gemini Integration
+# Earthie Platform: Gemini Integration
 
 This project integrates Google Gemini models into a Node.js/Next.js application to provide advanced AI chat capabilities for the Earth2 metaverse community.
 
