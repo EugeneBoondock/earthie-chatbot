@@ -558,10 +558,33 @@ export default function LobbyistPage() {
               
               {/* Trending content */}
               {activeTab === 'trending' && (
-                <div className="backdrop-blur-md bg-gradient-to-br from-earthie-dark/70 to-earthie-dark-light/60 border border-sky-400/20 rounded-xl p-4 sm:p-6 text-center">
-                  <TrendingUp className="h-10 w-10 text-sky-400/50 mx-auto mb-3" />
-                  <h3 className="text-xl font-medium text-white mb-2">No trending posts yet</h3>
-                  <p className="text-gray-300 mb-4">Trending posts will appear here soon.</p>
+                <div className="space-y-6">
+                  <div className="w-full">
+                    {loadingPosts ? (
+                      <div className="py-4 space-y-4">
+                        {[...Array(3)].map((_, i) => <PostSkeleton key={i} />)}
+                      </div>
+                    ) : displayedPosts.length === 0 ? (
+                      <div className="backdrop-blur-md bg-gradient-to-br from-earthie-dark/70 to-earthie-dark-light/60 border border-sky-400/20 rounded-xl p-4 mb-6 text-center py-12">
+                        <TrendingUp className="h-12 w-12 text-sky-400/30 mx-auto mb-3" />
+                        <h3 className="text-xl font-medium text-white mb-2">No trending posts yet</h3>
+                        <p className="text-gray-300 mb-4">Trending posts will appear here soon.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {displayedPosts.map(post => (
+                          <div key={post.id} className="w-full">
+                            <LobbyistPost
+                              post={post}
+                              onTagClick={handleTagClick}
+                              isBookmarked={bookmarkedPostIds.includes(post.id)}
+                              onBookmark={handleBookmark}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
