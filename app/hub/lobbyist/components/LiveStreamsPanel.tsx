@@ -24,6 +24,8 @@ interface Vod {
   createdAt: number;
   duration?: number;
   playbackSources?: any[];
+  isActive?: boolean;
+  isLive?: boolean;
 }
 
 function HLSPlayer({ url, onError }: { url: string; onError?: () => void }) {
@@ -314,16 +316,7 @@ export default function LiveStreamsPanel({ user }: { user: any }) {
             {liveNow.map((s) => (
               <div key={s.id} className="group rounded-xl overflow-hidden bg-gradient-to-br from-sky-900/60 to-indigo-900/60 border border-sky-400/10 shadow hover:scale-[1.02] transition-transform cursor-pointer flex items-center gap-3 p-2" onClick={() => { setSelectedStream(s); setModalOpen(true); }}>
                 <div className="w-20 h-14 bg-black flex items-center justify-center rounded-lg">
-                  {s.playbackId ? (
-                    <img
-                      src={`https://image.livepeer.studio/thumbnail/${s.playbackId}/storyboard.jpg`}
-                      alt="Stream thumbnail"
-                      className="w-20 h-14 object-cover rounded"
-                      onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                    />
-                  ) : (
-                    <PlayCircle className="text-emerald-400 w-8 h-8 animate-pulse" />
-                  )}
+                  <PlayCircle className="text-emerald-400 w-8 h-8 animate-pulse" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-bold text-sky-100 truncate">{s.name}</div>
@@ -356,15 +349,19 @@ export default function LiveStreamsPanel({ user }: { user: any }) {
               <div key={vod.playbackId} className="group rounded-xl overflow-hidden bg-gradient-to-br from-slate-800/60 to-sky-900/60 border border-sky-400/10 shadow hover:scale-[1.02] transition-transform flex flex-col gap-2 p-2">
                 <div className="font-bold text-sky-100 truncate">{vod.title}</div>
                 <div className="aspect-video w-full rounded-md overflow-hidden bg-black">
-                  <iframe
-                    src={`https://lvpr.tv?v=${vod.playbackId}`}
-                    allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
-                    allowFullScreen
-                    className="w-full h-full min-h-[200px] rounded-md border-0"
-                    title={`VOD: ${vod.title}`}
-                    loading="lazy"
-                    frameBorder="0"
-                  />
+                  {(vod.isActive || vod.isLive) ? (
+                    <HLSPlayer url={`https://livepeercdn.studio/hls/${vod.playbackId}/index.m3u8`} />
+                  ) : (
+                    <iframe
+                      src={`https://lvpr.tv?v=${vod.playbackId}`}
+                      allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+                      allowFullScreen
+                      className="w-full h-full min-h-[200px] rounded-md border-0"
+                      title={`VOD: ${vod.title}`}
+                      loading="lazy"
+                      frameBorder="0"
+                    />
+                  )}
                 </div>
                 {/* Optionally show duration, createdAt, etc. */}
               </div>
