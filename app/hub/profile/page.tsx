@@ -1486,7 +1486,7 @@ export default function ProfilePage() {
             </CardTitle>
             <CardDescription className="text-gray-400">
               Manually add properties you own to track them locally (independent of full API sync). Your E2 Profile must be linked first.
-              <br /> <span className="text-xs italic">Note: This requires backend implementation for saving.</span>
+              <br /> <span className="text-xs italic">Note: We're always trying to make it more user-friendly every-time.</span>
             </CardDescription>
           </CardHeader>
           <CardContent>
