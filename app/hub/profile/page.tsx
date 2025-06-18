@@ -2,11 +2,10 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { usePriceContext } from '@/contexts/PriceContext';
-// Assuming these are imported from your UI library, e.g., @/components/ui/card
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"; 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Loader2, AlertCircle, MapPin, Maximize, Building, Zap, Tag, Landmark, CheckCircle, XCircle, Gem, ShieldCheck, User, Globe, ArrowUpRight, LinkIcon, PlusCircle, Trash2 } from 'lucide-react';
+import { Loader2, AlertCircle, MapPin, Maximize, Building, Zap, Tag, Landmark, CheckCircle, XCircle, Gem, ShieldCheck, User, Globe, ArrowUpRight, LinkIcon, RefreshCw } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer, Sector } from 'recharts';
 import { BarChart, CartesianGrid, XAxis, YAxis, Bar } from 'recharts';
 import { get as idbGet, set as idbSet } from 'idb-keyval';
@@ -78,14 +77,6 @@ interface E2PropertiesResponse {
     prev?: string | null;
     next?: string | null; // Full URL or null
   };
-}
-
-// --- Interfaces ---
-// Add interface for tracked property (adjust fields as needed when backend is built)
-interface TrackedProperty {
-  id: string; // E2 Property ID
-  description?: string;
-  thumbnail?: string | null; // Allow null for thumbnail
 }
 
 // --- Helper function to extract E2 User ID ---
@@ -258,14 +249,6 @@ export default function ProfilePage() {
   // --- State for Exchange Rate ---
   const [exchangeRate, setExchangeRate] = useState<number | null>(null);
   const [isRateLoading, setIsRateLoading] = useState<boolean>(false);
-
-  // --- State for Local Property Management ---
-  const [propertyUrlInput, setPropertyUrlInput] = useState('');
-  const [isAddingProperty, setIsAddingProperty] = useState(false);
-  const [addPropertyError, setAddPropertyError] = useState<string | null>(null);
-  const [addPropertySuccess, setAddPropertySuccess] = useState<string | null>(null);
-  const [trackedProperties, setTrackedProperties] = useState<TrackedProperty[]>([]);
-  const [isLoadingTrackedProperties, setIsLoadingTrackedProperties] = useState<boolean>(false);
 
   // --- NEW: Sort & Filter State ---
   const [sortOption, setSortOption] = useState<'latest'|'size'>('latest');
@@ -544,7 +527,7 @@ export default function ProfilePage() {
     setPropertiesCurrentPage(page);
   };
 
-  const fetchAllPropertiesForAnalytics = async (userId: string, userInfo: E2UserInfo | null) => {
+  const fetchAllPropertiesForAnalytics = async (userId: string, userInfo: E2UserInfo | null, forceRefetch: boolean = false) => {
     if (!userId) {
       setIsAnalyticsLoading(false);
       return;
@@ -560,35 +543,37 @@ export default function ProfilePage() {
     console.log(`[Analytics] Expected total properties from user info: ${expectedCount}`);
 
     // Attempt to load from IndexedDB first
-    try {
-      const cached: E2Property[] | undefined = await idbGet(getCacheKey(userId));
-      if (cached && cached.length > 0) {
-        // If we couldn't get expectedCount, assume cache is good. Otherwise require a close match.
-        const isCacheValid = expectedCount === undefined || Math.abs(cached.length - expectedCount) <= 5;
+    if (!forceRefetch) {
+        try {
+          const cached: E2Property[] | undefined = await idbGet(getCacheKey(userId));
+          if (cached && cached.length > 0) {
+            // If we couldn't get expectedCount, assume cache is good. Otherwise require a close match.
+            const isCacheValid = expectedCount === undefined || Math.abs(cached.length - expectedCount) <= 5;
 
-        if (isCacheValid) {
-          console.log(`[Cache] Using valid cached property data from IndexedDB (${cached.length} items).`);
-          setCachedProps(cached);
-          setAllPropertiesForAnalytics(cached);
-          
-          // Prime first page list for display
-          const PER_PAGE = 12;
-          setProperties(cached.slice(0, PER_PAGE));
-          setPropertiesMeta({
-            count: cached.length,
-            current_page: 1,
-            last_page: Math.ceil(cached.length / PER_PAGE),
-            per_page: PER_PAGE,
-          });
-          setPropertiesCurrentPage(1);
-          setIsAnalyticsLoading(false); // Turn off loading
-          return; // IMPORTANT: Skip network fetching
-        } else {
-           console.log(`[Cache] Invalidating cache. Expected ${expectedCount}, found ${cached.length}. Re-fetching.`);
+            if (isCacheValid) {
+              console.log(`[Cache] Using valid cached property data from IndexedDB (${cached.length} items).`);
+              setCachedProps(cached);
+              setAllPropertiesForAnalytics(cached);
+              
+              // Prime first page list for display
+              const PER_PAGE = 12;
+              setProperties(cached.slice(0, PER_PAGE));
+              setPropertiesMeta({
+                count: cached.length,
+                current_page: 1,
+                last_page: Math.ceil(cached.length / PER_PAGE),
+                per_page: PER_PAGE,
+              });
+              setPropertiesCurrentPage(1);
+              setIsAnalyticsLoading(false); // Turn off loading
+              return; // IMPORTANT: Skip network fetching
+            } else {
+               console.log(`[Cache] Invalidating cache. Expected ${expectedCount}, found ${cached.length}. Re-fetching.`);
+            }
+          }
+        } catch (err) {
+          console.error('[Cache] Error accessing IndexedDB:', err);
         }
-      }
-    } catch (err) {
-      console.error('[Cache] Error accessing IndexedDB:', err);
     }
 
     // --- If cache is not used, proceed with network fetch ---
@@ -680,6 +665,35 @@ export default function ProfilePage() {
     if (expectedCount !== undefined && accumulatedProps.length < expectedCount) {
         console.warn(`[Analytics] Mismatch: Expected count was ${expectedCount}, but fetched ${accumulatedProps.length}.`);
     }
+  };
+
+  const handleRefetch = async () => {
+    if (!linkedE2UserId) return;
+
+    console.log('[Refetch] Starting user-triggered data refetch...');
+    setIsAnalyticsLoading(true);
+    setDataLoading(true); // To show general loading indicator
+    setError(null);
+
+    let userInfoData: E2UserInfo | null = null;
+    try {
+      const userInfoRes = await fetch(`https://app.earth2.io/api/v2/user_info/${linkedE2UserId}`);
+      if (!userInfoRes.ok) {
+        throw new Error(`Failed to fetch E2 user info (status: ${userInfoRes.status})`);
+      }
+      userInfoData = await userInfoRes.json();
+      setUserInfo(userInfoData);
+    } catch (err: any) {
+      setError(err.message || 'Could not fetch user profile for refetch.');
+      setDataLoading(false);
+      setIsAnalyticsLoading(false);
+      return; 
+    }
+
+    // Call fetchAllPropertiesForAnalytics with the force flag and fresh user info
+    await fetchAllPropertiesForAnalytics(linkedE2UserId, userInfoData, true);
+
+    setDataLoading(false); // isAnalyticsLoading is turned off inside fetchAll
   };
 
   const handleLinkSubmit = async (e: React.FormEvent) => {
@@ -992,129 +1006,6 @@ export default function ProfilePage() {
     // Add more as needed
   };
 
-  // --- Handler for Adding a Property (Client-Side) ---
-  const handleAddProperty = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAddPropertyError(null);
-    setAddPropertySuccess(null);
-    setIsAddingProperty(true);
-
-    // 1. Extract Property ID from URL
-    const propertyUrlRegex = /#propertyInfo\/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/;
-    const match = propertyUrlInput.match(propertyUrlRegex);
-    const propertyId = match ? match[1] : null;
-
-    if (!propertyId) {
-      setAddPropertyError('Invalid Earth2 Property Info URL format.');
-      setIsAddingProperty(false);
-      return;
-    }
-
-    try {
-      // 2. Send to Backend API (needs implementation)
-      console.log(`[Add Property] Sending request for ID: ${propertyId}`);
-      const response = await fetch('/api/profile/properties', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ propertyId }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || `Failed to add property (status: ${response.status})`);
-      }
-
-      setAddPropertySuccess(`Successfully added property: ${result.propertyName || propertyId}`);
-      setPropertyUrlInput(''); // Clear input on success
-      // TODO: Optionally trigger a refresh of locally stored properties list when implemented
-
-      // Re-fetch the list after successful add
-      await fetchTrackedProperties(); // Now correctly calls the outer function
-
-    } catch (err: any) {
-      console.error('[Add Property] Error:', err);
-      setAddPropertyError(err.message || 'An unexpected error occurred.');
-    } finally {
-      setIsAddingProperty(false);
-    }
-  };
-
-  // --- Placeholder Handler for Removing a Property ---
-  const handleRemoveProperty = async (propertyIdToRemove: string) => {
-    // Basic confirmation
-    if (!confirm(`Are you sure you want to stop tracking property ID: ${propertyIdToRemove}?`)) {
-        return;
-    }
-    console.log(`[Remove Property] Requesting removal for ID: ${propertyIdToRemove}`);
-    // TODO: Implement DELETE request to /api/profile/properties
-    try {
-        const response = await fetch(`/api/profile/properties?propertyId=${propertyIdToRemove}`, { // Example: using query param
-            method: 'DELETE',
-        });
-        if (!response.ok) {
-            const result = await response.json();
-            throw new Error(result.error || `Failed to remove property (status: ${response.status})`);
-        }
-        // Remove from local state on successful deletion
-        // setTrackedProperties(prev => prev.filter(p => p.id !== propertyIdToRemove));
-        alert('Property tracking removed.');
-        await fetchTrackedProperties(); // Now correctly calls the outer function
-
-    } catch (err: any) {
-        console.error('[Remove Property] Error:', err);
-        alert(`Error removing property: ${err.message}`);
-    }
-  };
-
-  // --- Fetch Tracked Properties Function ---
-  const fetchTrackedProperties = async () => {
-    if (!linkedE2UserId) {
-       console.log("[Tracked Props] No linked user ID, skipping fetch.");
-       setTrackedProperties([]);
-       return;
-    }
-    setIsLoadingTrackedProperties(true);
-    setTrackedProperties([]); // Clear existing before fetch
-    try {
-      console.log("[Tracked Props] Fetching saved properties from API...");
-
-      // *** REMOVED DUMMY DATA - Using actual fetch logic ***
-      const response = await fetch('/api/profile/properties');
-      if (!response.ok) {
-          const errorData = await response.json();
-          console.error("[Tracked Props] API fetch error:", errorData.error || response.statusText);
-          setError(prev => prev ? `${prev}\nFailed to load tracked properties: ${errorData.error || response.statusText}` : `Failed to load tracked properties: ${errorData.error || response.statusText}`);
-          setTrackedProperties([]);
-          return;
-      }
-      const dataFromApi = await response.json();
-      const mappedData: TrackedProperty[] = (dataFromApi || []).map((item: any) => ({
-          id: item.property_id,
-          description: item.description,
-          thumbnail: item.thumbnail_url
-      }));
-      setTrackedProperties(mappedData);
-
-    } catch (error: any) {
-       console.error("[Tracked Props] Error fetching:", error);
-       setError(prev => prev ? `${prev}\nFailed to load tracked properties: ${error.message}` : `Failed to load tracked properties: ${error.message}`);
-       setTrackedProperties([]);
-    } finally {
-      setIsLoadingTrackedProperties(false);
-    }
-  };
-
-  // --- useEffect Hooks ---
-  useEffect(() => { /* ... fetchLinkedId ... */ }, []);
-  useEffect(() => { /* ... fetch E2 Data & Analytics ... */ }, [linkedE2UserId]);
-  useEffect(() => { /* ... fetch Exchange Rate ... */ }, [selectedCurrency]);
-
-  // useEffect to fetch tracked properties (now just calls the function)
-  useEffect(() => {
-    fetchTrackedProperties();
-  }, [linkedE2UserId]); // Re-fetch if the linked user changes
-
   // --- Global Metrics State ---
   interface GlobalMetrics { [key:string]: number | string; }
   const [globalMetrics, setGlobalMetrics] = useState<GlobalMetrics|null>(null);
@@ -1252,92 +1143,14 @@ export default function ProfilePage() {
         </Card>
       )}
 
-      {/* --- Local Property Management Card --- */}
-      {linkedE2UserId && ( // Only show if profile is linked
-        <Card className="border-purple-400/30 bg-gradient-to-br from-earthie-dark/80 to-earthie-dark-light/70 shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center text-purple-300">
-              <Building className="h-5 w-5 mr-2" /> Manage My Tracked Properties
-            </CardTitle>
-            <CardDescription className="text-gray-400">
-              Manually add properties you own to track them locally (independent of full API sync). Your E2 Profile must be linked first.
-              <br /> <span className="text-xs italic">Note: We're always trying to make it more user-friendly every-time.</span>
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {/* Add Property Form */}
-            <form onSubmit={handleAddProperty} className="flex flex-col sm:flex-row gap-3 mb-6">
-              <div className="relative flex-grow">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <LinkIcon className="h-5 w-5 text-purple-500/50" />
-                </div>
-                <Input
-                  type="url"
-                  placeholder="Paste Earth2 Property Info URL (e.g., https://app.earth2.io/#propertyInfo/...)"
-                  value={propertyUrlInput}
-                  onChange={(e) => setPropertyUrlInput(e.target.value)}
-                  className="flex-grow pl-10 bg-earthie-dark-light/50 border-purple-500/30 backdrop-blur-sm focus:border-purple-400/70 focus:ring-1 focus:ring-purple-400/70 transition-all"
-                  disabled={isAddingProperty}
-                />
-              </div>
-              <Button 
-                type="submit" 
-                disabled={isAddingProperty || !propertyUrlInput}
-                className="bg-purple-600/80 hover:bg-purple-500/90 border border-purple-400/30 transition-all duration-300 whitespace-nowrap"
-              >
-                {isAddingProperty ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
-                Add Property
-              </Button>
-            </form>
-            {addPropertySuccess && (
-              <div className="mt-3 mb-3 text-sm text-green-400 bg-green-900/30 border border-green-600/50 rounded p-2">{addPropertySuccess}</div>
-            )}
-            {addPropertyError && (
-              <div className="mt-3 mb-3 text-sm text-red-400 bg-red-900/30 border border-red-600/50 rounded p-2">{addPropertyError}</div>
-            )}
-
-            {/* Listing/Removing Properties Section */}
-            <div className="mt-4 border-t border-purple-700/30 pt-4">
-              <h4 className="text-md font-semibold text-purple-200 mb-2">My Saved Properties:</h4>
-              {isLoadingTrackedProperties ? (
-                <div className="flex justify-center items-center p-4">
-                  <Loader2 className="h-6 w-6 animate-spin text-purple-400"/>
-                </div>
-              ) : trackedProperties.length > 0 ? (
-                <ul className="space-y-2 mt-2 max-h-60 overflow-y-auto pr-2"> {/* Added max-height and scroll */}
-                  {trackedProperties.map(prop => (
-                    <li key={prop.id} className="flex justify-between items-center p-2 bg-gray-700/50 rounded hover:bg-gray-600/50">
-                      <div className="flex items-center gap-2 overflow-hidden">
-                          {prop.thumbnail && <img src={prop.thumbnail} alt="" className="w-8 h-8 rounded object-cover flex-shrink-0"/>} 
-                          <span className="text-sm text-gray-200 truncate" title={prop.description || prop.id}>
-                              {prop.description || prop.id}
-                          </span>
-                      </div>
-                      <Button 
-                        variant="destructive"
-                        size="sm" 
-                        onClick={() => handleRemoveProperty(prop.id)}
-                        className="flex-shrink-0 ml-2"
-                       >
-                         <Trash2 className="h-4 w-4"/>
-                       </Button>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm text-gray-400 italic">
-                  (No properties added for local tracking yet. Use the form above.)
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {properties.length > 0 && (
         <div className="space-y-6 mt-8">
             <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-semibold text-sky-200">Your Earth2 Properties ({properties.length.toLocaleString()} of {userInfo?.userLandfieldCount?.toLocaleString() ?? (allPropertiesForAnalytics.length > 0 ? allPropertiesForAnalytics.length.toLocaleString() : '...')})</h2>
+                <h2 className="text-2xl font-semibold text-sky-200">Your Earth2 Properties ({userInfo?.userLandfieldCount?.toLocaleString() ?? (allPropertiesForAnalytics.length > 0 ? allPropertiesForAnalytics.length.toLocaleString() : '...')})</h2>
+                <Button onClick={handleRefetch} disabled={isAnalyticsLoading || dataLoading} className="bg-sky-600/80 hover:bg-sky-500/90 border border-sky-400/30 transition-all duration-300">
+                  {(isAnalyticsLoading || dataLoading) ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+                  Refetch Data
+                </Button>
             </div>
             {/* Sort / Filter Bar */}
             <div className="flex flex-wrap items-center justify-between bg-gray-800/60 backdrop-blur-md mb-4 px-4 py-2 rounded-lg gap-4">
@@ -1794,244 +1607,45 @@ export default function ProfilePage() {
                         contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }}
                         itemStyle={{ color: '#d1d5db' }}
                         cursor={{fill: 'rgba(107, 114, 128, 0.1)'}}
-                        formatter={(value: number) => value.toLocaleString()}
+                        formatter={(value: number, name, props) => {
+                          return [value.toLocaleString(), 'Properties'];
+                        }}
                       />
-                      <Legend />
-                      <Bar dataKey="count" name="Number of Properties" fill="#F43F5E" />
+                      <Bar dataKey="count" fill="#FB7185" />
                     </BarChart>
                   </ResponsiveContainer>
                 </CardContent>
               </Card>
             )}
-
-            {forSaleChartData.length > 0 && (
-                <Card className="border-teal-400/30 bg-gradient-to-br from-earthie-dark/80 to-earthie-dark-light/70 shadow-lg">
-                    <CardHeader>
-                        <CardTitle className="flex items-center text-teal-300">
-                            <CheckCircle className="h-5 w-5 mr-2" /> For Sale Status
-                        </CardTitle>
-                        <CardDescription className="text-gray-400">
-                            {featureCounts.forSale} of {featureCounts.forSale + featureCounts.notForSale} properties for sale ({((featureCounts.forSale / (featureCounts.forSale + featureCounts.notForSale)) * 100).toFixed(2)}%)
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="h-80">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                              <style>{pie3DStyle}</style>
-                                <Pie
-                                    data={forSaleChartData}
-                                    cx="50%"
-                                    cy="50%"
-                                    labelLine={false}
-                                    outerRadius="70%"
-                                    fill="#8884d8"
-                                    dataKey="value"
-                                    nameKey="name"
-                                    label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
-                                    stroke="#374151"
-                                >
-                                    {forSaleChartData.map((entry, index) => (
-                                        <Cell key={`cell-forsale-${index}`} fill={index === 0 ? BAR_CHART_COLORS[1] : BAR_CHART_COLORS[3]} />
-                                    ))}
-                                </Pie>
-                                <Tooltip 
-                                    contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }}
-                                    itemStyle={{ color: '#d1d5db' }}
-                                    formatter={(value: number, name: string, props: any) => {
-                                        // Use the original value for tooltip display
-                                        const originalValue = props.payload.originalValue || value;
-                                        return originalValue.toLocaleString();
-                                    }}
-                                />
-                                <Legend 
-                                  layout="vertical"
-                                  align="right" 
-                                  verticalAlign="middle" 
-                                  wrapperStyle={{
-                                    fontSize: '0.875rem',
-                                    paddingLeft: '15px'
-                                  }}
-                                  formatter={(value, entry, index) => {
-                                    const item = forSaleChartData[index];
-                                    const count = item?.originalValue || item?.value || 0;
-                                    return `${value} (${count.toLocaleString()})`;
-                                  }}
-                                />
-                            </PieChart>
-                        </ResponsiveContainer>
-                    </CardContent>
-                </Card>
-            )}
-            
-            {eplChartData.length > 0 && (
-                <Card className="border-fuchsia-400/30 bg-gradient-to-br from-earthie-dark/80 to-earthie-dark-light/70 shadow-lg">
-                    <CardHeader>
-                        <CardTitle className="flex items-center text-fuchsia-300">
-                            <Tag className="h-5 w-5 mr-2" /> EPL Usage
-                        </CardTitle>
-                        <CardDescription className="text-gray-400">
-                            {featureCounts.withEPL} of {featureCounts.withEPL + featureCounts.withoutEPL} properties have EPLs ({((featureCounts.withEPL / (featureCounts.withEPL + featureCounts.withoutEPL)) * 100).toFixed(2)}%)
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="h-80">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                              <style>{pie3DStyle}</style>
-                                <Pie
-                                    data={eplChartData}
-                                    cx="50%"
-                                    cy="50%"
-                                    labelLine={false}
-                                    outerRadius="70%"
-                                    fill="#8884d8"
-                                    dataKey="value"
-                                    nameKey="name"
-                                    label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
-                                    stroke="#374151"
-                                >
-                                    {eplChartData.map((entry, index) => (
-                                        <Cell key={`cell-epl-${index}`} fill={index === 0 ? BAR_CHART_COLORS[4] : BAR_CHART_COLORS[0]} />
-                                    ))}
-                                </Pie>
-                                <Tooltip 
-                                    contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }}
-                                    itemStyle={{ color: '#d1d5db' }}
-                                    formatter={(value: number, name: string, props: any) => {
-                                        // Use the original value for tooltip display
-                                        const originalValue = props.payload.originalValue || value;
-                                        return originalValue.toLocaleString();
-                                    }}
-                                />
-                                <Legend 
-                                  layout="vertical"
-                                  align="right" 
-                                  verticalAlign="middle"
-                                  wrapperStyle={{
-                                    fontSize: '0.875rem',
-                                    paddingLeft: '15px'
-                                  }}
-                                  formatter={(value, entry, index) => {
-                                    const item = eplChartData[index];
-                                    const count = item?.originalValue || item?.value || 0;
-                                    return `${value} (${count.toLocaleString()})`;
-                                  }}
-                                />
-                            </PieChart>
-                        </ResponsiveContainer>
-                    </CardContent>
-                </Card>
-            )}
-
           </div>
-        </div>
-      )}
-      
-      {!isAnalyticsLoading && allPropertiesForAnalytics.length === 0 && linkedE2UserId && !error && (
-         <div className="flex flex-col items-center justify-center py-12 text-sky-300/70 mt-12">
-          <AlertCircle className="h-10 w-10 text-sky-400/50 mb-3" />
-          <p className="text-lg">No property data found to generate full analytics.</p>
-          <p className="text-sm">Please ensure the linked E2 User ID is correct and has properties.</p>
         </div>
       )}
 
       {/* Global Metrics Modal */}
       <Dialog open={isMetricsOpen} onOpenChange={setIsMetricsOpen}>
-        <DialogContent className="max-w-3xl bg-gray-900/90 border-sky-500/40 backdrop-blur-md">
+        <DialogContent className="max-w-xl bg-gray-900/80 backdrop-blur-md border-sky-400/50 text-white">
           <DialogHeader>
-            <DialogTitle className="text-sky-200">Earth2 Global Metrics</DialogTitle>
+            <DialogTitle className="text-2xl text-sky-200">Global Earth2 Metrics</DialogTitle>
           </DialogHeader>
-          {globalMetrics ? (
-            <>
-              {/* ---- Helper for number formatting ---- */}
-              {(() => {
-                const formatWithCommas = (val:number)=> val.toLocaleString();
-
-                // Restore original: just use the first 12 metrics, including individual tier tiles
-                const keysOfInterest = [
-                  'jewelsCount',
-                  't1JewelsCount',
-                  't2JewelsCount',
-                  't3JewelsCount',
-                  't1EverMinedJewelsCount',
-                  'mentarSlotsCount',
-                  'tilesPurchased',
-                  't1TilesPurchased',
-                  't2TilesPurchased',
-                  't3TilesPurchased',
-                  'essMaxSupply',
-                  'essMinted',
-                  'cydroidTechnicianCiviliansCount',
-                  'raidCommanderCiviliansCount',
-                  'etherDispenserCiviliansCount'
-                ];
-                const entries = keysOfInterest
-                  .map(k => [k, globalMetrics[k]])
-                  .filter(([k, v]) => v !== undefined);
-
-                return (
-                  <div className="max-h-[60vh] overflow-y-auto pr-2 grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-                    {entries.map(([k,v])=> {
-                      const isNumber = typeof v==='number' || !isNaN(Number(v));
-                      const numericVal = isNumber? Number(v): null;
-                      // Detect cap counterpart – e.g. key ending with MINTED => look for MAXSUPPLY or CAP
-                      let maxKey:string|null = null; let maxVal:number|null=null; let percent:number|null=null;
-                      const kStr = String(k);
-                      if (kStr.toLowerCase() === 'jewelscount') {
-                        maxVal = 150000000;
-                      } else if (kStr.toLowerCase() === 'cydroidtechniciancivilianscount') {
-                        maxVal = 500000;
-                      } else if (kStr.toLowerCase() === 'raidcommandercivilianscount') {
-                        maxVal = 500000;
-                      } else if (kStr.toLowerCase() === 'etherdispensercivilianscount') {
-                        maxVal = 500000;
+          <div className="mt-4 text-sm max-h-[60vh] overflow-y-auto">
+            {globalMetrics ? (
+              <ul className="space-y-2">
+                {Object.entries(globalMetrics).map(([key, value]) => (
+                  <li key={key} className="flex justify-between items-center bg-gray-800/60 p-2 rounded-md">
+                    <span className="text-gray-300 capitalize">{key.replace(/_/g, ' ')}:</span>
+                    <span className="font-mono text-sky-300 font-semibold">
+                      {typeof value === 'number' 
+                        ? value.toLocaleString(undefined, { maximumFractionDigits: key.includes('price') ? 4 : 0 }) 
+                        : String(value)
                       }
-                      if(isNumber && maxVal === null){
-                        const keys = Object.keys(globalMetrics);
-                        if (/minted$/i.test(kStr)) {
-                          const base = kStr.replace(/minted$/i, '');
-                          const candidate = keys.find(key => key.toLowerCase() === (base + 'maxsupply').toLowerCase());
-                          if (candidate && globalMetrics[candidate]) {
-                            maxKey = candidate; maxVal = Number(globalMetrics[candidate]);
-                          }
-                        }
-                      }
-                      if(maxVal!==null && maxVal>0 && isNumber){
-                        percent = Math.min(100, (numericVal!*100)/maxVal);
-                      }
-                      // DEBUG: Log percent for each metric
-                      if (percent !== null) {
-                        console.log('Progress bar percent:', percent, 'for', k, numericVal, maxVal);
-                      }
-                      return (
-                        <Card key={kStr} className="bg-gray-800/75 border-gray-700 p-4">
-                          <p className="text-xs font-semibold tracking-wide uppercase text-gray-400 mb-1">
-                            {kStr}
-                          </p>
-                          <p className="text-2xl font-bold text-sky-100" title={isNumber? numericVal!.toLocaleString(): undefined}>
-                            {isNumber? formatWithCommas(numericVal!): v as any}
-                          </p>
-                          {percent !== null && (
-                            <div className="mt-3" style={{ minHeight: 20 }}>
-                              <Progress value={percent} max={100} className={`h-4 bg-gray-700 border ${percent >= 100 ? 'border-red-500 [&_.bg-emerald-500]:!bg-red-500' : 'border-emerald-500'}`} style={{ minWidth: 100, minHeight: 16 }} />
-                              <p className="text-[10px] text-gray-400 mt-1 flex justify-between uppercase">
-                                <span>Progress</span>
-                                <span>{percent.toFixed(1)}%</span>
-                              </p>
-                            </div>
-                          )}
-                        </Card>
-                      );
-                    })}
-                  </div>
-                );
-              })()}
-            </>
-          ) : (
-             <div className="flex justify-center items-center py-8"><Loader2 className="h-6 w-6 animate-spin text-sky-400"/></div>
-           )}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : <p className="text-center text-gray-400">No global metrics available.</p>}
+          </div>
         </DialogContent>
       </Dialog>
-
     </div>
   );
 } 
