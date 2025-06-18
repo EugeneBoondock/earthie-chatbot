@@ -551,7 +551,8 @@ export function LogisticsMap({ properties, selectedProperties, onRouteSummary, t
                 <RoutingMachine 
                     waypoints={waypoints} 
                     onRouteFound={handleRouteSummary} 
-                    transportMode={transportMode} 
+                    transportMode={transportMode}
+                    properties={selectedProperties}
                 />
             </MapContainer>
         </div>

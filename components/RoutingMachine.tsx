@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
+import { toast } from '@/components/ui/use-toast';
 
 interface RouteSegment {
     mode: 'walking' | 'car' | 'truck' | 'drone' | 'ship' | 'plane';
@@ -20,10 +21,23 @@ interface RouteSummary {
     isMultiModal?: boolean;
 }
 
+interface Property {
+    id: string;
+    attributes: {
+        center: string;
+        description: string;
+        country: string;
+        tileCount: number;
+        landfieldTier: number;
+        price: number;
+    };
+}
+
 interface RoutingProps {
     waypoints: L.LatLng[];
     onRouteFound: (summary: RouteSummary | null) => void;
     transportMode: 'walking' | 'car' | 'truck' | 'drone' | 'ship' | 'plane';
+    properties: Property[];
 }
 
 // Create waypoint icon
@@ -42,7 +56,40 @@ const createWaypointIcon = (isFirst: boolean, isLast: boolean, index: number) =>
     });
 };
 
-const RoutingMachine = ({ waypoints, onRouteFound, transportMode }: RoutingProps) => {
+// Format price for display
+const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+    }).format(price);
+};
+
+// Generate Earth2 URL
+const generateEarth2URL = (lat: number, lng: number) => {
+    return `https://app.earth2.io/?lat=${lat}&lng=${lng}#`;
+};
+
+// Copy text to clipboard
+const copyToClipboard = async (text: string, label: string) => {
+    try {
+        await navigator.clipboard.writeText(text);
+        toast({
+            title: `${label} Copied`,
+            description: text,
+        });
+    } catch (err) {
+        console.error('Failed to copy:', err);
+        toast({
+            title: 'Copy Failed',
+            description: 'Please try again',
+            variant: 'destructive',
+        });
+    }
+};
+
+const RoutingMachine = ({ waypoints, onRouteFound, transportMode, properties }: RoutingProps) => {
     const map = useMap();
     const routeLayersRef = useRef<L.Layer[]>([]);
     const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
@@ -154,11 +201,75 @@ const RoutingMachine = ({ waypoints, onRouteFound, transportMode }: RoutingProps
             let totalTime = 0;
             const segments: RouteSegment[] = [];
 
-            // Add waypoint markers
+            // Add waypoint markers with property information
             waypoints.forEach((point, index) => {
+                // Find the corresponding property
+                const property = properties.find(p => {
+                    const coords = p.attributes.center.match(/\(([^,]+),\s*([^)]+)\)/);
+                    if (!coords) return false;
+                    const [_, lng, lat] = coords;
+                    return Math.abs(parseFloat(lat) - point.lat) < 0.0001 && 
+                           Math.abs(parseFloat(lng) - point.lng) < 0.0001;
+                });
+
                 const marker = L.marker(point, {
                     icon: createWaypointIcon(index === 0, index === waypoints.length - 1, index)
-                }).addTo(map);
+                });
+
+                if (property) {
+                    const popupContent = `
+                        <div class="text-sm bg-gray-900 text-white rounded-lg shadow-lg border border-cyan-400/50 p-0 min-w-[280px]">
+                            <div class="p-4 space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <p class="font-bold text-amber-400 truncate">${property.attributes.description}</p>
+                                    <div class="flex items-center gap-2">
+                                        <span class="px-2 py-1 text-xs border rounded-full border-yellow-400 text-yellow-400">
+                                            T${property.attributes.landfieldTier}
+                                        </span>
+                                    </div>
+                                </div>
+                                
+                                <div class="space-y-2">
+                                    <p class="text-gray-300">${property.attributes.country}</p>
+                                    <div class="grid grid-cols-2 gap-2 text-xs">
+                                        <div class="flex items-center text-gray-400">
+                                            <span class="mr-1">📏</span>
+                                            ${property.attributes.tileCount.toLocaleString()} tiles
+                                        </div>
+                                        ${property.attributes.price > 0 ? `
+                                            <div class="flex items-center text-green-400 font-medium">
+                                                <span class="mr-1">💰</span>
+                                                ${formatPrice(property.attributes.price)}
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                                
+                                <div class="flex items-center justify-between pt-2 border-t border-gray-700">
+                                    <button
+                                        onclick="copyToClipboard('${point.lat}, ${point.lng}', 'Coordinates')"
+                                        class="px-2 py-1 text-xs bg-gray-800 border border-gray-600 rounded hover:bg-gray-700 flex items-center gap-1"
+                                    >
+                                        <span>📋</span>
+                                        Copy Coords
+                                    </button>
+                                    
+                                    <a
+                                        href="${generateEarth2URL(point.lat, point.lng)}"
+                                        target="_blank"
+                                        class="px-2 py-1 text-xs bg-green-900/30 border border-green-600 rounded hover:bg-green-800/50 text-green-300 flex items-center gap-1"
+                                    >
+                                        <span>🌍</span>
+                                        View in E2
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    marker.bindPopup(popupContent);
+                }
+
+                marker.addTo(map);
                 drawnLayers.push(marker);
             });
 
@@ -294,7 +405,7 @@ const RoutingMachine = ({ waypoints, onRouteFound, transportMode }: RoutingProps
         drawRoute();
 
         return cleanup;
-    }, [map, waypoints, transportMode, onRouteFound, mapboxToken]);
+    }, [map, waypoints, transportMode, onRouteFound, mapboxToken, properties]);
 
     return null;
 };
