@@ -919,7 +919,9 @@ export default function ProfilePage() {
   }, [allPropertiesForAnalytics]);
 
   const tierChartData = useMemo(() => {
-    return Object.entries(landfieldTierCounts)
+    if (Object.keys(landfieldTierCounts).length === 0) return [];
+    
+    const data = Object.entries(landfieldTierCounts)
       .map(([name, value]) => ({ name, value }))
       .sort((a,b) => {
         const tierA = parseInt(a.name.replace('Tier ', ''));
@@ -929,6 +931,8 @@ export default function ProfilePage() {
         if (!isNaN(tierB)) return 1;
         return a.name.localeCompare(b.name);
       });
+
+    return createPieDataWithMinSize(data, 2);
   }, [landfieldTierCounts]);
 
   const forSaleChartData = useMemo(() => {
@@ -1541,7 +1545,10 @@ export default function ProfilePage() {
                               <Tooltip 
                                   contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }}
                                   itemStyle={{ color: '#d1d5db' }}
-                                  formatter={(value: number) => value.toLocaleString()}
+                                  formatter={(value, name, props) => {
+                                    const originalValue = props.payload.originalValue ?? value;
+                                    return [originalValue.toLocaleString(), name];
+                                  }}
                               />
                               <Legend 
                                 layout="vertical"
@@ -1652,7 +1659,7 @@ export default function ProfilePage() {
                         contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }}
                         itemStyle={{ color: '#d1d5db' }}
                         formatter={(value, name, props) => {
-                           const originalValue = props.payload.originalValue;
+                           const originalValue = props.payload.originalValue ?? value;
                            return [originalValue.toLocaleString(), name];
                         }}
                       />
@@ -1705,7 +1712,7 @@ export default function ProfilePage() {
                         contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }}
                         itemStyle={{ color: '#d1d5db' }}
                         formatter={(value, name, props) => {
-                           const originalValue = props.payload.originalValue;
+                           const originalValue = props.payload.originalValue ?? value;
                            return [originalValue.toLocaleString(), name];
                         }}
                       />
