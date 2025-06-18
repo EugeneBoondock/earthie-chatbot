@@ -1161,45 +1161,45 @@ export default function ProfilePage() {
             {/* Sort / Filter Bar */}
             <div className="flex flex-col sm:flex-row flex-wrap items-center justify-between bg-gray-800/60 backdrop-blur-md mb-4 px-4 py-3 rounded-lg gap-4">
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 w-full justify-between">
-                <div className="flex items-center space-x-2 text-sm text-sky-200">
-                  <span>Sort by:</span>
-                  <select
-                    value={sortOption}
-                    onChange={e => setSortOption(e.target.value as any)}
-                    className="bg-gray-700 text-sky-200 px-2 py-1 rounded border border-gray-600 focus:outline-none"
-                  >
-                    <option value="latest">Purchase Date (Latest)</option>
-                    <option value="size">Size (Tiles)</option>
-                  </select>
-                </div>
-                <div className="flex items-center space-x-2 text-sm text-sky-200">
-                  <span>Filter tier:</span>
-                  <select
-                    value={tierFilter === null ? '' : tierFilter}
-                    onChange={e => {
-                      const v = e.target.value; setTierFilter(v === ''? null : parseInt(v));
-                    }}
-                    className="bg-gray-700 text-sky-200 px-2 py-1 rounded border border-gray-600 focus:outline-none"
-                  >
-                    <option value="">All</option>
-                    <option value="1">T1</option>
-                    <option value="2">T2</option>
-                    <option value="3">T3</option>
-                  </select>
-                </div>
-                
-                {/* New EPL filter */}
-                <div className="flex items-center space-x-2 text-sm text-sky-200">
-                  <span>EPL status:</span>
-                  <select
-                    value={eplFilter}
-                    onChange={e => setEplFilter(e.target.value as 'all'|'with'|'without')}
-                    className="bg-gray-700 text-sky-200 px-2 py-1 rounded border border-gray-600 focus:outline-none"
-                  >
-                    <option value="all">All properties</option>
-                    <option value="with">With EPL only</option>
-                    <option value="without">Without EPL only</option>
-                  </select>
+              <div className="flex items-center space-x-2 text-sm text-sky-200">
+                <span>Sort by:</span>
+                <select
+                  value={sortOption}
+                  onChange={e => setSortOption(e.target.value as any)}
+                  className="bg-gray-700 text-sky-200 px-2 py-1 rounded border border-gray-600 focus:outline-none"
+                >
+                  <option value="latest">Purchase Date (Latest)</option>
+                  <option value="size">Size (Tiles)</option>
+                </select>
+              </div>
+              <div className="flex items-center space-x-2 text-sm text-sky-200">
+                <span>Filter tier:</span>
+                <select
+                  value={tierFilter === null ? '' : tierFilter}
+                  onChange={e => {
+                    const v = e.target.value; setTierFilter(v === ''? null : parseInt(v));
+                  }}
+                  className="bg-gray-700 text-sky-200 px-2 py-1 rounded border border-gray-600 focus:outline-none"
+                >
+                  <option value="">All</option>
+                  <option value="1">T1</option>
+                  <option value="2">T2</option>
+                  <option value="3">T3</option>
+                </select>
+              </div>
+              
+              {/* New EPL filter */}
+              <div className="flex items-center space-x-2 text-sm text-sky-200">
+                <span>EPL status:</span>
+                <select
+                  value={eplFilter}
+                  onChange={e => setEplFilter(e.target.value as 'all'|'with'|'without')}
+                  className="bg-gray-700 text-sky-200 px-2 py-1 rounded border border-gray-600 focus:outline-none"
+                >
+                  <option value="all">All properties</option>
+                  <option value="with">With EPL only</option>
+                  <option value="without">Without EPL only</option>
+                </select>
                 </div>
               </div>
               
@@ -1632,110 +1632,110 @@ export default function ProfilePage() {
 
             {forSaleChartData.length > 0 && (
               <Card className="border-green-400/30 bg-gradient-to-br from-earthie-dark/80 to-earthie-dark-light/70 shadow-lg">
-                <CardHeader>
+                    <CardHeader>
                   <CardTitle className="flex items-center text-green-300">
-                    <CheckCircle className="h-5 w-5 mr-2" /> For Sale Status
-                  </CardTitle>
-                  <CardDescription className="text-gray-400">
+                            <CheckCircle className="h-5 w-5 mr-2" /> For Sale Status
+                        </CardTitle>
+                        <CardDescription className="text-gray-400">
                     Properties listed for sale vs. not for sale.
-                  </CardDescription>
-                </CardHeader>
+                        </CardDescription>
+                    </CardHeader>
                 <CardContent className="h-72 sm:h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <style>{pie3DStyle}</style>
-                      <Pie
-                        data={forSaleChartData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        outerRadius="70%"
-                        fill="#8884d8"
-                        dataKey="value"
-                        nameKey="name"
-                        stroke="#374151"
-                      >
-                        {forSaleChartData.map((entry, index) => (
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <style>{pie3DStyle}</style>
+                                <Pie
+                                    data={forSaleChartData}
+                                    cx="50%"
+                                    cy="50%"
+                                    labelLine={false}
+                                    outerRadius="70%"
+                                    fill="#8884d8"
+                                    dataKey="value"
+                                    nameKey="name"
+                                    stroke="#374151"
+                                >
+                                    {forSaleChartData.map((entry, index) => (
                           <Cell key={`cell-sale-${index}`} fill={entry.name === 'For Sale' ? '#34D399' : '#F87171'} />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }}
-                        itemStyle={{ color: '#d1d5db' }}
+                                    ))}
+                                </Pie>
+                                <Tooltip 
+                                    contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }}
+                                    itemStyle={{ color: '#d1d5db' }}
                         formatter={(value, name, props) => {
                            const originalValue = props.payload.originalValue ?? value;
                            return [originalValue.toLocaleString(), name];
-                        }}
-                      />
-                      <Legend
+                                    }}
+                                />
+                                <Legend 
                         layout={isMobile ? "horizontal" : "vertical"}
                         verticalAlign={isMobile ? "bottom" : "middle"}
                         align={isMobile ? "center" : "right"}
-                        wrapperStyle={{
+                                  wrapperStyle={{
                           fontSize: '0.8rem',
                           lineHeight: '1.2rem',
                           paddingLeft: isMobile ? 0 : '15px',
                           paddingTop: isMobile ? '10px' : 0,
-                        }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
+                                  }}
+                                />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </CardContent>
+                </Card>
             )}
-
+            
             {eplChartData.length > 0 && (
               <Card className="border-yellow-400/30 bg-gradient-to-br from-earthie-dark/80 to-earthie-dark-light/70 shadow-lg">
-                <CardHeader>
+                    <CardHeader>
                   <CardTitle className="flex items-center text-yellow-300">
-                    <Tag className="h-5 w-5 mr-2" /> EPL Usage
-                  </CardTitle>
-                  <CardDescription className="text-gray-400">
+                            <Tag className="h-5 w-5 mr-2" /> EPL Usage
+                        </CardTitle>
+                        <CardDescription className="text-gray-400">
                     Properties with and without an EPL address.
-                  </CardDescription>
-                </CardHeader>
+                        </CardDescription>
+                    </CardHeader>
                 <CardContent className="h-72 sm:h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <style>{pie3DStyle}</style>
-                      <Pie
-                        data={eplChartData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        outerRadius="70%"
-                        fill="#8884d8"
-                        dataKey="value"
-                        nameKey="name"
-                        stroke="#374151"
-                      >
-                        {eplChartData.map((entry, index) => (
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <style>{pie3DStyle}</style>
+                                <Pie
+                                    data={eplChartData}
+                                    cx="50%"
+                                    cy="50%"
+                                    labelLine={false}
+                                    outerRadius="70%"
+                                    fill="#8884d8"
+                                    dataKey="value"
+                                    nameKey="name"
+                                    stroke="#374151"
+                                >
+                                    {eplChartData.map((entry, index) => (
                           <Cell key={`cell-epl-${index}`} fill={entry.name === 'With EPL' ? '#FBBF24' : '#60A5FA'} />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }}
-                        itemStyle={{ color: '#d1d5db' }}
+                                    ))}
+                                </Pie>
+                                <Tooltip 
+                                    contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }}
+                                    itemStyle={{ color: '#d1d5db' }}
                         formatter={(value, name, props) => {
                            const originalValue = props.payload.originalValue ?? value;
                            return [originalValue.toLocaleString(), name];
-                        }}
-                      />
-                      <Legend
+                                    }}
+                                />
+                                <Legend 
                         layout={isMobile ? "horizontal" : "vertical"}
                         verticalAlign={isMobile ? "bottom" : "middle"}
                         align={isMobile ? "center" : "right"}
-                        wrapperStyle={{
+                                  wrapperStyle={{
                           fontSize: '0.8rem',
                           lineHeight: '1.2rem',
                           paddingLeft: isMobile ? 0 : '15px',
                           paddingTop: isMobile ? '10px' : 0,
-                        }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
+                                  }}
+                                />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </CardContent>
+                </Card>
             )}
           </div>
         </div>

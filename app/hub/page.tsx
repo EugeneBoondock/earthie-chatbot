@@ -1,4 +1,4 @@
-import { ArrowRight, Book, Building, BarChart3, User } from 'lucide-react';
+import { ArrowRight, Book, Building, BarChart3, User, Route } from 'lucide-react';
 import Link from 'next/link';
 
 export default function HubPage() {
@@ -42,6 +42,14 @@ export default function HubPage() {
       link: "/hub/essence",
       gradient: "from-teal-800/50 to-cyan-800/50",
       borderColor: "border-teal-400/30"
+    },
+    {
+      title: "Logistics Planner",
+      description: "Visualize properties, plan optimal routes, and manage your logistics.",
+      icon: <Route className="h-8 w-8 text-earthie-mint" />,
+      link: "/hub/logistics",
+      gradient: "from-gray-800/50 to-slate-800/50",
+      borderColor: "border-gray-400/30"
     }
   ];
 
