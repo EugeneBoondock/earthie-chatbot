@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet-routing-machine/dist/leaflet-routing-machine.css';
@@ -19,65 +19,59 @@ interface RoutingProps {
 
 const RoutingMachine = ({ waypoints, onRouteFound }: RoutingProps) => {
     const map = useMap();
+    const routingControlRef = useRef<L.Routing.Control | null>(null);
 
     useEffect(() => {
         if (!map) return;
 
-        // Ensure L is globally available for the plugin
-        (window as any).L = L;
+        const L_temp = (window as any).L;
 
-        let routingControl: L.Routing.Control | null = null;
-        
         import('leaflet-routing-machine').then(() => {
-            if (!map.getContainer()) return; // Map might have been unmounted
+            if (!routingControlRef.current && waypoints.length >= 2) {
+                const instance = L_temp.Routing.control({
+                    waypoints: waypoints,
+                    routeWhileDragging: true,
+                    plan: L_temp.Routing.plan(waypoints, {
+                        createMarker: function (i: number, waypoint: any) {
+                            return L.marker(waypoint.latLng, {
+                                draggable: true,
+                                icon: waypointIcon
+                            });
+                        }
+                    }),
+                    lineOptions: {
+                        styles: [{ color: '#63b3ed', opacity: 0.8, weight: 6 }],
+                        extendToWaypoints: true,
+                        missingRouteTolerance: 100
+                    },
+                    show: false,
+                    addWaypoints: false,
+                }).addTo(map);
 
-            if (waypoints.length < 2) {
-                // Clean up existing routes if any
-                map.eachLayer((layer) => {
-                    if (layer.options && (layer.options as any).waypoints) {
-                        map.removeLayer(layer);
+                instance.on('routesfound', function (e: any) {
+                    if (e.routes && e.routes.length > 0) {
+                        onRouteFound(e.routes[0].summary);
                     }
                 });
-                return;
+                routingControlRef.current = instance;
+            } else if (routingControlRef.current && waypoints.length >= 2) {
+                routingControlRef.current.setWaypoints(waypoints);
+            } else if (routingControlRef.current && waypoints.length < 2) {
+                map.removeControl(routingControlRef.current);
+                routingControlRef.current = null;
             }
-
-            routingControl = L.Routing.control({
-                waypoints: waypoints,
-                routeWhileDragging: true,
-                plan: L.Routing.plan(waypoints, {
-                    createMarker: function (i, waypoint) {
-                        return L.marker(waypoint.latLng, {
-                            draggable: true,
-                            icon: waypointIcon
-                        });
-                    }
-                }),
-                lineOptions: {
-                    styles: [{ color: '#63b3ed', opacity: 0.8, weight: 6 }],
-                    extendToWaypoints: true,
-                    missingRouteTolerance: 100
-                },
-                show: false,
-                addWaypoints: false,
-            }).addTo(map);
-
-            routingControl.on('routesfound', function (e: any) {
-                if (e.routes && e.routes.length > 0) {
-                    onRouteFound(e.routes[0].summary);
-                }
-            });
         });
 
-        return () => {
-            if (routingControl && map) {
-                try {
-                    map.removeControl(routingControl);
-                } catch(e) {
-                    // Ignore errors on cleanup
-                }
-            }
-        };
     }, [map, waypoints, onRouteFound]);
+
+    useEffect(() => {
+      // Cleanup on unmount
+      return () => {
+        if (routingControlRef.current) {
+            map.removeControl(routingControlRef.current);
+        }
+      };
+    }, [map]);
 
     return null;
 };
