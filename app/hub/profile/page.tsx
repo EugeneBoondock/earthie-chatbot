@@ -511,20 +511,20 @@ export default function ProfilePage() {
     if (!userId || !cachedProps) return;
 
     // The full data is expected to be in `cachedProps`. We just paginate over it.
-    const PER_PAGE = 12;
-    const start = (page - 1) * PER_PAGE;
+      const PER_PAGE = 12;
+      const start = (page - 1) * PER_PAGE;
     const end = start + PER_PAGE;
     const slice = cachedProps.slice(start, end);
 
-    setProperties(slice);
+      setProperties(slice);
     setPropertiesMeta(prevMeta => ({
       ...prevMeta,
-      count: cachedProps.length,
-      current_page: page,
-      last_page: Math.ceil(cachedProps.length / PER_PAGE),
-      per_page: PER_PAGE,
+        count: cachedProps.length,
+        current_page: page,
+        last_page: Math.ceil(cachedProps.length / PER_PAGE),
+        per_page: PER_PAGE,
     }));
-    setPropertiesCurrentPage(page);
+      setPropertiesCurrentPage(page);
   };
 
   const fetchAllPropertiesForAnalytics = async (userId: string, userInfo: E2UserInfo | null, forceRefetch: boolean = false) => {
@@ -537,43 +537,43 @@ export default function ProfilePage() {
     // Note: The parent useEffect already sets this, but this is a good safeguard.
     setIsAnalyticsLoading(true);
     setAllPropertiesForAnalytics([]);
-    
+
     // --- Use passed-in user info for expected count ---
     const expectedCount = userInfo?.userLandfieldCount ?? userInfo?.userNetworth?.totalTiles;
-    console.log(`[Analytics] Expected total properties from user info: ${expectedCount}`);
+        console.log(`[Analytics] Expected total properties from user info: ${expectedCount}`);
 
     // Attempt to load from IndexedDB first
     if (!forceRefetch) {
-        try {
-          const cached: E2Property[] | undefined = await idbGet(getCacheKey(userId));
-          if (cached && cached.length > 0) {
+    try {
+      const cached: E2Property[] | undefined = await idbGet(getCacheKey(userId));
+      if (cached && cached.length > 0) {
             // If we couldn't get expectedCount, assume cache is good. Otherwise require a close match.
             const isCacheValid = expectedCount === undefined || Math.abs(cached.length - expectedCount) <= 5;
 
             if (isCacheValid) {
               console.log(`[Cache] Using valid cached property data from IndexedDB (${cached.length} items).`);
-              setCachedProps(cached);
-              setAllPropertiesForAnalytics(cached);
+          setCachedProps(cached);
+          setAllPropertiesForAnalytics(cached);
               
               // Prime first page list for display
-              const PER_PAGE = 12;
-              setProperties(cached.slice(0, PER_PAGE));
-              setPropertiesMeta({
-                count: cached.length,
-                current_page: 1,
-                last_page: Math.ceil(cached.length / PER_PAGE),
-                per_page: PER_PAGE,
-              });
-              setPropertiesCurrentPage(1);
+          const PER_PAGE = 12;
+          setProperties(cached.slice(0, PER_PAGE));
+          setPropertiesMeta({
+            count: cached.length,
+            current_page: 1,
+            last_page: Math.ceil(cached.length / PER_PAGE),
+            per_page: PER_PAGE,
+          });
+          setPropertiesCurrentPage(1);
               setIsAnalyticsLoading(false); // Turn off loading
               return; // IMPORTANT: Skip network fetching
             } else {
                console.log(`[Cache] Invalidating cache. Expected ${expectedCount}, found ${cached.length}. Re-fetching.`);
-            }
-          }
-        } catch (err) {
-          console.error('[Cache] Error accessing IndexedDB:', err);
         }
+      }
+    } catch (err) {
+      console.error('[Cache] Error accessing IndexedDB:', err);
+    }
     }
 
     // --- If cache is not used, proceed with network fetch ---
@@ -622,7 +622,7 @@ export default function ProfilePage() {
                 pageUrl.searchParams.set('perPage', String(PER_PAGE_ANALYTICS));
                 pageUrl.searchParams.set('letter', term.toUpperCase());
                 pageFetches.push(fetch(pageUrl.toString()).then(res => res.ok ? res.json() : Promise.reject(`Failed fetch for page ${currentPage}`)));
-            }
+        }
 
             const results = await Promise.allSettled(pageFetches);
             results.forEach(result => {
@@ -645,23 +645,23 @@ export default function ProfilePage() {
 
     const PER_PAGE_DISPLAY = 12;
     setProperties(accumulatedProps.slice(0, PER_PAGE_DISPLAY));
-    setPropertiesMeta({
+      setPropertiesMeta({
         count: accumulatedProps.length,
         current_page: 1,
         last_page: Math.ceil(accumulatedProps.length / PER_PAGE_DISPLAY),
         per_page: PER_PAGE_DISPLAY,
-    });
-    setPropertiesCurrentPage(1);
+      });
+      setPropertiesCurrentPage(1);
 
     try {
       await idbSet(getCacheKey(userId), accumulatedProps);
       console.log(`[Cache] Saved ${accumulatedProps.length} properties to IndexedDB.`);
     } catch (err) {
       console.error('[Cache] Failed to save properties to IndexedDB:', err);
-    }
-    
+        }
+        
     setIsAnalyticsLoading(false);
-    
+
     if (expectedCount !== undefined && accumulatedProps.length < expectedCount) {
         console.warn(`[Analytics] Mismatch: Expected count was ${expectedCount}, but fetched ${accumulatedProps.length}.`);
     }
@@ -683,7 +683,7 @@ export default function ProfilePage() {
       }
       userInfoData = await userInfoRes.json();
       setUserInfo(userInfoData);
-    } catch (err: any) {
+      } catch (err: any) {
       setError(err.message || 'Could not fetch user profile for refetch.');
       setDataLoading(false);
       setIsAnalyticsLoading(false);
@@ -1617,6 +1617,112 @@ export default function ProfilePage() {
                 </CardContent>
               </Card>
             )}
+
+            {forSaleChartData.length > 0 && (
+              <Card className="border-green-400/30 bg-gradient-to-br from-earthie-dark/80 to-earthie-dark-light/70 shadow-lg">
+                <CardHeader>
+                  <CardTitle className="flex items-center text-green-300">
+                    <CheckCircle className="h-5 w-5 mr-2" /> For Sale Status
+                  </CardTitle>
+                  <CardDescription className="text-gray-400">
+                    Properties listed for sale vs. not for sale.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <style>{pie3DStyle}</style>
+                      <Pie
+                        data={forSaleChartData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        outerRadius="70%"
+                        fill="#8884d8"
+                        dataKey="value"
+                        nameKey="name"
+                        label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                        stroke="#374151"
+                      >
+                        {forSaleChartData.map((entry, index) => (
+                          <Cell key={`cell-sale-${index}`} fill={entry.name === 'For Sale' ? '#34D399' : '#F87171'} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }}
+                        itemStyle={{ color: '#d1d5db' }}
+                        formatter={(value, name, props) => {
+                           const originalValue = props.payload.originalValue;
+                           return [originalValue.toLocaleString(), name];
+                        }}
+                      />
+                      <Legend
+                        layout="vertical"
+                        align="right"
+                        verticalAlign="middle"
+                        wrapperStyle={{
+                          fontSize: '0.875rem',
+                          paddingLeft: '15px'
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            )}
+
+            {eplChartData.length > 0 && (
+              <Card className="border-yellow-400/30 bg-gradient-to-br from-earthie-dark/80 to-earthie-dark-light/70 shadow-lg">
+                <CardHeader>
+                  <CardTitle className="flex items-center text-yellow-300">
+                    <Tag className="h-5 w-5 mr-2" /> EPL Usage
+                  </CardTitle>
+                  <CardDescription className="text-gray-400">
+                    Properties with and without an EPL address.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <style>{pie3DStyle}</style>
+                      <Pie
+                        data={eplChartData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        outerRadius="70%"
+                        fill="#8884d8"
+                        dataKey="value"
+                        nameKey="name"
+                        label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                        stroke="#374151"
+                      >
+                        {eplChartData.map((entry, index) => (
+                          <Cell key={`cell-epl-${index}`} fill={entry.name === 'With EPL' ? '#FBBF24' : '#60A5FA'} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }}
+                        itemStyle={{ color: '#d1d5db' }}
+                        formatter={(value, name, props) => {
+                           const originalValue = props.payload.originalValue;
+                           return [originalValue.toLocaleString(), name];
+                        }}
+                      />
+                      <Legend
+                        layout="vertical"
+                        align="right"
+                        verticalAlign="middle"
+                        wrapperStyle={{
+                          fontSize: '0.875rem',
+                          paddingLeft: '15px'
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       )}
@@ -1628,7 +1734,7 @@ export default function ProfilePage() {
             <DialogTitle className="text-2xl text-sky-200">Global Earth2 Metrics</DialogTitle>
           </DialogHeader>
           <div className="mt-4 text-sm max-h-[60vh] overflow-y-auto">
-            {globalMetrics ? (
+          {globalMetrics ? (
               <ul className="space-y-2">
                 {Object.entries(globalMetrics).map(([key, value]) => (
                   <li key={key} className="flex justify-between items-center bg-gray-800/60 p-2 rounded-md">
@@ -1643,7 +1749,7 @@ export default function ProfilePage() {
                 ))}
               </ul>
             ) : <p className="text-center text-gray-400">No global metrics available.</p>}
-          </div>
+                            </div>
         </DialogContent>
       </Dialog>
     </div>
