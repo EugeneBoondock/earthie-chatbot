@@ -11,6 +11,7 @@ import { BarChart, CartesianGrid, XAxis, YAxis, Bar } from 'recharts';
 import { get as idbGet, set as idbSet } from 'idb-keyval';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
+import { useIsMobile } from '@/components/ui/use-mobile';
 
 // --- Interfaces for Earth2 API responses ---
 interface E2UserInfo {
@@ -199,7 +200,7 @@ const pie3DStyle = `
     }
     .recharts-legend-wrapper {
       font-size: 0.75rem !important;
-      max-width: 50% !important;
+      /* max-width: 50% !important; */ /* This was causing legend items to wrap and overlap */
     }
   }
 `;
@@ -227,6 +228,7 @@ const createPieDataWithMinSize = (data: {name: string, value: number}[], minPerc
 };
 
 export default function ProfilePage() {
+  const isMobile = useIsMobile();
   const [e2ProfileInput, setE2ProfileInput] = useState('');
   const [linkedE2UserId, setLinkedE2UserId] = useState<string | null>(null);
   
@@ -1036,10 +1038,10 @@ export default function ProfilePage() {
         <div className="absolute -bottom-32 -left-32 w-80 h-80 bg-sky-400/10 rounded-full blur-3xl"></div>
         
         <div className="relative z-10">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-sky-300 to-blue-300 inline-block text-transparent bg-clip-text mb-4">
+          <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-sky-300 to-blue-300 inline-block text-transparent bg-clip-text mb-4">
             Your Earth2 Profile
           </h1>
-          <p className="text-lg text-cyan-200/90 max-w-3xl">
+          <p className="text-base sm:text-lg text-cyan-200/90 max-w-3xl">
             Connect your Earth2 profile to view your properties, stats, and track your portfolio in one place.
           </p>
         </div>
@@ -1104,16 +1106,16 @@ export default function ProfilePage() {
 
       {userInfo && (
         <Card className="shadow-2xl bg-gradient-to-br from-gray-800/50 to-gray-900/70 border-sky-400/40 overflow-hidden">
-          <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 p-6 bg-gray-900/50">
+          <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 p-4 sm:p-6 bg-gray-900/50">
             {(userInfo.picture || userInfo.customPhoto) && (
               <img 
                 src={userInfo.customPhoto || userInfo.picture} 
                 alt={userInfo.username} 
-                className="w-24 h-24 rounded-full border-4 border-sky-500 object-cover shadow-lg flex-shrink-0"
+                className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-4 border-sky-500 object-cover shadow-lg flex-shrink-0"
               />
             )}
             <div className="flex-grow">
-              <CardTitle className="text-3xl font-bold text-sky-200 tracking-tight">{userInfo.username}</CardTitle>
+              <CardTitle className="text-2xl sm:text-3xl font-bold text-sky-200 tracking-tight">{userInfo.username}</CardTitle>
               {userInfo.description && <CardDescription className="text-cyan-200/80 mt-1 text-sm max-w-prose">{userInfo.description}</CardDescription>}
             </div>
             {userInfo.customFlag && (
@@ -1149,66 +1151,68 @@ export default function ProfilePage() {
 
       {properties.length > 0 && (
         <div className="space-y-6 mt-8">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <h2 className="text-2xl font-semibold text-sky-200">Your Earth2 Properties ({userInfo?.userLandfieldCount?.toLocaleString() ?? (allPropertiesForAnalytics.length > 0 ? allPropertiesForAnalytics.length.toLocaleString() : '...')})</h2>
-                <Button onClick={handleRefetch} disabled={isAnalyticsLoading || dataLoading} className="bg-sky-600/80 hover:bg-sky-500/90 border border-sky-400/30 transition-all duration-300">
+                <Button onClick={handleRefetch} disabled={isAnalyticsLoading || dataLoading} className="bg-sky-600/80 hover:bg-sky-500/90 border border-sky-400/30 transition-all duration-300 self-start sm:self-center">
                   {(isAnalyticsLoading || dataLoading) ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
                   Refetch Data
                 </Button>
             </div>
             {/* Sort / Filter Bar */}
-            <div className="flex flex-wrap items-center justify-between bg-gray-800/60 backdrop-blur-md mb-4 px-4 py-2 rounded-lg gap-4">
-              <div className="flex items-center space-x-2 text-sm text-sky-200">
-                <span>Sort by:</span>
-                <select
-                  value={sortOption}
-                  onChange={e => setSortOption(e.target.value as any)}
-                  className="bg-gray-700 text-sky-200 px-2 py-1 rounded border border-gray-600 focus:outline-none"
-                >
-                  <option value="latest">Purchase Date (Latest)</option>
-                  <option value="size">Size (Tiles)</option>
-                </select>
-              </div>
-              <div className="flex items-center space-x-2 text-sm text-sky-200">
-                <span>Filter tier:</span>
-                <select
-                  value={tierFilter === null ? '' : tierFilter}
-                  onChange={e => {
-                    const v = e.target.value; setTierFilter(v === ''? null : parseInt(v));
-                  }}
-                  className="bg-gray-700 text-sky-200 px-2 py-1 rounded border border-gray-600 focus:outline-none"
-                >
-                  <option value="">All</option>
-                  <option value="1">T1</option>
-                  <option value="2">T2</option>
-                  <option value="3">T3</option>
-                </select>
-              </div>
-              
-              {/* New EPL filter */}
-              <div className="flex items-center space-x-2 text-sm text-sky-200">
-                <span>EPL status:</span>
-                <select
-                  value={eplFilter}
-                  onChange={e => setEplFilter(e.target.value as 'all'|'with'|'without')}
-                  className="bg-gray-700 text-sky-200 px-2 py-1 rounded border border-gray-600 focus:outline-none"
-                >
-                  <option value="all">All properties</option>
-                  <option value="with">With EPL only</option>
-                  <option value="without">Without EPL only</option>
-                </select>
+            <div className="flex flex-col sm:flex-row flex-wrap items-center justify-between bg-gray-800/60 backdrop-blur-md mb-4 px-4 py-3 rounded-lg gap-4">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 w-full justify-between">
+                <div className="flex items-center space-x-2 text-sm text-sky-200">
+                  <span>Sort by:</span>
+                  <select
+                    value={sortOption}
+                    onChange={e => setSortOption(e.target.value as any)}
+                    className="bg-gray-700 text-sky-200 px-2 py-1 rounded border border-gray-600 focus:outline-none"
+                  >
+                    <option value="latest">Purchase Date (Latest)</option>
+                    <option value="size">Size (Tiles)</option>
+                  </select>
+                </div>
+                <div className="flex items-center space-x-2 text-sm text-sky-200">
+                  <span>Filter tier:</span>
+                  <select
+                    value={tierFilter === null ? '' : tierFilter}
+                    onChange={e => {
+                      const v = e.target.value; setTierFilter(v === ''? null : parseInt(v));
+                    }}
+                    className="bg-gray-700 text-sky-200 px-2 py-1 rounded border border-gray-600 focus:outline-none"
+                  >
+                    <option value="">All</option>
+                    <option value="1">T1</option>
+                    <option value="2">T2</option>
+                    <option value="3">T3</option>
+                  </select>
+                </div>
+                
+                {/* New EPL filter */}
+                <div className="flex items-center space-x-2 text-sm text-sky-200">
+                  <span>EPL status:</span>
+                  <select
+                    value={eplFilter}
+                    onChange={e => setEplFilter(e.target.value as 'all'|'with'|'without')}
+                    className="bg-gray-700 text-sky-200 px-2 py-1 rounded border border-gray-600 focus:outline-none"
+                  >
+                    <option value="all">All properties</option>
+                    <option value="with">With EPL only</option>
+                    <option value="without">Without EPL only</option>
+                  </select>
+                </div>
               </div>
               
               {/* Search */}
-              <form onSubmit={e=>{e.preventDefault();}} className="flex items-center">
+              <form onSubmit={e=>{e.preventDefault();}} className="flex items-center w-full sm:w-auto sm:flex-grow">
                 <input
                   type="text"
                   placeholder="Search description/location..."
                   value={searchQuery}
                   onChange={e=>setSearchQuery(e.target.value)}
-                  className="bg-gray-700 text-sky-200 px-3 py-1 rounded-l border border-gray-600 focus:outline-none w-48"
+                  className="bg-gray-700 text-sky-200 px-3 py-1.5 rounded-l-md border border-gray-600 focus:outline-none w-full sm:w-48"
                 />
-                <button type="submit" className="bg-sky-600 hover:bg-sky-500 px-3 py-1 rounded-r text-white text-sm">Search</button>
+                <button type="submit" className="bg-sky-600 hover:bg-sky-500 px-3 py-1.5 rounded-r-md text-white text-sm">Search</button>
               </form>
             </div>
 
@@ -1337,9 +1341,9 @@ export default function ProfilePage() {
 
       {!isAnalyticsLoading && allPropertiesForAnalytics.length > 0 && linkedE2UserId && (
         <div className="mt-12 space-y-8">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
             <h2 className="text-3xl font-bold text-sky-200">Full Portfolio Analytics</h2>
-            <Button onClick={fetchGlobalMetrics} className="bg-fuchsia-700/70 hover:bg-fuchsia-600 text-white text-sm px-4 py-2 rounded-lg shadow">
+            <Button onClick={fetchGlobalMetrics} className="bg-fuchsia-700/70 hover:bg-fuchsia-600 text-white text-sm px-4 py-2 rounded-lg shadow self-start sm:self-auto">
               {isMetricsLoading ? <Loader2 className="w-4 h-4 animate-spin"/> : 'View Global E2 Metrics'}
             </Button>
           </div>
@@ -1466,7 +1470,7 @@ export default function ProfilePage() {
                   </CardTitle>
                   <CardDescription className="text-gray-400">Top 10 countries by tiles across your portfolio.</CardDescription>
                 </CardHeader>
-                <CardContent className="h-96"> {/* Increased height for better spacing */}
+                <CardContent className="h-96 md:h-80 lg:h-96"> {/* Increased height for better spacing */}
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <style>{pie3DStyle}</style>
@@ -1502,8 +1506,8 @@ export default function ProfilePage() {
                         wrapperStyle={{
                           paddingLeft: '15px',
                           maxWidth: '40%',
-                          fontSize: '0.875rem',
-                          lineHeight: '1.25rem'
+                          fontSize: '0.8rem',
+                          lineHeight: '1.2rem'
                         }}
                       />
                     </PieChart>
@@ -1535,7 +1539,6 @@ export default function ProfilePage() {
                                 fill="#8884d8"
                                 dataKey="value"
                                 nameKey="name"
-                                label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
                                 stroke="#374151"
                               >
                                 {tierChartData.map((entry, index) => (
@@ -1551,12 +1554,14 @@ export default function ProfilePage() {
                                   }}
                               />
                               <Legend 
-                                layout="vertical"
-                                align="right" 
-                                verticalAlign="middle"
+                                layout={isMobile ? "horizontal" : "vertical"}
+                                verticalAlign={isMobile ? "bottom" : "middle"}
+                                align={isMobile ? "center" : "right"}
                                 wrapperStyle={{
-                                  fontSize: '0.875rem',
-                                  paddingLeft: '15px'
+                                  fontSize: '0.8rem',
+                                  lineHeight: '1.2rem',
+                                  paddingLeft: isMobile ? 0 : '15px',
+                                  paddingTop: isMobile ? '10px' : 0,
                                 }}
                               />
                           </PieChart>
@@ -1573,14 +1578,14 @@ export default function ProfilePage() {
                   </CardTitle>
                   <CardDescription className="text-gray-400">Properties and total tiles acquired per year.</CardDescription>
                 </CardHeader>
-                <CardContent className="h-80">
+                <CardContent className="h-72 sm:h-80">
                   <ResponsiveContainer width="100%" height="100%">
                     {/* Using ComposedChart for potentially different axes later, but using two Bars for now */}
-                    <BarChart data={acquisitionTimelineData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}> 
+                    <BarChart data={acquisitionTimelineData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}> 
                       <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
-                      <XAxis dataKey="name" stroke="#9ca3af" />
-                      <YAxis yAxisId="left" width={60} stroke="#F59E0B" orientation="left" allowDecimals={false} tickFormatter={(value) => value.toLocaleString()} />
-                      <YAxis yAxisId="right" width={70} stroke="#A3E635" orientation="right" allowDecimals={false} tickFormatter={(value) => value.toLocaleString()} />
+                      <XAxis dataKey="name" stroke="#9ca3af" fontSize="0.75rem" />
+                      <YAxis yAxisId="left" width={50} stroke="#F59E0B" orientation="left" allowDecimals={false} tickFormatter={(value) => value.toLocaleString()} fontSize="0.75rem" />
+                      <YAxis yAxisId="right" width={60} stroke="#A3E635" orientation="right" allowDecimals={false} tickFormatter={(value) => value.toLocaleString()} fontSize="0.75rem" />
                       <Tooltip 
                         contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }}
                         itemStyle={{ color: '#d1d5db' }}
@@ -1604,12 +1609,12 @@ export default function ProfilePage() {
                   </CardTitle>
                   <CardDescription className="text-gray-400">Distribution of property sizes by tile count.</CardDescription>
                 </CardHeader>
-                <CardContent className="h-80">
+                <CardContent className="h-72 sm:h-80">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={tileCountDistributionData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                    <BarChart data={tileCountDistributionData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
-                      <XAxis dataKey="name" stroke="#9ca3af" />
-                      <YAxis width={60} stroke="#9ca3af" allowDecimals={false} tickFormatter={(value) => value.toLocaleString()} />
+                      <XAxis dataKey="name" stroke="#9ca3af" fontSize="0.75rem" />
+                      <YAxis width={50} stroke="#9ca3af" allowDecimals={false} tickFormatter={(value) => value.toLocaleString()} fontSize="0.75rem" />
                       <Tooltip 
                         contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }}
                         itemStyle={{ color: '#d1d5db' }}
@@ -1635,7 +1640,7 @@ export default function ProfilePage() {
                     Properties listed for sale vs. not for sale.
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="h-80">
+                <CardContent className="h-72 sm:h-80">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <style>{pie3DStyle}</style>
@@ -1648,7 +1653,6 @@ export default function ProfilePage() {
                         fill="#8884d8"
                         dataKey="value"
                         nameKey="name"
-                        label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
                         stroke="#374151"
                       >
                         {forSaleChartData.map((entry, index) => (
@@ -1664,12 +1668,14 @@ export default function ProfilePage() {
                         }}
                       />
                       <Legend
-                        layout="vertical"
-                        align="right"
-                        verticalAlign="middle"
+                        layout={isMobile ? "horizontal" : "vertical"}
+                        verticalAlign={isMobile ? "bottom" : "middle"}
+                        align={isMobile ? "center" : "right"}
                         wrapperStyle={{
-                          fontSize: '0.875rem',
-                          paddingLeft: '15px'
+                          fontSize: '0.8rem',
+                          lineHeight: '1.2rem',
+                          paddingLeft: isMobile ? 0 : '15px',
+                          paddingTop: isMobile ? '10px' : 0,
                         }}
                       />
                     </PieChart>
@@ -1688,7 +1694,7 @@ export default function ProfilePage() {
                     Properties with and without an EPL address.
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="h-80">
+                <CardContent className="h-72 sm:h-80">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <style>{pie3DStyle}</style>
@@ -1701,7 +1707,6 @@ export default function ProfilePage() {
                         fill="#8884d8"
                         dataKey="value"
                         nameKey="name"
-                        label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
                         stroke="#374151"
                       >
                         {eplChartData.map((entry, index) => (
@@ -1717,12 +1722,14 @@ export default function ProfilePage() {
                         }}
                       />
                       <Legend
-                        layout="vertical"
-                        align="right"
-                        verticalAlign="middle"
+                        layout={isMobile ? "horizontal" : "vertical"}
+                        verticalAlign={isMobile ? "bottom" : "middle"}
+                        align={isMobile ? "center" : "right"}
                         wrapperStyle={{
-                          fontSize: '0.875rem',
-                          paddingLeft: '15px'
+                          fontSize: '0.8rem',
+                          lineHeight: '1.2rem',
+                          paddingLeft: isMobile ? 0 : '15px',
+                          paddingTop: isMobile ? '10px' : 0,
                         }}
                       />
                     </PieChart>
@@ -1736,7 +1743,7 @@ export default function ProfilePage() {
 
       {/* Global Metrics Modal */}
       <Dialog open={isMetricsOpen} onOpenChange={setIsMetricsOpen}>
-        <DialogContent className="max-w-xl bg-gray-900/80 backdrop-blur-md border-sky-400/50 text-white">
+        <DialogContent className="max-w-md w-[90vw] bg-gray-900/80 backdrop-blur-md border-sky-400/50 text-white">
           <DialogHeader>
             <DialogTitle className="text-2xl text-sky-200">Global Earth2 Metrics</DialogTitle>
           </DialogHeader>
