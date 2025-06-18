@@ -403,6 +403,19 @@
   }
 }
 
+/* Navigation line styling */
+.navigation-line {
+  stroke-dasharray: 8, 4;
+  animation: navigationFlow 3s linear infinite;
+  filter: drop-shadow(0 0 3px rgba(14, 165, 233, 0.5));
+}
+
+@keyframes navigationFlow {
+  to {
+    stroke-dashoffset: -12;
+  }
+}
+
 .route-waypoint-marker {
   transition: all 0.3s ease;
 }
@@ -490,6 +503,7 @@
 .animated-route-line {
   stroke-dasharray: 10, 10;
   animation: march 30s linear infinite;
+  filter: drop-shadow(0 0 3px rgba(14, 165, 233, 0.5));
 }
 
 @keyframes march {

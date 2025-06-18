@@ -547,13 +547,12 @@ export function LogisticsMap({ properties, selectedProperties, onRouteSummary, t
                     )
                 })}
                 
-                <div className="leaflet-top leaflet-right">
-                    <RoutingMachine 
-                        waypoints={waypoints} 
-                        onRouteFound={handleRouteSummary} 
-                        transportMode={transportMode} 
-                    />
-                </div>
+                {/* Routing Machine Component */}
+                <RoutingMachine 
+                    waypoints={waypoints} 
+                    onRouteFound={handleRouteSummary} 
+                    transportMode={transportMode} 
+                />
             </MapContainer>
         </div>
     );
