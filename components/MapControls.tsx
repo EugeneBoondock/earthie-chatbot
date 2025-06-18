@@ -1,6 +1,6 @@
 'use client';
 
-import { Layers, Eye, Route } from 'lucide-react';
+import { Layers, Eye, Route, MapPin, Type } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { 
   DropdownMenu, 
@@ -23,6 +23,8 @@ interface MapControlsProps {
   onShowAllPropertiesChange: (show: boolean) => void;
   showRoute: boolean;
   onShowRouteChange: (show: boolean) => void;
+  showLabels: boolean;
+  onShowLabelsChange: (show: boolean) => void;
 }
 
 export function MapControls({
@@ -32,6 +34,8 @@ export function MapControls({
   onShowAllPropertiesChange,
   showRoute,
   onShowRouteChange,
+  showLabels,
+  onShowLabelsChange,
 }: MapControlsProps) {
   return (
     <div className="leaflet-top leaflet-right">
@@ -70,6 +74,23 @@ export function MapControls({
              className="!mt-0"
            />
         </div>
+
+        {/* Labels toggle - only show when satellite view is active */}
+        {currentLayer === 'satellite' && (
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className={`h-10 w-10 transition-colors ${
+              showLabels 
+                ? 'text-cyan-300 bg-cyan-400/20 hover:bg-cyan-400/30' 
+                : 'text-white hover:bg-cyan-400/20 hover:text-cyan-300'
+            }`}
+            onClick={() => onShowLabelsChange(!showLabels)}
+            title="Toggle Country Names & City Labels"
+          >
+            <Type className="h-5 w-5" />
+          </Button>
+        )}
 
       </div>
     </div>

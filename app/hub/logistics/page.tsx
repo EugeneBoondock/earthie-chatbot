@@ -6,7 +6,7 @@ import {
   Loader2, AlertCircle, Map, List, Route, ArrowUpDown, Search, Gem, Car, Truck, Zap,
   Anchor, Factory, Home, TreePine, Mountain, Waves, Building, MapPin, Copy, ExternalLink,
   Package, Clock, Fuel, Calculator, TrendingUp, Compass, Navigation, Gauge,
-  Ship, Plane, Train, RefreshCw, Eye, EyeOff, Settings, Info, Star, Award, PersonStanding
+  Ship, Plane, Train, RefreshCw, Eye, EyeOff, Settings, Info, Star, Award, PersonStanding, X
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -842,16 +842,291 @@ export default function LogisticsPage() {
     }
   }, [selectedProperties]);
 
+  // Reset page when filters change - use useCallback to stabilize
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, sortOption, filterRole]);
+
+  // Helper function to get location context from coordinates
+  const getLocationContext = (lat: number, lng: number): string => {
+    const contexts = [];
+    
+    // Add continent
+    if (lat > 35 && lat < 75 && lng > -15 && lng < 65) {
+      contexts.push('Europe');
+    } else if (lat > -40 && lat < 40 && lng > -20 && lng < 55) {
+      contexts.push('Africa');
+    } else if (lat > 5 && lat < 75 && lng > 60 && lng < 180) {
+      contexts.push('Asia');
+    } else if (lat > 15 && lat < 75 && lng > -170 && lng < -50) {
+      contexts.push('North America');
+    } else if (lat > -60 && lat < 15 && lng > -85 && lng < -35) {
+      contexts.push('South America');
+    } else if (lat > -50 && lat < -10 && lng > 110 && lng < 180) {
+      contexts.push('Australia Oceania');
+    }
+    
+    // Add hemisphere info
+    if (lat > 0) contexts.push('Northern Hemisphere');
+    else contexts.push('Southern Hemisphere');
+    
+    if (lng > 0) contexts.push('Eastern Hemisphere');
+    else contexts.push('Western Hemisphere');
+    
+    return contexts.join(' ');
+  };
+
+  // Helper function to get country name variations
+  const getCountryVariations = (query: string): string[] => {
+    const variations = [query];
+    
+    // Expanded country name mappings with more variations
+    const countryMappings: Record<string, string[]> = {
+      // North America
+      'usa': ['united states', 'america', 'us', 'united states of america', 'states'],
+      'united states': ['usa', 'america', 'us', 'united states of america', 'states'],
+      'america': ['usa', 'united states', 'us', 'united states of america'],
+      'canada': ['can', 'dominion of canada'],
+      'mexico': ['mexican states', 'united mexican states', 'méxico'],
+      
+      // Europe
+      'uk': ['united kingdom', 'britain', 'england', 'great britain', 'scotland', 'wales', 'northern ireland'],
+      'united kingdom': ['uk', 'britain', 'england', 'great britain', 'scotland', 'wales'],
+      'britain': ['uk', 'united kingdom', 'england', 'great britain'],
+      'england': ['uk', 'united kingdom', 'britain', 'great britain'],
+      'scotland': ['uk', 'united kingdom', 'britain', 'great britain'],
+      'wales': ['uk', 'united kingdom', 'britain', 'great britain'],
+      'ireland': ['republic of ireland', 'eire'],
+      'germany': ['deutschland', 'federal republic of germany', 'german'],
+      'france': ['french republic', 'république française', 'french'],
+      'spain': ['españa', 'kingdom of spain', 'spanish'],
+      'italy': ['italia', 'italian republic', 'italian'],
+      'netherlands': ['holland', 'kingdom of the netherlands', 'dutch'],
+      'holland': ['netherlands', 'kingdom of the netherlands', 'dutch'],
+      'poland': ['polska', 'republic of poland', 'polish'],
+      'russia': ['russian federation', 'ussr', 'soviet union', 'russian'],
+      'czech republic': ['czechia', 'česká republika', 'bohemia'],
+      'czechia': ['czech republic', 'česká republika', 'bohemia'],
+      'greece': ['hellenic republic', 'hellas', 'greek'],
+      'portugal': ['portuguese republic', 'portuguese'],
+      'sweden': ['kingdom of sweden', 'swedish'],
+      'norway': ['kingdom of norway', 'norwegian'],
+      'denmark': ['kingdom of denmark', 'danish'],
+      'finland': ['republic of finland', 'finnish'],
+      'switzerland': ['swiss confederation', 'swiss'],
+      'austria': ['republic of austria', 'austrian'],
+      'belgium': ['kingdom of belgium', 'belgian'],
+      
+      // Asia
+      'china': ['people\'s republic of china', 'prc', 'chinese'],
+      'japan': ['nippon', 'nihon', 'japanese'],
+      'south korea': ['korea', 'republic of korea', 'korean'],
+      'north korea': ['korea', 'democratic people\'s republic of korea', 'korean'],
+      'india': ['republic of india', 'bharat', 'indian'],
+      'thailand': ['kingdom of thailand', 'siam', 'thai'],
+      'vietnam': ['socialist republic of vietnam', 'vietnamese'],
+      'taiwan': ['republic of china', 'chinese taipei', 'formosa'],
+      'singapore': ['republic of singapore', 'singaporean'],
+      'indonesia': ['republic of indonesia', 'indonesian'],
+      'malaysia': ['malaysian'],
+      'philippines': ['republic of the philippines', 'filipino'],
+      'pakistan': ['islamic republic of pakistan', 'pakistani'],
+      'bangladesh': ['people\'s republic of bangladesh', 'bangladeshi'],
+      'iran': ['islamic republic of iran', 'persia', 'persian'],
+      'iraq': ['republic of iraq', 'iraqi'],
+      'saudi arabia': ['kingdom of saudi arabia', 'saudi'],
+      'israel': ['state of israel', 'israeli'],
+      'turkey': ['republic of turkey', 'türkiye', 'turkish'],
+      
+      // Middle East
+      'uae': ['united arab emirates', 'emirates'],
+      'united arab emirates': ['uae', 'emirates'],
+      'qatar': ['state of qatar', 'qatari'],
+      'kuwait': ['state of kuwait', 'kuwaiti'],
+      'bahrain': ['kingdom of bahrain', 'bahraini'],
+      'oman': ['sultanate of oman', 'omani'],
+      'jordan': ['hashemite kingdom of jordan', 'jordanian'],
+      'lebanon': ['lebanese republic', 'lebanese'],
+      'syria': ['syrian arab republic', 'syrian'],
+      
+      // Africa
+      'south africa': ['republic of south africa', 'south african'],
+      'egypt': ['arab republic of egypt', 'egyptian'],
+      'nigeria': ['federal republic of nigeria', 'nigerian'],
+      'kenya': ['republic of kenya', 'kenyan'],
+      'ethiopia': ['federal democratic republic of ethiopia', 'ethiopian'],
+      'morocco': ['kingdom of morocco', 'moroccan'],
+      'algeria': ['people\'s democratic republic of algeria', 'algerian'],
+      'tunisia': ['republic of tunisia', 'tunisian'],
+      'libya': ['state of libya', 'libyan'],
+      'ghana': ['republic of ghana', 'ghanaian'],
+      
+      // Oceania
+      'australia': ['commonwealth of australia', 'australian', 'aussie'],
+      'new zealand': ['nz', 'new zealander', 'kiwi'],
+      
+      // South America
+      'brazil': ['federative republic of brazil', 'brazilian'],
+      'argentina': ['argentine republic', 'argentinian', 'argentine'],
+      'chile': ['republic of chile', 'chilean'],
+      'peru': ['republic of peru', 'peruvian'],
+      'colombia': ['republic of colombia', 'colombian'],
+      'venezuela': ['bolivarian republic of venezuela', 'venezuelan'],
+      'ecuador': ['republic of ecuador', 'ecuadorian'],
+      'bolivia': ['plurinational state of bolivia', 'bolivian'],
+      'uruguay': ['oriental republic of uruguay', 'uruguayan'],
+      'paraguay': ['republic of paraguay', 'paraguayan'],
+    };
+    
+    const lowerQuery = query.toLowerCase();
+    
+    // Direct mapping check
+    if (countryMappings[lowerQuery]) {
+      variations.push(...countryMappings[lowerQuery]);
+    }
+    
+    // Partial matches for longer country names
+    Object.entries(countryMappings).forEach(([key, values]) => {
+      if (key.includes(lowerQuery) || values.some(v => v.includes(lowerQuery))) {
+        variations.push(key, ...values);
+      }
+    });
+    
+    // Add common language/nationality searches
+    const languageToCountry: Record<string, string[]> = {
+      'english': ['united kingdom', 'usa', 'canada', 'australia', 'new zealand'],
+      'spanish': ['spain', 'mexico', 'argentina', 'colombia', 'peru', 'chile'],
+      'french': ['france', 'canada', 'belgium', 'switzerland'],
+      'german': ['germany', 'austria', 'switzerland'],
+      'italian': ['italy', 'switzerland'],
+      'portuguese': ['portugal', 'brazil'],
+      'chinese': ['china', 'taiwan', 'singapore'],
+      'japanese': ['japan'],
+      'korean': ['south korea', 'north korea'],
+      'arabic': ['saudi arabia', 'uae', 'egypt', 'jordan', 'lebanon'],
+      'russian': ['russia'],
+      'dutch': ['netherlands', 'belgium'],
+    };
+    
+    if (languageToCountry[lowerQuery]) {
+      variations.push(...languageToCountry[lowerQuery]);
+    }
+    
+    return [...new Set(variations)]; // Remove duplicates
+  };
+
+  // Helper function to check continent matches
+  const checkContinentMatch = (query: string, coords: { lat: number; lng: number } | null): boolean => {
+    if (!coords) return false;
+    
+    const continentQueries = {
+      'europe': () => coords.lat > 35 && coords.lat < 75 && coords.lng > -15 && coords.lng < 65,
+      'africa': () => coords.lat > -40 && coords.lat < 40 && coords.lng > -20 && coords.lng < 55,
+      'asia': () => coords.lat > 5 && coords.lat < 75 && coords.lng > 60 && coords.lng < 180,
+      'north america': () => coords.lat > 15 && coords.lat < 75 && coords.lng > -170 && coords.lng < -50,
+      'south america': () => coords.lat > -60 && coords.lat < 15 && coords.lng > -85 && coords.lng < -35,
+      'australia': () => coords.lat > -50 && coords.lat < -10 && coords.lng > 110 && coords.lng < 180,
+      'oceania': () => coords.lat > -50 && coords.lat < -10 && coords.lng > 110 && coords.lng < 180,
+    };
+    
+    const lowerQuery = query.toLowerCase();
+    return Object.entries(continentQueries).some(([continent, checkFn]) => 
+      (continent.includes(lowerQuery) || lowerQuery.includes(continent)) && checkFn()
+    );
+  };
+
   // Enhanced filtering and sorting logic
   const filteredAndSortedProperties = useMemo(() => {
     let filtered = enhancedProperties;
 
     if (searchQuery) {
-      filtered = filtered.filter(p => 
-        p.attributes.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.attributes.country.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (p.logisticsRole && getPropertyRoleInfo(p.logisticsRole).label.toLowerCase().includes(searchQuery.toLowerCase()))
-      );
+      const query = searchQuery.toLowerCase().trim();
+      
+      // Create a comprehensive search that matches various location formats with priority scoring
+      const searchResults = enhancedProperties.map(p => {
+        const description = p.attributes.description.toLowerCase();
+        const country = p.attributes.country.toLowerCase();
+        const logisticsRoleLabel = p.logisticsRole ? getPropertyRoleInfo(p.logisticsRole).label.toLowerCase() : '';
+        
+        // Parse center coordinates to get location context
+        const coords = parseCoordinates(p.attributes.center);
+        let locationContext = '';
+        if (coords) {
+          locationContext = getLocationContext(coords.lat, coords.lng).toLowerCase();
+        }
+        
+        let score = 0;
+        let matched = false;
+        
+        // High priority: Exact country name match
+        if (country === query) {
+          score += 100;
+          matched = true;
+        }
+        
+        // High priority: Country name contains query or query contains country
+        if (country.includes(query) || query.includes(country)) {
+          score += 80;
+          matched = true;
+        }
+        
+        // Enhanced country matching with common variations
+        const countryVariations = getCountryVariations(query);
+        const exactCountryMatch = countryVariations.find(variation => country === variation);
+        if (exactCountryMatch) {
+          score += 90;
+          matched = true;
+        } else if (countryVariations.some(variation => country.includes(variation))) {
+          score += 70;
+          matched = true;
+        }
+        
+        // Medium-high priority: Property description contains query
+        if (description.includes(query)) {
+          score += 60;
+          matched = true;
+        }
+        
+        // Medium priority: Logistics role match
+        if (logisticsRoleLabel.includes(query)) {
+          score += 50;
+          matched = true;
+        }
+        
+        // Medium priority: Continent/region match
+        const continentMatch = checkContinentMatch(query, coords);
+        if (continentMatch) {
+          score += 40;
+          matched = true;
+        }
+        
+        // Lower priority: Location context match
+        if (locationContext.includes(query)) {
+          score += 30;
+          matched = true;
+        }
+        
+        // Lower priority: City/region names in description (split by commas)
+        if (description.split(',').some(part => part.trim().includes(query))) {
+          score += 25;
+          matched = true;
+        }
+        
+        // Lowest priority: Any partial text match in combined searchable text
+        const searchableText = [description, country, logisticsRoleLabel, locationContext].join(' ');
+        if (searchableText.includes(query) && !matched) {
+          score += 10;
+          matched = true;
+        }
+        
+        return { property: p, score, matched };
+      });
+      
+      // Filter only matched results and sort by score
+      filtered = searchResults
+        .filter(result => result.matched)
+        .sort((a, b) => b.score - a.score)
+        .map(result => result.property);
     }
 
     if (filterRole !== 'all') {
@@ -879,7 +1154,7 @@ export default function LogisticsPage() {
 
     return sorted;
   }, [enhancedProperties, searchQuery, sortOption, filterRole]);
-  
+
   // Pagination logic - stabilize with useMemo
   const totalPages = useMemo(() => 
     Math.ceil(filteredAndSortedProperties.length / PROPERTIES_PER_PAGE),
@@ -900,11 +1175,6 @@ export default function LogisticsPage() {
     return [...selectedProperties, ...paginatedWithoutSelected];
   }, [selectedProperties, paginatedProperties]);
   
-  // Reset page when filters change - use useCallback to stabilize
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, sortOption, filterRole]);
-
   const formatDistance = (meters: number) => {
     if (meters < 1000) return `${meters.toFixed(0)} m`;
     return `${(meters / 1000).toFixed(2)} km`;
@@ -1546,7 +1816,7 @@ export default function LogisticsPage() {
                   <div className="relative flex-grow">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input 
-                      placeholder="Search properties, countries, roles..."
+                      placeholder="Search by country, property name, or location..."
                       value={searchQuery}
                       onChange={handleSearchChange}
                       className="pl-10 bg-gray-800/60 backdrop-blur-sm border-cyan-400/30 focus:border-cyan-400"

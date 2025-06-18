@@ -42,6 +42,14 @@ interface RoutingProps {
 
 type TransportMode = 'walking' | 'car' | 'truck' | 'drone' | 'ship' | 'plane';
 
+interface TransportHub {
+    name: string;
+    lat: number;
+    lng: number;
+    type: 'airport' | 'port' | 'city' | 'train_station';
+    importance: number;
+}
+
 // Create waypoint icon
 const createWaypointIcon = (isFirst: boolean, isLast: boolean, index: number) => {
     const color = isFirst ? '#22c55e' : isLast ? '#ef4444' : '#3b82f6';
@@ -181,6 +189,283 @@ const RoutingMachine = ({ waypoints, onRouteFound, transportMode, properties }: 
         }
     };
 
+    // Calculate distance between two points
+    const calculateDistance = (point1: L.LatLng, point2: L.LatLng): number => {
+        return point1.distanceTo(point2);
+    };
+
+    // Find transportation hubs dynamically using OpenStreetMap Overpass API
+    const findTransportHubs = async (center: L.LatLng, radius: number, hubType: 'airport' | 'port' | 'city' | 'train_station'): Promise<TransportHub[]> => {
+        console.log(`Searching for ${hubType} hubs within ${Math.round(radius/1000)}km of ${center.lat.toFixed(2)}, ${center.lng.toFixed(2)}`);
+        
+        try {
+            let overpassQuery = '';
+            
+            switch (hubType) {
+                case 'airport':
+                    overpassQuery = `
+                        [out:json][timeout:25];
+                        (
+                          node(around:${radius},${center.lat},${center.lng})[aeroway=aerodrome][iata];
+                          node(around:${radius},${center.lat},${center.lng})[aeroway=aerodrome][icao];
+                          way(around:${radius},${center.lat},${center.lng})[aeroway=aerodrome][iata];
+                          way(around:${radius},${center.lat},${center.lng})[aeroway=aerodrome][icao];
+                        );
+                        out center tags;
+                    `;
+                    break;
+                    
+                case 'port':
+                    overpassQuery = `
+                        [out:json][timeout:25];
+                        (
+                          node(around:${radius},${center.lat},${center.lng})[harbour=yes];
+                          node(around:${radius},${center.lat},${center.lng})[seamark:type=harbour];
+                          node(around:${radius},${center.lat},${center.lng})[landuse=port];
+                          way(around:${radius},${center.lat},${center.lng})[harbour=yes];
+                          way(around:${radius},${center.lat},${center.lng})[landuse=port];
+                          way(around:${radius},${center.lat},${center.lng})[seamark:type=harbour];
+                          node(around:${radius},${center.lat},${center.lng})[amenity=ferry_terminal];
+                          way(around:${radius},${center.lat},${center.lng})[amenity=ferry_terminal];
+                        );
+                        out center tags;
+                    `;
+                    break;
+                    
+                case 'city':
+                    overpassQuery = `
+                        [out:json][timeout:25];
+                        (
+                          node(around:${radius},${center.lat},${center.lng})[place=city];
+                          node(around:${radius},${center.lat},${center.lng})[place=town];
+                          node(around:${radius},${center.lat},${center.lng})[admin_level=4];
+                          node(around:${radius},${center.lat},${center.lng})[admin_level=6];
+                        );
+                        out center tags;
+                    `;
+                    break;
+                    
+                case 'train_station':
+                    overpassQuery = `
+                        [out:json][timeout:25];
+                        (
+                          node(around:${radius},${center.lat},${center.lng})[railway=station];
+                          node(around:${radius},${center.lat},${center.lng})[public_transport=station][station=subway];
+                          way(around:${radius},${center.lat},${center.lng})[railway=station];
+                        );
+                        out center tags;
+                    `;
+                    break;
+            }
+
+            const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(overpassQuery)}`;
+            console.log(`Overpass query URL: ${url.substring(0, 100)}...`);
+            
+            const response = await fetch(url);
+            if (!response.ok) {
+                console.error(`Overpass API error: ${response.status}`);
+                return [];
+            }
+
+            const data = await response.json();
+            console.log(`Overpass response for ${hubType}:`, data.elements?.length || 0, 'elements');
+
+            const hubs: TransportHub[] = [];
+
+            for (const element of data.elements || []) {
+                let lat: number, lng: number;
+                
+                // Handle different element types
+                if (element.type === 'node') {
+                    lat = element.lat;
+                    lng = element.lon;
+                } else if (element.type === 'way' && element.center) {
+                    lat = element.center.lat;
+                    lng = element.center.lon;
+                } else {
+                    continue;
+                }
+
+                const tags = element.tags || {};
+                let name = tags.name || tags['name:en'] || tags.iata || tags.icao || 'Unknown';
+                let importance = 1;
+
+                // Calculate importance based on various factors
+                if (hubType === 'airport') {
+                    if (tags.iata) importance += 5; // International airports
+                    if (tags.icao) importance += 3;
+                    if (tags['aerodrome:type'] === 'international') importance += 7;
+                    if (tags.name && tags.name.toLowerCase().includes('international')) importance += 5;
+                } else if (hubType === 'port') {
+                    if (tags.harbour === 'yes') importance += 3;
+                    if (tags['seamark:type'] === 'harbour') importance += 4;
+                    if (tags.landuse === 'port') importance += 5;
+                    if (tags.amenity === 'ferry_terminal') importance += 4;
+                } else if (hubType === 'city') {
+                    if (tags.place === 'city') importance += 5;
+                    if (tags.admin_level === '4') importance += 4;
+                    if (tags.population) {
+                        const pop = parseInt(tags.population);
+                        if (pop > 1000000) importance += 8;
+                        else if (pop > 500000) importance += 6;
+                        else if (pop > 100000) importance += 4;
+                    }
+                }
+
+                // Add distance factor (closer hubs are more important)
+                const distance = calculateDistance(center, new L.LatLng(lat, lng));
+                const distanceFactor = Math.max(0, 10 - (distance / (radius / 10)));
+                importance += distanceFactor;
+
+                hubs.push({
+                    name,
+                    lat,
+                    lng,
+                    type: hubType,
+                    importance
+                });
+            }
+
+            // Sort by importance and return top results
+            const sortedHubs = hubs.sort((a, b) => b.importance - a.importance).slice(0, 10);
+            console.log(`Found ${sortedHubs.length} ${hubType} hubs:`, sortedHubs.map(h => `${h.name} (${h.importance.toFixed(1)})`));
+            
+            return sortedHubs;
+
+        } catch (error) {
+            console.error(`Error finding ${hubType} hubs:`, error);
+            return [];
+        }
+    };
+
+    // Check if route crosses significant water bodies
+    const checkRouteForWaterCrossing = async (start: L.LatLng, end: L.LatLng): Promise<boolean> => {
+        console.log(`Checking for water crossing between ${start.lat.toFixed(3)},${start.lng.toFixed(3)} and ${end.lat.toFixed(3)},${end.lng.toFixed(3)}`);
+        
+        // Sample points along the route to check for water
+        const numSamples = 10;
+        for (let i = 1; i < numSamples; i++) {
+            const ratio = i / numSamples;
+            const sampleLat = start.lat + (end.lat - start.lat) * ratio;
+            const sampleLng = start.lng + (end.lng - start.lng) * ratio;
+            const samplePoint = new L.LatLng(sampleLat, sampleLng);
+            
+            if (await isOverWater(samplePoint)) {
+                console.log(`Water detected at sample point ${i}: ${sampleLat.toFixed(3)},${sampleLng.toFixed(3)}`);
+                return true;
+            }
+        }
+        
+        console.log('No significant water crossings detected');
+        return false;
+    };
+
+    // Find nearest port to a given point
+    const findNearestPort = async (point: L.LatLng): Promise<L.LatLng | null> => {
+        console.log(`Finding nearest port to ${point.lat.toFixed(3)},${point.lng.toFixed(3)}`);
+        
+        const ports = await findTransportHubs(point, 200000, 'port'); // Search within 200km
+        
+        if (ports.length === 0) {
+            console.log('No ports found within search radius');
+            return null;
+        }
+
+        // Return the closest port
+        const nearestPort = ports[0];
+        console.log(`Found nearest port: ${nearestPort.name} at ${nearestPort.lat.toFixed(3)},${nearestPort.lng.toFixed(3)}`);
+        return new L.LatLng(nearestPort.lat, nearestPort.lng);
+    };
+
+    // Create multi-modal route when water crossing is detected
+    const createMultiModalRoute = async (start: L.LatLng, end: L.LatLng, originalMode: TransportMode): Promise<{
+        waypoints: L.LatLng[];
+        segments: RouteSegment[];
+    }> => {
+        console.log(`Creating multi-modal route from ${start.lat.toFixed(3)},${start.lng.toFixed(3)} to ${end.lat.toFixed(3)},${end.lng.toFixed(3)}`);
+        
+        const segments: RouteSegment[] = [];
+        const waypoints: L.LatLng[] = [start];
+
+        // Find nearest ports to start and end points
+        const startPort = await findNearestPort(start);
+        const endPort = await findNearestPort(end);
+
+        if (!startPort || !endPort) {
+            console.log('Could not find suitable ports for multi-modal routing');
+            // Fallback to direct route
+            waypoints.push(end);
+            const distance = calculateDistance(start, end);
+            const time = distance / getSpeed(originalMode);
+            segments.push({
+                mode: originalMode,
+                distance,
+                time,
+                description: `${originalMode.toUpperCase()} route (water crossing - no ports found)`,
+                waypoints: [
+                    { lat: start.lat, lng: start.lng },
+                    { lat: end.lat, lng: end.lng }
+                ],
+                reason: 'No suitable ports found for water crossing'
+            });
+            return { waypoints, segments };
+        }
+
+        // Segment 1: Ground transport to start port
+        if (calculateDistance(start, startPort) > 1000) { // Only if port is more than 1km away
+            waypoints.push(startPort);
+            const landDistance1 = calculateDistance(start, startPort);
+            const landTime1 = landDistance1 / getSpeed(originalMode);
+            segments.push({
+                mode: originalMode,
+                distance: landDistance1,
+                time: landTime1,
+                description: `${originalMode.toUpperCase()} to departure port`,
+                waypoints: [
+                    { lat: start.lat, lng: start.lng },
+                    { lat: startPort.lat, lng: startPort.lng }
+                ]
+            });
+        }
+
+        // Segment 2: Ship transport across water
+        if (startPort.lat !== endPort.lat || startPort.lng !== endPort.lng) {
+            waypoints.push(endPort);
+            const waterDistance = calculateDistance(startPort, endPort);
+            const waterTime = waterDistance / getSpeed('ship');
+            segments.push({
+                mode: 'ship',
+                distance: waterDistance,
+                time: waterTime,
+                description: 'Ferry/Ship across water',
+                waypoints: [
+                    { lat: startPort.lat, lng: startPort.lng },
+                    { lat: endPort.lat, lng: endPort.lng }
+                ]
+            });
+        }
+
+        // Segment 3: Ground transport from end port to destination
+        if (calculateDistance(endPort, end) > 1000) { // Only if port is more than 1km away
+            waypoints.push(end);
+            const landDistance2 = calculateDistance(endPort, end);
+            const landTime2 = landDistance2 / getSpeed(originalMode);
+            segments.push({
+                mode: originalMode,
+                distance: landDistance2,
+                time: landTime2,
+                description: `${originalMode.toUpperCase()} from arrival port`,
+                waypoints: [
+                    { lat: endPort.lat, lng: endPort.lng },
+                    { lat: end.lat, lng: end.lng }
+                ]
+            });
+        }
+
+        console.log(`Multi-modal route created with ${segments.length} segments and ${waypoints.length} waypoints`);
+        return { waypoints, segments };
+    };
+
     // Check if a point is over water using multiple reliable sources
     const isOverWater = async (point: L.LatLng): Promise<boolean> => {
         try {
@@ -311,47 +596,6 @@ const RoutingMachine = ({ waypoints, onRouteFound, transportMode, properties }: 
         return !isOnLand; // Return true if NOT on major landmass (likely water)
     };
 
-    // Enhanced shore finding using better water detection
-    const findNearestShore = async (point: L.LatLng, isStartPoint: boolean): Promise<L.LatLng | null> => {
-        try {
-            console.log('Finding shore for:', `${point.lat},${point.lng}`);
-            
-            // Use a grid search pattern around the point
-            const searchRadius = 0.5; // degrees (roughly 50km)
-            const steps = 16; // Check 16 points in a circle
-            
-            for (let radius = 0.1; radius <= searchRadius; radius += 0.1) {
-                for (let i = 0; i < steps; i++) {
-                    const angle = (i / steps) * 2 * Math.PI;
-                    const testLat = point.lat + radius * Math.cos(angle);
-                    const testLng = point.lng + radius * Math.sin(angle);
-                    const testPoint = L.latLng(testLat, testLng);
-                    
-                    const isWater = await isOverWater(testPoint);
-                    
-                    // For start point, find land (not water)
-                    // For end point, find water
-                    if (isStartPoint ? !isWater : isWater) {
-                        console.log('Found shore point:', {
-                            original: `${point.lat},${point.lng}`,
-                            shore: `${testPoint.lat},${testPoint.lng}`,
-                            distance: point.distanceTo(testPoint),
-                            isWater
-                        });
-                        return testPoint;
-                    }
-                }
-            }
-            
-            console.log('No suitable shore point found');
-            return null;
-        } catch (error) {
-            console.warn('Error finding shore:', error);
-            return null;
-        }
-    };
-
-    // Fetch route using Mapbox Directions API
     const fetchMapboxRoute = async (
         profile: 'driving' | 'walking' | 'cycling',
         start: L.LatLng,
@@ -395,38 +639,13 @@ const RoutingMachine = ({ waypoints, onRouteFound, transportMode, properties }: 
             });
             
             if (data.routes && data.routes.length > 0) {
-                // Get the shortest route that doesn't cross water
-                const validRoutes = await Promise.all(data.routes.map(async (route: any) => {
-                    const coords = route.geometry.coordinates;
-                    // Check a few points along the route for water
-                    const checkPoints = [
-                        Math.floor(coords.length * 0.25),
-                        Math.floor(coords.length * 0.5),
-                        Math.floor(coords.length * 0.75)
-                    ];
-                    
-                    for (const idx of checkPoints) {
-                        const point = L.latLng(coords[idx][1], coords[idx][0]);
-                        if (await isOverWater(point)) {
-                            console.log('Route crosses water at point:', {
-                                lat: point.lat,
-                                lng: point.lng,
-                                routeIndex: data.routes.indexOf(route)
-                            });
-                            return null;
-                        }
-                    }
-                    return route;
-                }));
-
-                const route = validRoutes.find(r => r !== null) || data.routes[0];
+                const route = data.routes[0];
                 const coordinates = route.geometry.coordinates.map(([lng, lat]: number[]) => L.latLng(lat, lng));
                 
                 console.log('Selected route:', {
                     distance: route.distance,
                     duration: route.duration,
-                    pointCount: coordinates.length,
-                    isWaterRoute: validRoutes.every(r => r === null)
+                    pointCount: coordinates.length
                 });
 
                 return {
@@ -471,24 +690,211 @@ const RoutingMachine = ({ waypoints, onRouteFound, transportMode, properties }: 
             let totalTime = 0;
             const segments: RouteSegment[] = [];
 
-            console.log('=== STARTING ROUTE CALCULATION ===');
+            console.log('=== STARTING MULTI-MODAL ROUTE CALCULATION ===');
             console.log('Transport mode:', transportMode);
             console.log('Waypoints:', waypoints.map(wp => `${wp.lat},${wp.lng}`));
             console.log('Mapbox token available:', !!mapboxToken);
 
-            // Add waypoint markers with property information
+            // Process each segment
+            for (let i = 0; i < waypoints.length - 1; i++) {
+                const start = waypoints[i];
+                const end = waypoints[i + 1];
+                
+                console.log(`\n=== PROCESSING SEGMENT ${i + 1} ===`);
+                console.log('Start:', `${start.lat},${start.lng}`);
+                console.log('End:', `${end.lat},${end.lng}`);
+                
+                const distance = start.distanceTo(end);
+                console.log('Segment distance:', distance, 'meters');
+
+                let routeDrawn = false;
+
+                // For air and ship modes, use direct routing
+                if (['plane', 'drone', 'ship'].includes(transportMode)) {
+                    console.log(`→ ${transportMode.toUpperCase()} transport - using direct route`);
+                    
+                    const lineColor = {
+                        'plane': '#3b82f6',
+                        'drone': '#8b5cf6',
+                        'ship': '#0ea5e9',
+                        'car': '#22c55e',
+                        'truck': '#f97316',
+                        'walking': '#gray-500'
+                    }[transportMode] || '#0ea5e9';
+
+                    const line = createAnimatedPolyline([start, end], {
+                        color: lineColor,
+                        weight: 5,
+                        opacity: 0.7,
+                        dashArray: transportMode === 'ship' ? '15, 10' : '10, 10'
+                    }).addTo(map);
+                    drawnLayers.push(line);
+                    
+                    const time = distance / getSpeed(transportMode);
+                    totalDistance += distance;
+                    totalTime += time;
+                    
+                    segments.push({
+                        mode: transportMode,
+                        distance,
+                        time,
+                        description: `${transportMode.toUpperCase()} route (${Math.round(distance/1000)}km)`,
+                        waypoints: [
+                            { lat: start.lat, lng: start.lng },
+                            { lat: end.lat, lng: end.lng }
+                        ]
+                    });
+                    routeDrawn = true;
+                }
+                // For ground transport, check for water crossings and create multi-modal routes
+                else {
+                    console.log('✓ Attempting road routing for ground transport');
+                    console.log('Transport mode:', transportMode);
+                    console.log('Distance:', Math.round(distance / 1000), 'km');
+                    
+                    // First, check if the route crosses water
+                    const crossesWater = await checkRouteForWaterCrossing(start, end);
+                    
+                    if (crossesWater && distance > 50000) { // Only use multi-modal for distances > 50km
+                        console.log('🌊 Water crossing detected - creating multi-modal route');
+                        
+                        const multiModalResult = await createMultiModalRoute(start, end, transportMode);
+                        
+                        // Draw multi-modal route segments
+                        for (let j = 0; j < multiModalResult.segments.length; j++) {
+                            const segment = multiModalResult.segments[j];
+                            const segmentCoords = segment.waypoints.map(wp => L.latLng(wp.lat, wp.lng));
+                            
+                            const segmentColor = segment.mode === 'ship' ? '#0ea5e9' : 
+                                               transportMode === 'truck' ? '#f97316' : '#22c55e';
+                            const segmentStyle = segment.mode === 'ship' ? '15, 10' : undefined;
+                            
+                            console.log(`Drawing ${segment.mode} segment: ${segmentCoords.length} points`);
+                            
+                            // Try to get actual road routing for ground segments
+                            if (segment.mode !== 'ship') {
+                                const profile = segment.mode === 'walking' ? 'walking' : 'driving';
+                                const roadResult = await fetchMapboxRoute(profile, segmentCoords[0], segmentCoords[segmentCoords.length - 1], true);
+                                
+                                if (roadResult && roadResult.coordinates.length > 2) {
+                                    console.log(`✓ Got road route for ${segment.mode} segment`);
+                                    const line = createAnimatedPolyline(roadResult.coordinates, {
+                                        color: segmentColor,
+                                        weight: 5,
+                                        opacity: 0.8
+                                    }).addTo(map);
+                                    drawnLayers.push(line);
+                                    
+                                    // Update segment with actual route data
+                                    segment.distance = roadResult.distance;
+                                    segment.time = roadResult.duration;
+                                    segment.waypoints = roadResult.coordinates.map(coord => ({ lat: coord.lat, lng: coord.lng }));
+                                } else {
+                                    // Fallback to direct line
+                                    const line = createAnimatedPolyline(segmentCoords, {
+                                        color: segmentColor,
+                                        weight: 5,
+                                        opacity: 0.8,
+                                        dashArray: segmentStyle
+                                    }).addTo(map);
+                                    drawnLayers.push(line);
+                                }
+                            } else {
+                                // Ship segment - always direct line
+                                const line = createAnimatedPolyline(segmentCoords, {
+                                    color: segmentColor,
+                                    weight: 5,
+                                    opacity: 0.8,
+                                    dashArray: segmentStyle
+                                }).addTo(map);
+                                drawnLayers.push(line);
+                            }
+                            
+                            totalDistance += segment.distance;
+                            totalTime += segment.time;
+                        }
+                        
+                        segments.push(...multiModalResult.segments);
+                        routeDrawn = true;
+                    } else {
+                        // Try normal road routing
+                        const profile = transportMode === 'walking' ? 'walking' : 'driving';
+                        console.log('Using Mapbox profile:', profile);
+                        
+                        const result = await fetchMapboxRoute(profile, start, end, true);
+                        
+                        if (result && result.coordinates.length > 2) {
+                            console.log('✓ Successfully got road route with', result.coordinates.length, 'points');
+                            console.log('Route distance:', result.distance, 'meters');
+                            console.log('Route duration:', result.duration, 'seconds');
+                            
+                            const line = createAnimatedPolyline(result.coordinates, {
+                                color: transportMode === 'truck' ? '#f97316' : '#22c55e',
+                                weight: 5,
+                                opacity: 0.8
+                            }).addTo(map);
+                            drawnLayers.push(line);
+                            
+                            totalDistance += result.distance;
+                            totalTime += result.duration;
+                            
+                            segments.push({
+                                mode: transportMode,
+                                distance: result.distance,
+                                time: result.duration,
+                                description: `${transportMode.toUpperCase()} route via roads`,
+                                waypoints: result.coordinates.map(coord => ({ lat: coord.lat, lng: coord.lng }))
+                            });
+                            routeDrawn = true;
+                        } else {
+                            console.log('✗ Road routing failed or returned invalid route');
+                            console.log('Mapbox result:', result);
+                        }
+                    }
+                }
+
+                // Fallback if no routing succeeded
+                if (!routeDrawn) {
+                    console.log('→ Fallback - using direct route');
+                    const line = createAnimatedPolyline([start, end], {
+                        color: '#ef4444',
+                        weight: 5,
+                        opacity: 0.7,
+                        dashArray: '5, 5'
+                    }).addTo(map);
+                    drawnLayers.push(line);
+                    
+                    const time = distance / getSpeed(transportMode);
+                    totalDistance += distance;
+                    totalTime += time;
+                    
+                    segments.push({
+                        mode: transportMode,
+                        distance,
+                        time,
+                        description: `${transportMode.toUpperCase()} route (routing unavailable)`,
+                        waypoints: [
+                            { lat: start.lat, lng: start.lng },
+                            { lat: end.lat, lng: end.lng }
+                        ],
+                        reason: 'All routing methods failed'
+                    });
+                }
+            }
+
+            // Add waypoint markers
             waypoints.forEach((point, index) => {
-                // Find the corresponding property
+                const marker = L.marker(point, {
+                    icon: createWaypointIcon(index === 0, index === waypoints.length - 1, index)
+                });
+
+                // Find the corresponding property for enhanced popup
                 const property = properties.find(p => {
                     const coords = p.attributes.center.match(/\(([^,]+),\s*([^)]+)\)/);
                     if (!coords) return false;
                     const [_, lng, lat] = coords;
                     return Math.abs(parseFloat(lat) - point.lat) < 0.0001 && 
                            Math.abs(parseFloat(lng) - point.lng) < 0.0001;
-                });
-
-                const marker = L.marker(point, {
-                    icon: createWaypointIcon(index === 0, index === waypoints.length - 1, index)
                 });
 
                 if (property) {
@@ -548,146 +954,7 @@ const RoutingMachine = ({ waypoints, onRouteFound, transportMode, properties }: 
                 drawnLayers.push(marker);
             });
 
-            // Process each segment
-            for (let i = 0; i < waypoints.length - 1; i++) {
-                const start = waypoints[i];
-                const end = waypoints[i + 1];
-                
-                console.log(`\n=== PROCESSING SEGMENT ${i + 1} ===`);
-                console.log('Start:', `${start.lat},${start.lng}`);
-                console.log('End:', `${end.lat},${end.lng}`);
-                
-                const distance = start.distanceTo(end);
-                console.log('Segment distance:', distance, 'meters');
-
-                let routeDrawn = false;
-
-                // Always try road routing first for ground-based transport (unless explicitly air transport)
-                if (!['plane', 'drone'].includes(transportMode)) {
-                    console.log('✓ Attempting road routing for ground transport');
-                    console.log('Transport mode:', transportMode);
-                    console.log('Distance:', Math.round(distance / 1000), 'km');
-                    
-                    const profile = transportMode === 'walking' ? 'walking' : 'driving';
-                    console.log('Using Mapbox profile:', profile);
-                    
-                    const result = await fetchMapboxRoute(profile, start, end, true);
-                    
-                    if (result && result.coordinates.length > 2) {
-                        console.log('✓ Successfully got road route with', result.coordinates.length, 'points');
-                        console.log('Route distance:', result.distance, 'meters');
-                        console.log('Route duration:', result.duration, 'seconds');
-                        
-                        const line = createAnimatedPolyline(result.coordinates, {
-                            color: transportMode === 'truck' ? '#f97316' : 
-                                   transportMode === 'ship' ? '#0ea5e9' : '#22c55e',
-                            weight: 5,
-                            opacity: 0.8
-                        }).addTo(map);
-                        drawnLayers.push(line);
-                        
-                        totalDistance += result.distance;
-                        totalTime += result.duration;
-                        
-                        segments.push({
-                            mode: transportMode,
-                            distance: result.distance,
-                            time: result.duration,
-                            description: `${transportMode.toUpperCase()} route via roads`,
-                            waypoints: result.coordinates.map(coord => ({ lat: coord.lat, lng: coord.lng }))
-                        });
-                        routeDrawn = true;
-                    } else {
-                        console.log('✗ Road routing failed or returned invalid route');
-                        console.log('Mapbox result:', result);
-                    }
-                }
-
-                // Only use fallbacks if road routing completely failed
-                if (!routeDrawn) {
-                    console.log('Road routing failed, using fallback...');
-                    
-                    if (['plane', 'drone'].includes(transportMode)) {
-                        console.log('→ Air transport - using direct route');
-                        // Air route - straight line
-                        const line = createAnimatedPolyline([start, end], {
-                            color: '#3b82f6',
-                            weight: 5,
-                            opacity: 0.7,
-                            dashArray: '10, 10'
-                        }).addTo(map);
-                        drawnLayers.push(line);
-                        
-                        const time = distance / getSpeed(transportMode);
-                        totalDistance += distance;
-                        totalTime += time;
-                        
-                        segments.push({
-                            mode: transportMode,
-                            distance,
-                            time,
-                            description: `${transportMode.toUpperCase()} route (direct flight)`,
-                            waypoints: [
-                                { lat: start.lat, lng: start.lng },
-                                { lat: end.lat, lng: end.lng }
-                            ]
-                        });
-                    } else if (transportMode === 'ship') {
-                        console.log('→ Ship transport - using maritime route');
-                        // Ship route
-                        const line = createAnimatedPolyline([start, end], {
-                            color: '#0ea5e9',
-                            weight: 5,
-                            opacity: 0.7,
-                            dashArray: '15, 10'
-                        }).addTo(map);
-                        drawnLayers.push(line);
-                        
-                        const time = distance / getSpeed('ship');
-                        totalDistance += distance;
-                        totalTime += time;
-                        
-                        segments.push({
-                            mode: 'ship',
-                            distance,
-                            time,
-                            description: 'Maritime route',
-                            waypoints: [
-                                { lat: start.lat, lng: start.lng },
-                                { lat: end.lat, lng: end.lng }
-                            ]
-                        });
-                    } else {
-                        console.log('→ Fallback - road routing unavailable, using approximate route');
-                        // Last resort fallback
-                        const line = createAnimatedPolyline([start, end], {
-                            color: '#ef4444',
-                            weight: 5,
-                            opacity: 0.7,
-                            dashArray: '5, 5'
-                        }).addTo(map);
-                        drawnLayers.push(line);
-                        
-                        const time = distance / getSpeed(transportMode);
-                        totalDistance += distance;
-                        totalTime += time;
-                        
-                        segments.push({
-                            mode: transportMode,
-                            distance,
-                            time,
-                            description: `${transportMode.toUpperCase()} route (road routing unavailable)`,
-                            waypoints: [
-                                { lat: start.lat, lng: start.lng },
-                                { lat: end.lat, lng: end.lng }
-                            ],
-                            reason: 'Mapbox Directions API failed'
-                        });
-                    }
-                }
-            }
-
-            console.log('=== ROUTE CALCULATION COMPLETE ===');
+            console.log('=== MULTI-MODAL ROUTE CALCULATION COMPLETE ===');
             console.log('Total segments:', segments.length);
             console.log('Total distance:', totalDistance);
             console.log('Total time:', totalTime);

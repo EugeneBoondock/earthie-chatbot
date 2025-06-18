@@ -306,6 +306,7 @@ export function LogisticsMap({ properties, selectedProperties, onRouteSummary, t
     const [mapLayer, setMapLayer] = useState<MapLayer>('dark');
     const [showAllProperties, setShowAllProperties] = useState(false);
     const [showRoute, setShowRoute] = useState(true);
+    const [showLabels, setShowLabels] = useState(true);
     const [waypoints, setWaypoints] = useState<L.LatLng[]>([]);
     
     // Calculate center point for the map view
@@ -384,6 +385,8 @@ export function LogisticsMap({ properties, selectedProperties, onRouteSummary, t
                         onShowAllPropertiesChange={setShowAllProperties}
                         showRoute={showRoute}
                         onShowRouteChange={setShowRoute}
+                        showLabels={showLabels}
+                        onShowLabelsChange={setShowLabels}
                     />
                 ) : null}
 
@@ -395,11 +398,44 @@ export function LogisticsMap({ properties, selectedProperties, onRouteSummary, t
                     />
                 )}
                 {mapLayer === 'satellite' && (
-                    <TileLayer
-                        key={mapLayer}
-                        attribution={MAP_LAYERS[mapLayer].attribution}
-                        url={MAP_LAYERS[mapLayer].url}
-                    />
+                    <>
+                        <TileLayer
+                            key={mapLayer}
+                            attribution={MAP_LAYERS[mapLayer].attribution}
+                            url={MAP_LAYERS[mapLayer].url}
+                        />
+                        {showLabels && (
+                            <>
+                                {/* Country boundaries - distinct layer for borders only */}
+                                <TileLayer
+                                    key="satellite-boundaries"
+                                    attribution="&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors"
+                                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                    opacity={0.4}
+                                    zIndex={998}
+                                    className="satellite-boundaries-overlay"
+                                />
+                                {/* Administrative boundaries with enhanced visibility */}
+                                <TileLayer
+                                    key="satellite-admin-boundaries"
+                                    attribution="&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors"
+                                    url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png"
+                                    opacity={0.6}
+                                    zIndex={999}
+                                    className="satellite-admin-boundaries-overlay"
+                                />
+                                {/* Place labels and city names with enhanced contrast */}
+                                <TileLayer
+                                    key="satellite-labels"
+                                    attribution="&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors"
+                                    url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png"
+                                    opacity={1.0}
+                                    zIndex={1000}
+                                    className="satellite-labels-overlay"
+                                />
+                            </>
+                        )}
+                    </>
                 )}
                 {mapLayer === 'topo' && (
                     <TileLayer
