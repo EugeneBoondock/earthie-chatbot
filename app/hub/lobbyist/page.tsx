@@ -545,20 +545,20 @@ export default function LobbyistPage() {
               {activeTab === 'following' && (
                 <div className="space-y-6">
                   {/* Always show Discover People intro at the top, but only show the empty text if no posts */}
-                  <div className="backdrop-blur-md bg-gradient-to-br from-earthie-dark/70 to-earthie-dark-light/60 border border-sky-400/20 rounded-xl p-4 sm:p-6 text-center">
-                    <Users className="h-10 w-10 text-sky-400/50 mx-auto mb-3" />
+                <div className="backdrop-blur-md bg-gradient-to-br from-earthie-dark/70 to-earthie-dark-light/60 border border-sky-400/20 rounded-xl p-4 sm:p-6 text-center">
+                  <Users className="h-10 w-10 text-sky-400/50 mx-auto mb-3" />
                     {displayedPosts.length === 0 && !loadingFollowing && (
                       <>
-                        <h3 className="text-xl font-medium text-white mb-2">No followed posts yet</h3>
-                        <p className="text-gray-300 mb-4">Follow other lobbyists to see their posts here.</p>
+                  <h3 className="text-xl font-medium text-white mb-2">No followed posts yet</h3>
+                  <p className="text-gray-300 mb-4">Follow other lobbyists to see their posts here.</p>
                       </>
                     )}
-                    <Button 
-                      onClick={() => setIsDiscoverPeopleOpen(true)}
-                      className="bg-sky-600 hover:bg-sky-700"
-                    >
-                      Discover People
-                    </Button>
+                  <Button 
+                    onClick={() => setIsDiscoverPeopleOpen(true)}
+                    className="bg-sky-600 hover:bg-sky-700"
+                  >
+                    Discover People
+                  </Button>
                   </div>
                   {/* Show posts or loading/empty state below */}
                   {loadingFollowing ? (
@@ -595,8 +595,8 @@ export default function LobbyistPage() {
                     ) : displayedPosts.length === 0 ? (
                       <div className="backdrop-blur-md bg-gradient-to-br from-earthie-dark/70 to-earthie-dark-light/60 border border-sky-400/20 rounded-xl p-4 mb-6 text-center py-12">
                         <Bookmark className="h-12 w-12 text-sky-400/30 mx-auto mb-3" />
-                        <h3 className="text-xl font-medium text-white mb-2">No bookmarks yet</h3>
-                        <p className="text-gray-300 mb-4">Save posts to see them here!</p>
+                  <h3 className="text-xl font-medium text-white mb-2">No bookmarks yet</h3>
+                  <p className="text-gray-300 mb-4">Save posts to see them here!</p>
                       </div>
                     ) : (
                       <div className="space-y-4">
@@ -627,8 +627,8 @@ export default function LobbyistPage() {
                     ) : displayedPosts.length === 0 ? (
                       <div className="backdrop-blur-md bg-gradient-to-br from-earthie-dark/70 to-earthie-dark-light/60 border border-sky-400/20 rounded-xl p-4 mb-6 text-center py-12">
                         <TrendingUp className="h-12 w-12 text-sky-400/30 mx-auto mb-3" />
-                        <h3 className="text-xl font-medium text-white mb-2">No trending posts yet</h3>
-                        <p className="text-gray-300 mb-4">Trending posts will appear here soon.</p>
+                  <h3 className="text-xl font-medium text-white mb-2">No trending posts yet</h3>
+                  <p className="text-gray-300 mb-4">Trending posts will appear here soon.</p>
                       </div>
                     ) : (
                       <div className="space-y-4">

@@ -485,118 +485,93 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (linkedE2UserId) {
+      // Reset state for new user ID
       setProperties([]);
       setAllPropertiesForAnalytics([]);
       setPropertiesCurrentPage(1);
       setUserInfo(null);
       setError(null);
+      setCachedProps(null);
+      setDataLoading(true);
+      setIsAnalyticsLoading(true); // Show analytics loading from the start
 
-      // First try to populate from cache (inside fetchAllProperties...), then load first display page.
-      fetchAllPropertiesForAnalytics(linkedE2UserId).finally(() => {
-        fetchE2Data(linkedE2UserId, 1);
-      });
+      const loadProfileData = async () => {
+        let userInfoData: E2UserInfo | null = null;
+        try {
+          const userInfoRes = await fetch(`https://app.earth2.io/api/v2/user_info/${linkedE2UserId}`);
+          if (!userInfoRes.ok) {
+            throw new Error(`Failed to fetch E2 user info (status: ${userInfoRes.status})`);
+          }
+          userInfoData = await userInfoRes.json();
+          setUserInfo(userInfoData);
+        } catch (err: any) {
+          setError(err.message || 'Could not fetch user profile.');
+          setDataLoading(false);
+          setIsAnalyticsLoading(false);
+          return; // Stop if we can't get basic info
+        }
+
+        // Pass user info to the main data fetcher.
+        // This function handles cache/network and sets all necessary state for display.
+        await fetchAllPropertiesForAnalytics(linkedE2UserId, userInfoData);
+
+        // Loading states are turned off inside fetchAllPropertiesForAnalytics
+        setDataLoading(false);
+      };
+
+      loadProfileData();
     }
   }, [linkedE2UserId]);
 
   const fetchE2Data = async (userId: string, page: number = 1) => {
-    if (!userId) return;
-    if (page === 1 && !userInfo) {
-        setDataLoading(true);
-        setError(null);
-    }
+    // This function is now only for pagination from cached data.
+    if (!userId || !cachedProps) return;
 
-    // If we have cached properties, serve from cache to avoid network
-    if (cachedProps) {
-      const PER_PAGE = 12;
-      const start = (page - 1) * PER_PAGE;
-      const slice = cachedProps.slice(start, start + PER_PAGE);
-      setProperties(slice);
-      setPropertiesMeta({
-        count: cachedProps.length,
-        current_page: page,
-        last_page: Math.ceil(cachedProps.length / PER_PAGE),
-        per_page: PER_PAGE,
-      });
-      setPropertiesCurrentPage(page);
-      return; // Skip network
-    }
+    // The full data is expected to be in `cachedProps`. We just paginate over it.
+    const PER_PAGE = 12;
+    const start = (page - 1) * PER_PAGE;
+    const end = start + PER_PAGE;
+    const slice = cachedProps.slice(start, end);
 
-    try {
-      if (page === 1 && !userInfo) {
-          const userInfoRes = await fetch(`https://app.earth2.io/api/v2/user_info/${userId}`);
-          if (!userInfoRes.ok) throw new Error(`Failed to fetch E2 user info (status: ${userInfoRes.status})`);
-          const userInfoData: E2UserInfo = await userInfoRes.json();
-          setUserInfo(userInfoData);
-      }
-
-      const propertiesUrl = new URL('/api/e2/properties', window.location.origin);
-      propertiesUrl.searchParams.set('page', String(page)); 
-      propertiesUrl.searchParams.set('perPage', '12'); 
-      propertiesUrl.searchParams.set('userId', userId);
-      
-      console.log(`[Profile Page Display] Fetching properties (page ${page}, perPage 12) via: ${propertiesUrl.toString()}`);
-      const propertiesRes = await fetch(propertiesUrl.toString());
-      
-      if (!propertiesRes.ok) {
-         const errorData = await propertiesRes.json();
-         throw new Error(errorData.error || `Failed to fetch E2 properties for display (status: ${propertiesRes.status})`);
-      }
-      const propertiesData: E2PropertiesResponse = await propertiesRes.json();
-      
-      setProperties(propertiesData.data || []);
-
-      const fallbackPerPage = 12;
-      const metaFromApi = (propertiesData.meta ?? {}) as Partial<E2PropertiesResponse['meta']>;
-
-      const countVal = (metaFromApi && metaFromApi.count !== undefined) ? metaFromApi.count : (userInfo?.userLandfieldCount ?? propertiesMeta?.count ?? 0);
-      const perPageVal = (metaFromApi && metaFromApi.per_page !== undefined) ? metaFromApi.per_page : fallbackPerPage;
-      const normalizedMeta: E2PropertiesResponse['meta'] = {
-        count: countVal,
-        current_page: page,
-        per_page: perPageVal,
-        last_page: (metaFromApi && metaFromApi.last_page !== undefined) ? metaFromApi.last_page : (countVal ? Math.ceil(countVal / perPageVal) : undefined),
-      };
-
-      setPropertiesMeta(normalizedMeta);
-
-    } catch (err: any) {
-      console.error('Error fetching E2 data for display:', err);
-      setError(err.message || 'Failed to fetch data for display from Earth2 APIs via internal proxy.');
-    } finally {
-       if (page === 1) {
-           setDataLoading(false);
-       }
-    }
+    setProperties(slice);
+    setPropertiesMeta(prevMeta => ({
+      ...prevMeta,
+      count: cachedProps.length,
+      current_page: page,
+      last_page: Math.ceil(cachedProps.length / PER_PAGE),
+      per_page: PER_PAGE,
+    }));
+    setPropertiesCurrentPage(page);
   };
 
-  const fetchAllPropertiesForAnalytics = async (userId: string) => {
-    if (!userId) return;
+  const fetchAllPropertiesForAnalytics = async (userId: string, userInfo: E2UserInfo | null) => {
+    if (!userId) {
+      setIsAnalyticsLoading(false);
+      return;
+    }
+
+    // Set loading state at the beginning of the operation.
+    // Note: The parent useEffect already sets this, but this is a good safeguard.
     setIsAnalyticsLoading(true);
     setAllPropertiesForAnalytics([]);
-
-    // --- Determine expected total property count ---
-    let expectedCount: number | undefined = undefined;
-    try {
-      const infoRes = await fetch(`https://app.earth2.io/api/v2/user_info/${userId}`);
-      if (infoRes.ok) {
-        const info: E2UserInfo = await infoRes.json();
-        expectedCount = info.userLandfieldCount ?? info.userNetworth?.totalTiles;
-        console.log(`[Analytics] Expected total properties from user info: ${expectedCount}`);
-      }
-    } catch (err) {
-      console.error('[Analytics] Failed to fetch user info for expected count:', err);
-    }
+    
+    // --- Use passed-in user info for expected count ---
+    const expectedCount = userInfo?.userLandfieldCount ?? userInfo?.userNetworth?.totalTiles;
+    console.log(`[Analytics] Expected total properties from user info: ${expectedCount}`);
 
     // Attempt to load from IndexedDB first
     try {
       const cached: E2Property[] | undefined = await idbGet(getCacheKey(userId));
       if (cached && cached.length > 0) {
-        // If we couldn't get expectedCount, assume cache is good. Otherwise require exact match.
-        if (expectedCount === undefined || cached.length === expectedCount) {
-          console.log('[Cache] Using cached property data from IndexedDB.');
+        // If we couldn't get expectedCount, assume cache is good. Otherwise require a close match.
+        const isCacheValid = expectedCount === undefined || Math.abs(cached.length - expectedCount) <= 5;
+
+        if (isCacheValid) {
+          console.log(`[Cache] Using valid cached property data from IndexedDB (${cached.length} items).`);
           setCachedProps(cached);
           setAllPropertiesForAnalytics(cached);
-          // Prime first page list if not already loaded
+          
+          // Prime first page list for display
           const PER_PAGE = 12;
           setProperties(cached.slice(0, PER_PAGE));
           setPropertiesMeta({
@@ -606,304 +581,104 @@ export default function ProfilePage() {
             per_page: PER_PAGE,
           });
           setPropertiesCurrentPage(1);
-          setIsAnalyticsLoading(false);
-          return; // Skip network fetching
+          setIsAnalyticsLoading(false); // Turn off loading
+          return; // IMPORTANT: Skip network fetching
+        } else {
+           console.log(`[Cache] Invalidating cache. Expected ${expectedCount}, found ${cached.length}. Re-fetching.`);
         }
       }
     } catch (err) {
       console.error('[Cache] Error accessing IndexedDB:', err);
     }
 
-    // --- LETTER BASED FETCH STRATEGY FOR LARGE PORTFOLIOS ---
-    if (expectedCount !== undefined && expectedCount > 9900) {
-      const PER_PAGE_LETTERS = 60;
-      const MAX_PAGES_PER_PASS = 166; // 166 * 60 ≈ 10k – Earth2 hard cap per query
-      const letters = 'abcdefghijklmnopqrstuvwxyz0123456789*'.split('');
+    // --- If cache is not used, proceed with network fetch ---
+    const allProperties = new Map<string, E2Property>();
 
-      const uniqueMap = new Map<string, E2Property>();
+    const performLetterPass = async () => {
+      const searchTerms = 'abcdefghijklmnopqrstuvwxyz0123456789*'.split('');
+      const PER_PAGE_ANALYTICS = 60;
 
-      for (const letter of letters) {
+      for (const term of searchTerms) {
+        let totalPages = 1;
         try {
-          // 1️⃣ First page for this letter to get meta.count
-          const baseUrl = new URL('/api/e2/properties', window.location.origin);
-          baseUrl.searchParams.set('perPage', String(PER_PAGE_LETTERS));
-          baseUrl.searchParams.set('userId', userId);
-          baseUrl.searchParams.set('sort', 'description');
-          baseUrl.searchParams.set('search', letter);
-          baseUrl.searchParams.append('searchTerms[]', 'description');
+          const firstPageUrl = new URL('/api/e2/properties', window.location.origin);
+          firstPageUrl.searchParams.set('userId', userId);
+          firstPageUrl.searchParams.set('page', '1');
+          firstPageUrl.searchParams.set('perPage', String(PER_PAGE_ANALYTICS));
+          firstPageUrl.searchParams.set('letter', term.toUpperCase());
 
-          const firstUrl = new URL(baseUrl.toString());
-          firstUrl.searchParams.set('page', '1');
-
-          const firstRes = await fetch(firstUrl.toString());
-          if (!firstRes.ok) {
-            continue; // skip on error
+          const firstPageResponse = await fetch(firstPageUrl.toString());
+          if (!firstPageResponse.ok) {
+            console.warn(`[Analytics] Warning: Initial fetch for letter '${term.toUpperCase()}' failed. Skipping.`);
+            continue;
           }
-          const firstData: E2PropertiesResponse = await firstRes.json();
-          if (firstData.data?.length) firstData.data.forEach(p => uniqueMap.set(p.id, p));
 
-          const letterCount = firstData.meta?.count ?? 0;
-          if (letterCount === 0) continue;
+          const firstPageData: E2PropertiesResponse = await firstPageResponse.json();
+          if (!firstPageData || !firstPageData.meta || !firstPageData.data) {
+            console.warn(`[Analytics] Warning: Invalid response structure for letter '${term.toUpperCase()}'. Skipping.`);
+            continue;
+          }
+          
+          totalPages = Math.ceil((firstPageData.meta.count || 0) / PER_PAGE_ANALYTICS) || 1;
+          firstPageData.data.forEach(prop => allProperties.set(prop.id, prop));
 
-          const totalPagesForLetter = Math.ceil(letterCount / PER_PAGE_LETTERS);
-          const pagesToFetchAsc = Math.min(totalPagesForLetter, MAX_PAGES_PER_PASS);
+        } catch (error) {
+          console.error(`[Analytics] Error on first page for letter '${term.toUpperCase()}'. Skipping.`, error);
+          continue;
+        }
 
-          // Ascending pages 2..pagesToFetchAsc
-          for (let page = 2; page <= pagesToFetchAsc; page++) {
-            const url = new URL(baseUrl.toString());
-            url.searchParams.set('page', String(page));
-            try {
-              const res = await fetch(url.toString());
-              if (!res.ok) break;
-              const data: E2PropertiesResponse = await res.json();
-              if (!data.data?.length) break;
-              data.data.forEach(p => uniqueMap.set(p.id, p));
-            } catch {
-              break;
+        // Fetch remaining pages in parallel for efficiency
+        if (totalPages > 1) {
+            const pageFetches = [];
+            for (let currentPage = 2; currentPage <= totalPages; currentPage++) {
+                const pageUrl = new URL('/api/e2/properties', window.location.origin);
+                pageUrl.searchParams.set('userId', userId);
+                pageUrl.searchParams.set('page', String(currentPage));
+                pageUrl.searchParams.set('perPage', String(PER_PAGE_ANALYTICS));
+                pageUrl.searchParams.set('letter', term.toUpperCase());
+                pageFetches.push(fetch(pageUrl.toString()).then(res => res.ok ? res.json() : Promise.reject(`Failed fetch for page ${currentPage}`)));
             }
-          }
 
-          // Descending pages if > MAX_PAGES_PER_PASS
-          if (totalPagesForLetter > MAX_PAGES_PER_PASS) {
-            let pagesFetchedDesc = 0;
-            for (let page = totalPagesForLetter; page > pagesToFetchAsc && pagesFetchedDesc < MAX_PAGES_PER_PASS; page--) {
-              const url = new URL(baseUrl.toString());
-              url.searchParams.set('page', String(page));
-              try {
-                const res = await fetch(url.toString());
-                if (!res.ok) break;
-                const data: E2PropertiesResponse = await res.json();
-                if (!data.data?.length) break;
-                data.data.forEach(p => uniqueMap.set(p.id, p));
-                pagesFetchedDesc++;
-              } catch {
-                break;
-              }
-            }
-          }
-
-        } catch (err) {
-          console.error('[LetterFetch] error', err);
-        }
-      }
-
-      // Evaluate after letters
-      let combined = Array.from(uniqueMap.values());
-      if (expectedCount !== undefined && combined.length < expectedCount) {
-        // Size based fallback
-        const sizeSorts = ['size', '-size'];
-        for (const sortKey of sizeSorts) {
-          for (let page = 1; page <= MAX_PAGES_PER_PASS; page++) {
-            const url = new URL('/api/e2/properties', window.location.origin);
-            url.searchParams.set('page', String(page));
-            url.searchParams.set('perPage', String(PER_PAGE_LETTERS));
-            url.searchParams.set('userId', userId);
-            url.searchParams.set('sort', sortKey);
-            try {
-              const res = await fetch(url.toString());
-              if (!res.ok) break;
-              const data: E2PropertiesResponse = await res.json();
-              if (!data.data?.length) break;
-              data.data.forEach(p => uniqueMap.set(p.id, p));
-              if (uniqueMap.size >= expectedCount) break;
-            } catch {
-              break;
-            }
-          }
-          if (uniqueMap.size >= (expectedCount ?? 0)) break;
-        }
-        combined = Array.from(uniqueMap.values());
-      }
-
-      // Additional sort-based passes (-current_value/current_value, -current_profit/current_profit, -purchase_date/purchase_date)
-      if (expectedCount !== undefined && combined.length < expectedCount) {
-        const extraSorts = ['-current_value', 'current_value', '-current_profit', 'current_profit', '-purchase_date', 'purchase_date'];
-        for (const sortKey of extraSorts) {
-          for (let page = 1; page <= MAX_PAGES_PER_PASS; page++) {
-            const url = new URL('/api/e2/properties', window.location.origin);
-            url.searchParams.set('page', String(page));
-            url.searchParams.set('perPage', String(PER_PAGE_LETTERS));
-            url.searchParams.set('userId', userId);
-            url.searchParams.set('sort', sortKey);
-            try {
-              const res = await fetch(url.toString());
-              if (!res.ok) break;
-              const data: E2PropertiesResponse = await res.json();
-              if (!data.data?.length) break;
-              data.data.forEach(p => uniqueMap.set(p.id, p));
-              if (uniqueMap.size >= expectedCount) break;
-            } catch { break; }
-          }
-          if (uniqueMap.size >= (expectedCount ?? 0)) break;
-        }
-        combined = Array.from(uniqueMap.values());
-      }
-
-      // Update state/cache and exit
-      setAllPropertiesForAnalytics(combined);
-      setCachedProps(combined);
-      const FIRST_PAGE_SIZE = 12;
-      setProperties(combined.slice(0, FIRST_PAGE_SIZE));
-      setPropertiesMeta({
-        count: combined.length,
-        current_page: 1,
-        last_page: Math.ceil(combined.length / FIRST_PAGE_SIZE),
-        per_page: FIRST_PAGE_SIZE,
-      });
-      setPropertiesCurrentPage(1);
-      await idbSet(getCacheKey(userId), combined);
-      setIsAnalyticsLoading(false);
-      return;
-    }
-
-    /* eslint-disable */
-    // --- LETTER BASED FETCH STRATEGY (disabled for this test) ---
-    if (false) {
-      // Letter-based strategy temporarily disabled.
-      setIsAnalyticsLoading(false);
-      return;
-    }
-    /* eslint-enable */
-
-    let currentPage = 1;
-    let fetchedAll = false;
-    const accumulatedProps: E2Property[] = [];
-    let totalCountFromMeta: number | undefined = undefined;
-    const PER_PAGE_FOR_ANALYTICS = 60; // simple pass perPage
-
-    console.log(`[Analytics] Starting fetch for all properties of user ${userId}`);
-
-    let highestAscPageFetched = 0;
-    let failureDetected = false;
-
-    // For smaller portfolios (<9900) just simple ascending loop
-    // --------- ASCENDING LOOP (page 1 -> ...) ---------
-    do {
-      try {
-        const proxyUrl = new URL('/api/e2/properties', window.location.origin);
-        proxyUrl.searchParams.set('page', String(currentPage));
-        proxyUrl.searchParams.set('perPage', String(PER_PAGE_FOR_ANALYTICS));
-        proxyUrl.searchParams.set('userId', userId);
-
-        console.log(`[Analytics] Fetching page ${currentPage} via proxy (perPage ${PER_PAGE_FOR_ANALYTICS}): ${proxyUrl.toString()}`);
-        const proxyRes = await fetch(proxyUrl.toString());
-
-        if (!proxyRes.ok) {
-          const errorData = await proxyRes.json();
-          throw new Error(errorData.error || `Proxy API failed for analytics (page ${currentPage}, status: ${proxyRes.status})`);
-        }
-        
-        const proxyData: E2PropertiesResponse = await proxyRes.json(); 
-        
-        console.log(`[Analytics] Page ${currentPage} Response:`, { 
-            dataLength: proxyData.data?.length ?? 0,
-            meta: proxyData.meta,
-            links: proxyData.links 
-        });
-
-        if (proxyData.data && proxyData.data.length > 0) {
-          accumulatedProps.push(...proxyData.data);
-        }
-
-        if (totalCountFromMeta === undefined && proxyData.meta?.count !== undefined) {
-            totalCountFromMeta = proxyData.meta.count;
-            console.log(`[Analytics] Total properties count from meta: ${totalCountFromMeta}`);
-        }
-        
-        let shouldContinuePaging = false;
-        const itemsInLastFetch = proxyData.data ? proxyData.data.length : 0;
-
-        if (itemsInLastFetch === 0) {
-            shouldContinuePaging = false;
-            console.log(`[Analytics] Loop Decision: Stop - Fetched page returned 0 properties.`);
-        } else if (totalCountFromMeta !== undefined && accumulatedProps.length >= totalCountFromMeta) {
-            shouldContinuePaging = false;
-            console.log(`[Analytics] Loop Decision: Stop - Reached or exceeded total count (${accumulatedProps.length}/${totalCountFromMeta}).`);
-        } else if (proxyData.links?.next) {
-            shouldContinuePaging = true;
-            console.log(`[Analytics] Loop Decision: Continue - Found 'next' link in API response.`);
-        } else if (totalCountFromMeta !== undefined && accumulatedProps.length < totalCountFromMeta) {
-            shouldContinuePaging = true;
-            console.log(`[Analytics] Loop Decision: Continue - No 'next' link, but total count (${totalCountFromMeta}) not yet reached (${accumulatedProps.length}).`);
-        } else if (totalCountFromMeta === undefined && itemsInLastFetch === PER_PAGE_FOR_ANALYTICS) {
-            shouldContinuePaging = true;
-            console.log(`[Analytics] Loop Decision: Continue - No 'next' link or total count, but received a full page of ${PER_PAGE_FOR_ANALYTICS} items.`);
-        } else {
-            shouldContinuePaging = false;
-            console.log(`[Analytics] Loop Decision: Stop - No clear signal to continue (e.g., no 'next' link, total unknown or met, and not a full page if total unknown).`);
-        }
-
-        if (shouldContinuePaging) {
-            currentPage++;
-            console.log(`[Analytics] Preparing to fetch next page: ${currentPage}.`);
-            fetchedAll = false; 
-        } else {
-            fetchedAll = true; 
-        }
-
-      } catch (err: any) {
-        console.error('Error fetching/processing E2 properties page for analytics (ascending):', err);
-        setError(prevError => {
-          const newErrorMessage = `Error fetching analytics page ${currentPage}: ${err.message}`;
-          return prevError ? (prevError.includes(newErrorMessage) ? prevError : `${prevError}\n${newErrorMessage}`) : newErrorMessage;
-        });
-        failureDetected = true;
-        fetchedAll = true; // stop ascending loop
-      }
-    } while (!fetchedAll);
-
-    // Record last successful asc page
-    highestAscPageFetched = currentPage - 1;
-
-    // --------- DESCENDING LOOP (last_page -> missing) ---------
-    if (failureDetected && totalCountFromMeta !== undefined) {
-      const lastPage = totalCountFromMeta && totalCountFromMeta > 0 ? Math.ceil(totalCountFromMeta / PER_PAGE_FOR_ANALYTICS) : undefined;
-      if (lastPage) {
-        console.log(`[Analytics] Starting fallback descending fetch from page ${lastPage}.`);
-        let descPage = lastPage;
-        while (descPage > highestAscPageFetched) {
-          try {
-            const proxyUrl = new URL('/api/e2/properties', window.location.origin);
-            proxyUrl.searchParams.set('page', String(descPage));
-            proxyUrl.searchParams.set('perPage', String(PER_PAGE_FOR_ANALYTICS));
-            proxyUrl.searchParams.set('userId', userId);
-
-            console.log(`[Analytics] (DESC) Fetching page ${descPage}`);
-            const proxyRes = await fetch(proxyUrl.toString());
-            if (!proxyRes.ok) throw new Error(`Status ${proxyRes.status}`);
-            const proxyData: E2PropertiesResponse = await proxyRes.json();
-
-            if (proxyData.data && proxyData.data.length > 0) {
-              for (const p of proxyData.data) {
-                if (!accumulatedProps.find(ap => ap.id === p.id)) {
-                  accumulatedProps.push(p);
+            const results = await Promise.allSettled(pageFetches);
+            results.forEach(result => {
+                if (result.status === 'fulfilled' && result.value.data) {
+                    const newProperties: E2Property[] = result.value.data;
+                    newProperties.forEach(prop => allProperties.set(prop.id, prop));
                 }
-              }
-            }
-          } catch (err) {
-            console.error(`[Analytics] Error fetching descending page ${descPage}:`, err);
-          }
-
-          descPage--;
+            });
         }
       }
-    }
+    };
+    
+    console.log('[Analytics] Starting unified letter-based fetch...');
+    await performLetterPass();
+    console.log(`[Analytics] Fetch complete. Found ${allProperties.size} unique properties.`);
 
-    // ---- END OF BOTH LOOPS ----
-
+    const accumulatedProps = Array.from(allProperties.values());
     setAllPropertiesForAnalytics(accumulatedProps);
     setCachedProps(accumulatedProps);
-    // Save to IndexedDB for future use
+
+    const PER_PAGE_DISPLAY = 12;
+    setProperties(accumulatedProps.slice(0, PER_PAGE_DISPLAY));
+    setPropertiesMeta({
+        count: accumulatedProps.length,
+        current_page: 1,
+        last_page: Math.ceil(accumulatedProps.length / PER_PAGE_DISPLAY),
+        per_page: PER_PAGE_DISPLAY,
+    });
+    setPropertiesCurrentPage(1);
+
     try {
       await idbSet(getCacheKey(userId), accumulatedProps);
-      console.log('[Cache] Saved properties to IndexedDB.');
+      console.log(`[Cache] Saved ${accumulatedProps.length} properties to IndexedDB.`);
     } catch (err) {
       console.error('[Cache] Failed to save properties to IndexedDB:', err);
     }
+    
     setIsAnalyticsLoading(false);
-    console.log(`[Analytics] Finished fetching. Total ${accumulatedProps.length} properties gathered for analytics.`);
-    if(totalCountFromMeta !== undefined && accumulatedProps.length !== totalCountFromMeta && accumulatedProps.length > 0){ // Added check for > 0 to avoid warning if 0 == 0
-        console.warn(`[Analytics] Mismatch: Meta count was ${totalCountFromMeta}, but fetched ${accumulatedProps.length}. This might indicate an issue with API's reported total or pagination details.`);
+    
+    if (expectedCount !== undefined && accumulatedProps.length < expectedCount) {
+        console.warn(`[Analytics] Mismatch: Expected count was ${expectedCount}, but fetched ${accumulatedProps.length}.`);
     }
   };
 

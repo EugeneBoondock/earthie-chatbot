@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import LiveStreamModal from './LiveStreamModal';
-import { PlayCircle, User, Eye, Radio, Video, Loader2, RefreshCw, ExternalLink, Play, Pause, Volume2, Maximize2, AlertCircle } from 'lucide-react';
+import { PlayCircle, User, Eye, Radio, Video, Loader2, RefreshCw, ExternalLink, Play, Pause, Volume2, Maximize2, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Hls from 'hls.js';
 import React, { useCallback } from 'react';
@@ -256,6 +256,7 @@ export default function LiveStreamsPanel({ user }: { user: any }) {
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedStream, setSelectedStream] = useState<Stream | null>(null);
+  const [liveOpen, setLiveOpen] = useState(typeof window !== 'undefined' ? window.innerWidth > 768 : true);
 
   useEffect(() => {
     setLoading(true);
@@ -292,45 +293,59 @@ export default function LiveStreamsPanel({ user }: { user: any }) {
 
   const liveNow = liveStreams.filter(s => s.isActive);
 
+  // Responsive: collapse by default on mobile
+  useEffect(() => {
+    const handleResize = () => {
+      setLiveOpen(window.innerWidth > 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   return (
     <>
       {/* Live Now Panel */}
       <div className="mt-6 mb-4 rounded-2xl bg-gradient-to-br from-sky-900/80 to-indigo-900/80 border border-sky-400/20 shadow-xl p-4 relative overflow-hidden">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2 text-lg font-bold text-sky-200">
+        <button
+          className="flex items-center justify-between w-full gap-2 text-lg font-bold text-sky-200 mb-3 md:cursor-default"
+          onClick={() => setLiveOpen((v) => window.innerWidth > 768 ? true : !v)}
+          type="button"
+          aria-expanded={liveOpen}
+        >
+          <span className="flex items-center gap-2">
             <Video className="w-6 h-6 text-sky-400" /> Live Now
-          </div>
-          <Button onClick={() => { setModalOpen(true); setSelectedStream(null); }} className="bg-gradient-to-r from-sky-600 to-indigo-600 text-white font-bold px-4 py-1.5 rounded-full shadow hover:scale-105 transition-all">
-            🎥 Go Live
-          </Button>
-        </div>
-        {loading ? (
-          <div className="py-8 text-center text-sky-300 animate-pulse">Loading streams...</div>
-        ) : liveNow.length === 0 ? (
-          <div className="py-8 text-center text-gray-400">
-            No one is live right now.<br />
-            <span className="text-sky-400 font-semibold">Be the first to go live!</span>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-3">
-            {liveNow.map((s) => (
-              <div key={s.id} className="group rounded-xl overflow-hidden bg-gradient-to-br from-sky-900/60 to-indigo-900/60 border border-sky-400/10 shadow hover:scale-[1.02] transition-transform cursor-pointer flex items-center gap-3 p-2" onClick={() => { setSelectedStream(s); setModalOpen(true); }}>
-                <div className="w-20 h-14 bg-black flex items-center justify-center rounded-lg">
-                  <PlayCircle className="text-emerald-400 w-8 h-8 animate-pulse" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-bold text-sky-100 truncate">{s.name}</div>
-                  <div className="flex items-center gap-2 text-xs text-gray-400 mt-1">
-                    <User className="w-4 h-4" /> {s.userId || 'Unknown'}
-                    <Eye className="w-4 h-4 ml-2" /> {s.viewerCount || 0}
+          </span>
+          <span className="md:hidden">{liveOpen ? <ChevronUp /> : <ChevronDown />}</span>
+        </button>
+        {liveOpen && (
+          loading ? (
+            <div className="py-8 text-center text-sky-300 animate-pulse">Loading streams...</div>
+          ) : liveNow.length === 0 ? (
+            <div className="py-8 text-center text-gray-400">
+              No one is live right now.<br />
+              <span className="text-sky-400 font-semibold">Be the first to go live!</span>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-3">
+              {liveNow.map((s) => (
+                <div key={s.id} className="group rounded-xl overflow-hidden bg-gradient-to-br from-sky-900/60 to-indigo-900/60 border border-sky-400/10 shadow hover:scale-[1.02] transition-transform cursor-pointer flex items-center gap-3 p-2" onClick={() => { setSelectedStream(s); setModalOpen(true); }}>
+                  <div className="w-20 h-14 bg-black flex items-center justify-center rounded-lg">
+                    <PlayCircle className="text-emerald-400 w-8 h-8 animate-pulse" />
                   </div>
-                  {s.livepeerTvUrl && (
-                    <a href={s.livepeerTvUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-sky-400 underline mt-1 inline-block">Watch on Livepeer.tv</a>
-                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold text-sky-100 truncate">{s.name}</div>
+                    <div className="flex items-center gap-2 text-xs text-gray-400 mt-1">
+                      <User className="w-4 h-4" /> {s.userId || 'Unknown'}
+                      <Eye className="w-4 h-4 ml-2" /> {s.viewerCount || 0}
+                    </div>
+                    {s.livepeerTvUrl && (
+                      <a href={s.livepeerTvUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-sky-400 underline mt-1 inline-block">Watch on Livepeer.tv</a>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )
         )}
       </div>
       {/* Past Streams Panel */}
@@ -376,6 +391,16 @@ export default function LiveStreamsPanel({ user }: { user: any }) {
         selectedStream={selectedStream}
         setSelectedStream={setSelectedStream}
       />
+      <style jsx global>{`
+        @media (max-width: 768px) {
+          iframe[src*="twitch.tv"], .twitch-player-overlay, .twitch-player-controls {
+            transform: scale(0.7);
+            transform-origin: top left;
+            font-size: 12px !important;
+            max-width: 100vw;
+          }
+        }
+      `}</style>
     </>
   );
 } 
