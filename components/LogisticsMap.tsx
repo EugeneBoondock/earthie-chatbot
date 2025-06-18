@@ -47,10 +47,27 @@ interface RouteSummary {
   totalTime: number;
 }
 
+interface RouteSegment {
+  mode: 'walking' | 'car' | 'truck' | 'drone' | 'ship' | 'plane';
+  distance: number;
+  time: number;
+  description: string;
+  waypoints: { lat: number; lng: number }[];
+  reason?: string;
+}
+
+interface RouteSummary {
+  totalDistance: number;
+  totalTime: number;
+  segments?: RouteSegment[];
+  isMultiModal?: boolean;
+}
+
 interface LogisticsMapProps {
   properties: Property[];
   selectedProperties: Property[];
   onRouteSummary: (summary: RouteSummary | null) => void;
+  transportMode: 'walking' | 'car' | 'truck' | 'drone' | 'ship' | 'plane';
 }
 
 // Helper to determine property logistics role
@@ -284,7 +301,7 @@ const MAP_LAYERS: Record<MapLayer, { url: string; attribution: string }> = {
   },
 };
 
-export function LogisticsMap({ properties, selectedProperties, onRouteSummary }: LogisticsMapProps) {
+export function LogisticsMap({ properties, selectedProperties, onRouteSummary, transportMode }: LogisticsMapProps) {
     const [map, setMap] = useState<L.Map | null>(null);
     const [mapLayer, setMapLayer] = useState<MapLayer>('dark');
     const [showAllProperties, setShowAllProperties] = useState(false);
@@ -530,9 +547,13 @@ export function LogisticsMap({ properties, selectedProperties, onRouteSummary }:
                     )
                 })}
                 
-                {showRoute && selectedProperties.length >= 2 && (
-                    <RoutingMachine waypoints={waypoints} onRouteFound={handleRouteSummary} />
-                )}
+                <div className="leaflet-top leaflet-right">
+                    <RoutingMachine 
+                        waypoints={waypoints} 
+                        onRouteFound={handleRouteSummary} 
+                        transportMode={transportMode} 
+                    />
+                </div>
             </MapContainer>
         </div>
     );

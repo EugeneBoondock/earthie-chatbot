@@ -37,11 +37,71 @@ import {
 import { toast } from "@/components/ui/use-toast"
 import { Toaster } from "@/components/ui/toaster"
 
+// Multi-modal route segment
+interface RouteSegment {
+  mode: 'walking' | 'car' | 'truck' | 'drone' | 'ship' | 'plane';
+  distance: number;
+  time: number;
+  description: string;
+  waypoints: { lat: number; lng: number }[];
+  reason?: string; // Why this mode was chosen
+}
+
 // Define the type locally to avoid module resolution issues
 interface RouteSummary {
   totalDistance: number;
   totalTime: number;
+  elevationGain?: number;
+  terrainDifficulty?: 'easy' | 'moderate' | 'difficult';
+  routeType?: 'direct' | 'detoured' | 'rerouted';
+  weatherImpact?: number;
+  obstacles?: RouteObstacle[];
+  segments?: RouteSegment[]; // Multi-modal journey segments
+  isMultiModal?: boolean;
 }
+
+// Obstacle Detection Types (Natural terrain only - Earth 2 removed man-made structures)
+interface RouteObstacle {
+  id: string;
+  type: 'mountain' | 'steep_cliff' | 'water_body' | 'deep_valley' | 'swamp' | 'glacier';
+  position: { lat: number; lng: number };
+  severity: 'low' | 'medium' | 'high';
+  description: string;
+  detourRequired: boolean;
+  naturalFeature: true; // Always true since only natural obstacles exist
+}
+
+// Elevation and Terrain Analysis
+interface ElevationPoint {
+  lat: number;
+  lng: number;
+  elevation: number;
+  terrainType: 'water_body' | 'flat_land' | 'hills' | 'mountains' | 'steep_cliff' | 'deep_valley';
+  isPassable: boolean;
+  difficulty: 'easy' | 'moderate' | 'difficult' | 'impassable';
+}
+
+interface RouteProfile {
+  elevationProfile: ElevationPoint[];
+  maxElevation: number;
+  minElevation: number;
+  elevationGain: number;
+  terrainDifficulty: 'easy' | 'moderate' | 'difficult';
+  recommendedTransport: Array<'walking' | 'car' | 'truck' | 'drone' | 'ship' | 'plane'>;
+  obstacles: RouteObstacle[];
+  alternativeRoutes?: AlternativeRoute[];
+}
+
+interface AlternativeRoute {
+  id: string;
+  reason: string;
+  waypoints: { lat: number; lng: number }[];
+  additionalDistance: number;
+  additionalTime: number;
+  description: string;
+}
+
+// No port operations in Earth 2's natural world
 
 const LogisticsMap = dynamic(() => import('@/components/LogisticsMap').then(mod => mod.LogisticsMap), {
   ssr: false,
@@ -183,6 +243,147 @@ const copyToClipboard = async (text: string, label: string) => {
       variant: "destructive",
       duration: 2000,
     });
+  }
+};
+
+// Distance calculation helper
+const calculateDistance = (coord1: { lat: number; lng: number }, coord2: { lat: number; lng: number }): number => {
+  const R = 6371; // Earth's radius in km
+  const dLat = (coord2.lat - coord1.lat) * Math.PI / 180;
+  const dLng = (coord2.lng - coord1.lng) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+           Math.cos(coord1.lat * Math.PI / 180) * Math.cos(coord2.lat * Math.PI / 180) *
+           Math.sin(dLng/2) * Math.sin(dLng/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+};
+
+// Elevation and Terrain Analysis
+const getElevationProfile = async (waypoints: { lat: number; lng: number }[]): Promise<RouteProfile | null> => {
+  if (waypoints.length < 2) return null;
+  
+  try {
+    // Using Open Elevation API for elevation data
+    const elevationProfile: ElevationPoint[] = [];
+    
+    for (const waypoint of waypoints) {
+      const response = await fetch(`https://api.open-elevation.com/api/v1/lookup?locations=${waypoint.lat},${waypoint.lng}`);
+      const data = await response.json();
+      
+      if (data.results && data.results[0]) {
+        const elevation = data.results[0].elevation;
+        const terrainType = classifyTerrain(elevation, waypoint);
+        elevationProfile.push({
+          lat: waypoint.lat,
+          lng: waypoint.lng,
+          elevation,
+          terrainType,
+          isPassable: terrainType !== 'water_body' && elevation < 3000 && terrainType !== 'steep_cliff',
+          difficulty: classifyTerrainDifficulty(elevation, terrainType),
+        });
+      }
+    }
+    
+    if (elevationProfile.length === 0) return null;
+    
+    const elevations = elevationProfile.map(p => p.elevation);
+    const maxElevation = Math.max(...elevations);
+    const minElevation = Math.min(...elevations);
+    const elevationGain = calculateElevationGain(elevationProfile);
+    const terrainDifficulty = calculateRouteTerrainDifficulty(elevationGain, maxElevation - minElevation);
+    const recommendedTransport = getRecommendedTransportForTerrain(terrainDifficulty, elevationProfile);
+    
+    return {
+      elevationProfile,
+      maxElevation,
+      minElevation,
+      elevationGain,
+      terrainDifficulty,
+      recommendedTransport,
+      obstacles: elevationProfile.filter(p => !p.isPassable).map(p => ({
+        id: `obstacle_${p.lat}_${p.lng}`,
+        type: mapTerrainToObstacleType(p.terrainType),
+        position: { lat: p.lat, lng: p.lng },
+        severity: p.difficulty === 'difficult' || p.difficulty === 'impassable' ? 'high' : 
+                  p.difficulty === 'moderate' ? 'medium' : 'low',
+        description: `Natural obstacle: ${p.terrainType.replace('_', ' ')} (${p.elevation}m elevation)`,
+        detourRequired: true,
+        naturalFeature: true,
+      })),
+      alternativeRoutes: [],
+    };
+  } catch (error) {
+    console.error('Error fetching elevation data:', error);
+    return null;
+  }
+};
+
+const classifyTerrain = (elevation: number, coord: { lat: number; lng: number }): 'water_body' | 'flat_land' | 'hills' | 'mountains' | 'steep_cliff' | 'deep_valley' => {
+  // Classify based on elevation and geographic context (Earth 2 has only natural terrain)
+  if (elevation < 0) return 'deep_valley'; // Below sea level
+  if (elevation < 10) return 'water_body'; // Sea level or coastal water
+  if (elevation < 200) return 'flat_land'; // Plains and lowlands
+  if (elevation < 1000) return 'hills'; // Rolling hills
+  if (elevation > 2500) return 'steep_cliff'; // Very steep terrain
+  return 'mountains'; // Mountain ranges
+};
+
+const calculateElevationGain = (profile: ElevationPoint[]): number => {
+  let gain = 0;
+  for (let i = 1; i < profile.length; i++) {
+    const diff = profile[i].elevation - profile[i-1].elevation;
+    if (diff > 0) gain += diff;
+  }
+  return gain;
+};
+
+const classifyTerrainDifficulty = (elevation: number, terrainType: string): 'easy' | 'moderate' | 'difficult' | 'impassable' => {
+  if (terrainType === 'water_body') return 'impassable'; // for land transport
+  if (terrainType === 'steep_cliff') return 'impassable'; // steep cliffs are impassable
+  if (terrainType === 'deep_valley') return 'difficult'; // valleys are challenging
+  if (elevation > 3000) return 'impassable';
+  if (elevation > 2000) return 'difficult';
+  if (elevation > 1000) return 'moderate';
+  return 'easy';
+};
+
+const calculateRouteTerrainDifficulty = (elevationGain: number, elevationRange: number): 'easy' | 'moderate' | 'difficult' => {
+  if (elevationGain < 100 && elevationRange < 200) return 'easy';
+  if (elevationGain < 500 && elevationRange < 800) return 'moderate';
+  return 'difficult';
+};
+
+const getRecommendedTransportForTerrain = (difficulty: 'easy' | 'moderate' | 'difficult', profile: ElevationPoint[]): Array<'walking' | 'car' | 'truck' | 'drone' | 'ship' | 'plane'> => {
+  const hasWater = profile.some(p => p.terrainType === 'water_body');
+  const hasMountains = profile.some(p => p.terrainType === 'mountains');
+  const hasSteepCliffs = profile.some(p => p.terrainType === 'steep_cliff');
+  
+  let modes: Array<'walking' | 'car' | 'truck' | 'drone' | 'ship' | 'plane'> = ['drone', 'plane']; // Always available
+  
+  if (hasWater) modes.push('ship');
+  
+  if (difficulty === 'easy' && !hasSteepCliffs) {
+    modes.push('walking', 'car', 'truck');
+  } else if (difficulty === 'moderate' && !hasSteepCliffs) {
+    modes.push('car', 'truck');
+  }
+  // For difficult terrain or steep cliffs, only air transport is recommended
+  
+  return modes;
+};
+
+// No shipping or port operations in Earth 2's natural world
+
+// Helper to map natural terrain types to obstacle types (Earth 2 natural world only)
+const mapTerrainToObstacleType = (terrainType: string): 'mountain' | 'steep_cliff' | 'water_body' | 'deep_valley' | 'swamp' | 'glacier' => {
+  switch (terrainType) {
+    case 'mountains': return 'mountain';
+    case 'water_body': return 'water_body';
+    case 'steep_cliff': return 'steep_cliff';
+    case 'deep_valley': return 'deep_valley';
+    case 'hills': return 'steep_cliff'; // Steep hills become cliff obstacles
+    case 'flat_land': return 'swamp'; // Some flat areas might be swampy
+    default: return 'mountain'; // Default to mountain obstacle
   }
 };
 
@@ -342,10 +543,17 @@ export default function LogisticsPage() {
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [compactView, setCompactView] = useState(false);
   
+  // New state for advanced features
+  const [routeProfile, setRouteProfile] = useState<RouteProfile | null>(null);
+  const [showElevationProfile, setShowElevationProfile] = useState(false);
+  const [terrainBasedRerouting, setTerrainBasedRerouting] = useState(true);
+  const [detectedObstacles, setDetectedObstacles] = useState<RouteObstacle[]>([]);
+  const [autoSwitchedMode, setAutoSwitchedMode] = useState<string | null>(null);
+  
   // Memoize properties per page to prevent infinite re-renders
   const PROPERTIES_PER_PAGE = useMemo(() => compactView ? 15 : 10, [compactView]);
 
-  // Logistics calculations
+  // Enhanced logistics calculations with network analysis
   const logisticsAnalytics = useMemo(() => {
     if (selectedProperties.length === 0) return null;
     
@@ -364,15 +572,17 @@ export default function LogisticsPage() {
         roleDistribution[enhanced.logisticsRole]++;
       }
     });
-    
+
     return {
       totalValue,
       totalTiles,
       avgTileCount,
       roleDistribution,
       diversityScore: Object.values(roleDistribution).filter(count => count > 0).length,
+      obstacleCount: detectedObstacles.length,
+      terrainDifficulty: routeProfile?.terrainDifficulty || 'easy',
     };
-  }, [selectedProperties, enhancedProperties]);
+  }, [selectedProperties, enhancedProperties, detectedObstacles, routeProfile]);
 
   // 1. Effect to fetch the linked Earth 2 User ID from our app's backend
   useEffect(() => {
@@ -507,6 +717,63 @@ export default function LogisticsPage() {
     }
   }, []);
 
+  // New effects for advanced features
+  // 3. Effect to detect obstacles when route changes and terrain rerouting is enabled
+  useEffect(() => {
+    if (selectedProperties.length >= 2 && terrainBasedRerouting) {
+      const waypoints = selectedProperties
+        .map(p => parseCoordinates(p.attributes.center))
+        .filter(coord => coord !== null) as { lat: number; lng: number }[];
+      
+      if (waypoints.length >= 2) {
+        detectRouteObstacles(waypoints, transportMode).then(obstacles => {
+          setDetectedObstacles(obstacles);
+          
+          if (obstacles.length > 0) {
+            const highSeverityObstacles = obstacles.filter(o => o.severity === 'high');
+            if (highSeverityObstacles.length > 0) {
+              toast({
+                title: "Route Obstacles Detected",
+                description: `${obstacles.length} obstacles found, ${highSeverityObstacles.length} requiring detour. Consider alternative transport or route.`,
+                duration: 5000,
+              });
+            }
+          }
+        }).catch(err => {
+          console.error('Failed to detect obstacles:', err);
+        });
+      }
+    }
+  }, [selectedProperties, terrainBasedRerouting, transportMode]);
+
+  // 4. Effect to fetch elevation profile when route changes and terrain rerouting is enabled
+  useEffect(() => {
+    if (selectedProperties.length >= 2 && terrainBasedRerouting) {
+      const waypoints = selectedProperties
+        .map(p => parseCoordinates(p.attributes.center))
+        .filter(coord => coord !== null) as { lat: number; lng: number }[];
+      
+      if (waypoints.length >= 2) {
+        getElevationProfile(waypoints).then(profile => {
+          setRouteProfile(profile);
+          
+          // If terrain is difficult, suggest rerouting or alternative transport
+          if (profile && profile.terrainDifficulty === 'difficult') {
+            toast({
+              title: "Difficult Terrain Detected",
+              description: `Elevation gain: ${Math.round(profile.elevationGain)}m. Consider using ${profile.recommendedTransport.join(', ')} for this route.`,
+              duration: 5000,
+            });
+          }
+        }).catch(err => {
+          console.error('Failed to fetch elevation profile:', err);
+        });
+      }
+    }
+  }, [selectedProperties, terrainBasedRerouting]);
+
+  // No port operations in Earth 2's natural world
+
   const handleRouteSummary = (summary: RouteSummary | null) => {
     setRouteSummary(currentSummary => {
       if (currentSummary && summary && 
@@ -516,13 +783,58 @@ export default function LogisticsPage() {
       }
       return summary;
     });
+
+    // Auto-update transport mode based on multi-modal route requirements
+    if (summary?.isMultiModal && summary.segments && summary.segments.length > 0) {
+      // Find the recommended transport mode for the current route
+      const recommendedMode = findRecommendedTransportMode(summary.segments);
+      if (recommendedMode !== transportMode) {
+        console.log(`🚨 Auto-switching transport mode from ${transportMode} to ${recommendedMode} due to terrain constraints`);
+        setAutoSwitchedMode(`${transportMode} → ${recommendedMode}`);
+        setTransportMode(recommendedMode);
+        
+        // Show toast notification to user about mode change
+        toast({
+          title: "🚨 Transport Mode Auto-Changed",
+          description: `Switched from ${transportMode.toUpperCase()} to ${recommendedMode.toUpperCase()} due to terrain impossibility`,
+          duration: 5000,
+        });
+      }
+    }
+  };
+
+  // Find the most appropriate transport mode based on route segments
+  const findRecommendedTransportMode = (segments: RouteSegment[]): typeof transportMode => {
+    if (!segments || segments.length === 0) return transportMode;
+    
+    // Priority order: Ship > Plane > Drone > Truck > Car > Walking
+    const modePriority = {
+      'ship': 6,
+      'plane': 5, 
+      'drone': 4,
+      'truck': 3,
+      'car': 2,
+      'walking': 1
+    };
+    
+    // Find the highest priority mode that appears in segments
+    const modesInRoute = segments.map(s => s.mode);
+    const highestPriorityMode = modesInRoute.reduce((highest, current) => {
+      return (modePriority[current] || 0) > (modePriority[highest] || 0) ? current : highest;
+    }, modesInRoute[0]);
+    
+    return highestPriorityMode as typeof transportMode;
   };
 
   const handleTransportModeChange = useCallback((value: string) => {
     if (value) {
       setTransportMode(value as typeof transportMode);
+      // Clear auto-switched indicator when user manually changes mode
+      if (autoSwitchedMode) {
+        setAutoSwitchedMode(null);
+      }
     }
-  }, []);
+  }, [autoSwitchedMode]);
 
   useEffect(() => {
     if (selectedProperties.length < 2) {
@@ -619,49 +931,56 @@ export default function LogisticsPage() {
             speedKmh: 5, 
             timeMultiplier: 10, 
             icon: PersonStanding,
-            label: 'Walking'
+            label: 'Walking',
+            color: 'text-red-400'
           };
         case 'car': 
           return { 
             speedKmh: 50, 
             timeMultiplier: 1, 
             icon: Car,
-            label: 'Car'
+            label: 'Car',
+            color: 'text-cyan-400'
           };
         case 'truck': 
           return { 
             speedKmh: 40, 
             timeMultiplier: 1.25, 
             icon: Truck,
-            label: 'Truck'
+            label: 'Truck',
+            color: 'text-orange-400'
           };
         case 'drone': 
           return { 
             speedKmh: 120, 
             timeMultiplier: 0.42, 
             icon: Zap,
-            label: 'Drone'
+            label: 'Drone',
+            color: 'text-purple-400'
           };
         case 'ship':
           return { 
             speedKmh: 25, 
             timeMultiplier: 2.0, 
             icon: Ship,
-            label: 'Ship'
+            label: 'Ship',
+            color: 'text-blue-400'
           };
         case 'plane':
           return { 
             speedKmh: 250, 
             timeMultiplier: 0.2, 
             icon: Plane,
-            label: 'Plane'
+            label: 'Plane',
+            color: 'text-green-400'
           };
         default: 
           return { 
             speedKmh: 50, 
             timeMultiplier: 1, 
             icon: Car,
-            label: 'Car'
+            label: 'Car',
+            color: 'text-cyan-400'
           };
     }
   };
@@ -671,8 +990,20 @@ export default function LogisticsPage() {
     if (!routeSummary) return null;
     
     const { totalDistance, totalTime } = routeSummary;
+    
+    // For multi-modal routes, use the actual calculated data
+    if (routeSummary.isMultiModal) {
+      return {
+        ...routeSummary,
+        speedKmh: Math.round((totalDistance / 1000) / (totalTime / 3600)),
+        mode: 'multi-modal',
+        modeLabel: 'Multi-Modal Journey',
+        modeIcon: Route, // Use Route icon for multi-modal
+      };
+    }
+    
+    // For single-mode routes, apply mode-specific adjustments
     const modeDetails = getTransportModeDetails(transportMode);
-
     return {
         ...routeSummary,
         totalTime: totalTime * modeDetails.timeMultiplier,
@@ -724,6 +1055,94 @@ export default function LogisticsPage() {
     e.stopPropagation();
     window.open(generateEarth2URL(lat, lng), '_blank');
   }, []);
+
+  // Obstacle Detection and Rerouting Functions
+  const detectRouteObstacles = async (waypoints: { lat: number; lng: number }[], transportMode: 'walking' | 'car' | 'truck' | 'drone' | 'ship' | 'plane'): Promise<RouteObstacle[]> => {
+    const obstacles: RouteObstacle[] = [];
+    
+    for (let i = 0; i < waypoints.length - 1; i++) {
+      const start = waypoints[i];
+      const end = waypoints[i + 1];
+      
+      // Check for terrain obstacles between waypoints
+      const routeObstacles = await checkTerrainObstacles(start, end, transportMode);
+      obstacles.push(...routeObstacles);
+    }
+    
+    return obstacles;
+  };
+
+  const checkTerrainObstacles = async (start: { lat: number; lng: number }, end: { lat: number; lng: number }, transportMode: string): Promise<RouteObstacle[]> => {
+    const obstacles: RouteObstacle[] = [];
+    
+    // Sample points along the route
+    const steps = 10;
+    for (let i = 0; i <= steps; i++) {
+      const ratio = i / steps;
+      const lat = start.lat + (end.lat - start.lat) * ratio;
+      const lng = start.lng + (end.lng - start.lng) * ratio;
+      
+      try {
+        // Get elevation data for this point
+        const response = await fetch(`https://api.open-elevation.com/api/v1/lookup?locations=${lat},${lng}`);
+        const data = await response.json();
+        
+        if (data.results && data.results[0]) {
+          const elevation = data.results[0].elevation;
+          const terrainType = classifyTerrain(elevation, { lat, lng });
+          const isPassable = checkPassability(elevation, terrainType, transportMode);
+          
+          if (!isPassable) {
+            obstacles.push({
+              id: `obstacle_${lat}_${lng}`,
+              type: mapTerrainToObstacleType(terrainType),
+              position: { lat, lng },
+              severity: classifyObstacleSeverity(elevation, terrainType, transportMode),
+              description: `Natural ${terrainType.replace('_', ' ')} obstacle (${elevation}m elevation)`,
+              detourRequired: true,
+              naturalFeature: true,
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error checking terrain obstacle:', error);
+      }
+    }
+    
+    return obstacles;
+  };
+
+  const checkPassability = (elevation: number, terrainType: string, transportMode: string): boolean => {
+    switch (transportMode) {
+      case 'walking':
+        return elevation < 3000 && terrainType !== 'water_body' && terrainType !== 'steep_cliff'; // Can walk up to 3000m, not through water or cliffs
+      case 'car':
+      case 'truck':
+        return elevation < 2000 && terrainType !== 'water_body' && terrainType !== 'mountains' && terrainType !== 'steep_cliff'; // Roads don't go through water, steep mountains or cliffs
+      case 'ship':
+        return terrainType === 'water_body' || elevation < 10; // Ships need water
+      case 'drone':
+      case 'plane':
+        return true; // Air transport can go anywhere
+      default:
+        return true;
+    }
+  };
+
+  const classifyObstacleSeverity = (elevation: number, terrainType: string, transportMode: string): 'low' | 'medium' | 'high' => {
+    if (transportMode === 'drone' || transportMode === 'plane') return 'low';
+    
+    if (terrainType === 'water_body' && (transportMode === 'car' || transportMode === 'truck' || transportMode === 'walking')) {
+      return 'high';
+    }
+    
+    if (terrainType === 'steep_cliff') return 'high'; // Cliffs are always high severity
+    if (terrainType === 'deep_valley') return 'medium'; // Valleys are moderate
+    
+    if (elevation > 2000) return 'high';
+    if (elevation > 1000) return 'medium';
+    return 'low';
+  };
 
   return (
     <TooltipProvider>
@@ -785,16 +1204,50 @@ export default function LogisticsPage() {
                       {selectedProperties.length} selected
                     </Badge>
                   </h2>
-                  <p className='text-xs md:text-sm text-gray-400'>{filteredAndSortedProperties.length} found</p>
+                  <div className="flex gap-2">
+                    <p className='text-xs md:text-sm text-gray-400'>{filteredAndSortedProperties.length} found</p>
+                    
+                    {/* Advanced Feature Toggles */}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => setTerrainBasedRerouting(!terrainBasedRerouting)}
+                          className={`h-6 w-6 ${terrainBasedRerouting ? 'bg-orange-400/20 border-orange-400' : 'bg-black/40 border-cyan-400/30'} hover:bg-orange-400/20`}
+                        >
+                          <Navigation className="h-3 w-3" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Obstacle Detection</TooltipContent>
+                    </Tooltip>
+                    
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => setShowElevationProfile(!showElevationProfile)}
+                          className={`h-6 w-6 ${showElevationProfile ? 'bg-green-400/20 border-green-400' : 'bg-black/40 border-cyan-400/30'} hover:bg-green-400/20`}
+                        >
+                          <Mountain className="h-3 w-3" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Elevation Profile</TooltipContent>
+                    </Tooltip>
+                    
+                    {/* No shipping data in Earth 2's natural world */}
+                  </div>
                 </div>
 
-              {/* Enhanced Route Summary */}
+              {/* Enhanced Multi-Modal Route Summary */}
               {adjustedRouteSummary && (
               <Card className="bg-gradient-to-br from-gray-800/60 via-gray-900/70 to-black/60 border-cyan-400/30 transition-all duration-300 backdrop-blur-sm">
                 <CardHeader className='p-4'>
                   <CardTitle className="text-cyan-300 flex items-center text-base">
                     <Route className="mr-2 h-5 w-5"/>
                     Mission Brief
+                    {adjustedRouteSummary.isMultiModal && <Badge variant="outline" className="ml-2 text-xs border-green-400 text-green-400">Smart Routing</Badge>}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="text-sm space-y-3 p-4 pt-0">
@@ -819,6 +1272,36 @@ export default function LogisticsPage() {
                       <p className="text-lg font-bold text-cyan-300">{formatTime(adjustedRouteSummary.totalTime)}</p>
                     </div>
                   </div>
+
+                  {/* Multi-Modal Route Segments */}
+                  {adjustedRouteSummary.segments && adjustedRouteSummary.segments.length > 1 && (
+                    <div className="space-y-2 pt-3 border-t border-cyan-400/20">
+                      <p className="font-semibold text-white text-xs">Journey Segments:</p>
+                      <div className="space-y-2 max-h-40 overflow-y-auto">
+                        {adjustedRouteSummary.segments.map((segment, index) => {
+                          const modeDetails = getTransportModeDetails(segment.mode);
+                          return (
+                            <div key={index} className="bg-black/30 rounded-md p-2 border border-gray-600/30">
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-center space-x-2">
+                                  <modeDetails.icon className={`h-3 w-3 ${modeDetails.color}`} />
+                                  <span className={`text-xs font-medium ${modeDetails.color}`}>{segment.description}</span>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-gray-300 text-xs">{formatDistance(segment.distance)}</p>
+                                  <p className="text-gray-400 text-xs">{formatTime(segment.time)}</p>
+                                </div>
+                              </div>
+                              {segment.reason && (
+                                <p className="text-gray-400 text-xs mt-1 italic">{segment.reason}</p>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  
                   <div className='pt-2 border-t border-cyan-400/20'>
                     <div className='flex justify-between items-center'>
                       <p className="font-semibold text-white flex items-center">
@@ -933,12 +1416,122 @@ export default function LogisticsPage() {
                            <p className="text-gray-300 text-xs">Diversity</p>
                            <p className="text-sm md:text-lg font-bold text-purple-300">{logisticsAnalytics.diversityScore}/8</p>
                          </div>
+                         {/* Route Obstacle Analytics */}
+                         {detectedObstacles.length > 0 && (
+                           <>
+                             <div>
+                               <p className="text-gray-300 text-xs">Route Obstacles</p>
+                               <p className="text-sm md:text-lg font-bold text-red-400">{logisticsAnalytics.obstacleCount}</p>
+                             </div>
+                             <div>
+                               <p className="text-gray-300 text-xs">Terrain</p>
+                               <p className="text-sm md:text-lg font-bold text-orange-400">{logisticsAnalytics.terrainDifficulty}</p>
+                             </div>
+                           </>
+                         )}
                        </div>
                      </div>
                    )}
                  </CardContent>
                </Card>
                )}
+
+               {/* Obstacle Detection Panel */}
+               {terrainBasedRerouting && detectedObstacles.length > 0 && (
+                 <Card className="bg-gradient-to-br from-red-900/30 via-orange-900/30 to-black/60 border-red-400/30 backdrop-blur-sm">
+                   <CardHeader className='p-4'>
+                     <CardTitle className="text-red-300 flex items-center text-base">
+                       <Navigation className="mr-2 h-5 w-5"/>
+                       Route Obstacles
+                     </CardTitle>
+                   </CardHeader>
+                   <CardContent className="text-xs md:text-sm space-y-3 md:space-y-4 p-3 md:p-4 pt-0">
+                     <div className='grid grid-cols-2 gap-2 md:gap-3'>
+                       <div>
+                         <p className="text-gray-300 text-xs">Total Obstacles</p>
+                         <p className="text-sm md:text-lg font-bold text-red-300">{detectedObstacles.length}</p>
+                       </div>
+                       <div>
+                         <p className="text-gray-300 text-xs">High Severity</p>
+                         <p className="text-sm md:text-lg font-bold text-red-400">{detectedObstacles.filter(o => o.severity === 'high').length}</p>
+                       </div>
+                       <div>
+                         <p className="text-gray-300 text-xs">Detours Required</p>
+                         <p className="text-sm md:text-lg font-bold text-orange-300">{detectedObstacles.filter(o => o.detourRequired).length}</p>
+                       </div>
+                       <div>
+                         <p className="text-gray-300 text-xs">Transport Mode</p>
+                         <p className="text-sm md:text-lg font-bold text-cyan-300 capitalize">{transportMode}</p>
+                       </div>
+                     </div>
+                     
+                     {detectedObstacles.filter(o => o.severity === 'high').length > 0 && (
+                       <div className="pt-3 border-t border-red-400/20">
+                         <h4 className="text-sm text-white font-semibold mb-2">⚠️ Critical Obstacles</h4>
+                         <div className="space-y-1">
+                           {detectedObstacles.filter(o => o.severity === 'high').slice(0, 3).map(obstacle => (
+                             <div key={obstacle.id} className="text-xs bg-red-900/20 p-2 rounded border border-red-500/30">
+                               <p className="text-red-300 font-medium">{obstacle.description}</p>
+                               <p className="text-gray-400">{obstacle.type} - {obstacle.severity} severity</p>
+                             </div>
+                           ))}
+                         </div>
+                       </div>
+                     )}
+                   </CardContent>
+                 </Card>
+               )}
+
+               {/* Elevation Profile Panel */}
+               {showElevationProfile && routeProfile && (
+                 <Card className="bg-gradient-to-br from-green-900/30 via-emerald-900/30 to-black/60 border-green-400/30 backdrop-blur-sm">
+                   <CardHeader className='p-4'>
+                     <CardTitle className="text-green-300 flex items-center text-base">
+                       <Mountain className="mr-2 h-5 w-5"/>
+                       Terrain Analysis
+                     </CardTitle>
+                   </CardHeader>
+                   <CardContent className="text-xs md:text-sm space-y-3 md:space-y-4 p-3 md:p-4 pt-0">
+                     <div className='grid grid-cols-2 gap-2 md:gap-3'>
+                       <div>
+                         <p className="text-gray-300 text-xs">Difficulty</p>
+                         <Badge variant="outline" className={`text-xs ${
+                           routeProfile.terrainDifficulty === 'easy' ? 'text-green-400 border-green-400' :
+                           routeProfile.terrainDifficulty === 'moderate' ? 'text-yellow-400 border-yellow-400' :
+                           'text-red-400 border-red-400'
+                         }`}>
+                           {routeProfile.terrainDifficulty.toUpperCase()}
+                         </Badge>
+                       </div>
+                       <div>
+                         <p className="text-gray-300 text-xs">Elevation Gain</p>
+                         <p className="text-sm md:text-lg font-bold text-green-300">{Math.round(routeProfile.elevationGain)}m</p>
+                       </div>
+                       <div>
+                         <p className="text-gray-300 text-xs">Max Elevation</p>
+                         <p className="text-sm md:text-lg font-bold text-blue-300">{Math.round(routeProfile.maxElevation)}m</p>
+                       </div>
+                       <div>
+                         <p className="text-gray-300 text-xs">Min Elevation</p>
+                         <p className="text-sm md:text-lg font-bold text-cyan-300">{Math.round(routeProfile.minElevation)}m</p>
+                       </div>
+                     </div>
+                     
+                     <div className="pt-3 border-t border-green-400/20">
+                       <h4 className="text-sm text-white font-semibold mb-2">🚁 Recommended Transport</h4>
+                       <div className="flex flex-wrap gap-1">
+                         {routeProfile.recommendedTransport.map(mode => (
+                           <Badge key={mode} variant="outline" className="text-xs text-green-300 border-green-400">
+                             {mode}
+                           </Badge>
+                         ))}
+                       </div>
+                     </div>
+                   </CardContent>
+                 </Card>
+               )}
+
+               {/* No port operations in Earth 2's natural world */}
             </div>
 
             {isLoading && <div className="flex-grow flex items-center justify-center"><Loader2 className="animate-spin h-8 w-8 text-cyan-400" /></div>}
@@ -1035,7 +1628,14 @@ export default function LogisticsPage() {
                 
                                  {/* Enhanced Transport Mode Selection */}
                  <div className="space-y-2">
-                   <p className="text-sm font-medium text-gray-300">Transport Mode</p>
+                   <div className="flex items-center justify-between">
+                     <p className="text-sm font-medium text-gray-300">Transport Mode</p>
+                     {autoSwitchedMode && (
+                       <Badge variant="outline" className="text-xs border-yellow-400 text-yellow-400 bg-yellow-400/10">
+                         Auto: {autoSwitchedMode}
+                       </Badge>
+                     )}
+                   </div>
                    <ToggleGroup 
                      type="single" 
                      value={transportMode} 
@@ -1160,6 +1760,7 @@ export default function LogisticsPage() {
               properties={allProperties} 
               selectedProperties={selectedProperties}
               onRouteSummary={handleRouteSummary}
+              transportMode={transportMode}
             />
           </div>
         </div>

@@ -486,3 +486,17 @@
   backdrop-filter: blur(8px) !important;
   border: 1px solid rgba(6, 182, 212, 0.3) !important;
 }
+
+.animated-route-line {
+  stroke-dasharray: 10, 10;
+  animation: march 30s linear infinite;
+}
+
+@keyframes march {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: -500;
+  }
+}
