@@ -315,13 +315,21 @@ export function LogisticsMap({ properties, selectedProperties, onRouteSummary, t
         : [51.505, -0.09]; // Default to London if no properties
 
     useEffect(() => {
+        console.log('🗺️ LogisticsMap: selectedProperties changed');
+        console.log('Selected properties count:', selectedProperties.length);
+        console.log('Selected properties:', selectedProperties.map(p => p.attributes.description));
+        
         // Update waypoints when selected properties change
         const newWaypoints = selectedProperties
             .map(p => parseCoordinates(p.attributes.center))
             .filter((p): p is [number, number] => p !== null)
             .map(p => L.latLng(p[0], p[1]));
         
+        console.log('Generated waypoints count:', newWaypoints.length);
+        console.log('Generated waypoints:', newWaypoints.map(wp => `${wp.lat},${wp.lng}`));
+        
         setWaypoints(newWaypoints);
+        console.log('🗺️ Waypoints state updated');
     }, [selectedProperties]);
     
     const handlePropertyDrop = (property: Property) => {

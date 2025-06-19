@@ -670,19 +670,73 @@ const RoutingMachine = ({ waypoints, onRouteFound, transportMode, properties }: 
     };
 
     useEffect(() => {
-        if (!map || waypoints.length < 2) return;
+        console.log('🔍 RoutingMachine useEffect triggered');
+        console.log('Map available:', !!map);
+        console.log('Waypoints count:', waypoints.length);
+        console.log('Waypoints:', waypoints.map(wp => `${wp.lat},${wp.lng}`));
+        console.log('Current route layers count:', routeLayersRef.current.length);
+        
+        if (!map) return;
 
         // Cleanup function to remove old routes
         const cleanup = () => {
-            routeLayersRef.current.forEach(layer => {
-                if (map.hasLayer(layer)) {
-                    map.removeLayer(layer);
+            console.log('🧹 Cleaning up routes - removing', routeLayersRef.current.length, 'layers');
+            
+            // Remove all tracked layers
+            routeLayersRef.current.forEach((layer, index) => {
+                try {
+                    if (map.hasLayer(layer)) {
+                        map.removeLayer(layer);
+                        console.log(`  ✓ Removed layer ${index} from map`);
+                    } else {
+                        console.log(`  ⚠️ Layer ${index} not found on map`);
+                    }
+                } catch (error) {
+                    console.error(`  ❌ Error removing layer ${index}:`, error);
                 }
             });
+            
+            // Clear the reference array
             routeLayersRef.current = [];
+            
+            // Additional cleanup: remove any route-related layers that might have been missed
+            // This is a failsafe to remove any polylines or markers with route-specific classes
+            try {
+                map.eachLayer((layer: any) => {
+                    // Check if layer has route-specific classes or properties
+                    if (layer.options && (
+                        layer.options.className?.includes('animated-route-line') ||
+                        layer.options.className?.includes('route-line') ||
+                        layer.options.className?.includes('navigation-line')
+                    )) {
+                        map.removeLayer(layer);
+                        console.log('  🔧 Removed orphaned route layer');
+                    }
+                    
+                    // Remove route waypoint markers
+                    if (layer._icon && layer._icon.className?.includes('route-waypoint')) {
+                        map.removeLayer(layer);
+                        console.log('  🔧 Removed orphaned waypoint marker');
+                    }
+                });
+            } catch (error) {
+                console.error('  ❌ Error in additional cleanup:', error);
+            }
+            
+            console.log('🧹 Cleanup complete');
         };
 
+        // Always cleanup first
         cleanup();
+
+        // If there are fewer than 2 waypoints, clear the route summary and return
+        if (waypoints.length < 2) {
+            console.log('🚫 Less than 2 waypoints - clearing route summary and stopping');
+            onRouteFound(null);
+            return cleanup;
+        }
+
+        console.log('✅ Proceeding with route calculation for', waypoints.length, 'waypoints');
 
         const drawRoute = async () => {
             const drawnLayers: L.Layer[] = [];
@@ -729,6 +783,7 @@ const RoutingMachine = ({ waypoints, onRouteFound, transportMode, properties }: 
                         dashArray: transportMode === 'ship' ? '15, 10' : '10, 10'
                     }).addTo(map);
                     drawnLayers.push(line);
+                    console.log(`  📍 Added ${transportMode} route line to map`);
                     
                     const time = distance / getSpeed(transportMode);
                     totalDistance += distance;
@@ -958,8 +1013,10 @@ const RoutingMachine = ({ waypoints, onRouteFound, transportMode, properties }: 
             console.log('Total segments:', segments.length);
             console.log('Total distance:', totalDistance);
             console.log('Total time:', totalTime);
+            console.log('Total drawn layers:', drawnLayers.length);
 
             routeLayersRef.current = drawnLayers;
+            console.log('📍 Stored', drawnLayers.length, 'layers in routeLayersRef for future cleanup');
 
             // Return route summary
             const summary: RouteSummary = {
