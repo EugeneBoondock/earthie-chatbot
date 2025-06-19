@@ -115,6 +115,7 @@ type Property = {
   attributes: {
     center: string; // Needed for the map
     description: string;
+    location?: string; // Full location string like "Anse-la-Raye, Anse la Raye Quarter, Saint Lucia"
     country: string;
     tileCount: number;
     landfieldTier: number;
@@ -469,7 +470,17 @@ const PropertyListItem = React.memo(({
         </div>
 
         <div className="flex items-center justify-between text-gray-400 text-xs">
-          <span className="truncate">{prop.attributes.country} • {prop.attributes.tileCount.toLocaleString()} tiles</span>
+          <span className="truncate">
+            {prop.attributes.location ? (
+              <>
+                {prop.attributes.location} • {prop.attributes.tileCount.toLocaleString()} tiles
+              </>
+            ) : (
+              <>
+                {prop.attributes.country} • {prop.attributes.tileCount.toLocaleString()} tiles
+              </>
+            )}
+          </span>
           {prop.attributes.price > 0 && (
             <span className="text-green-400 font-medium ml-2">
               {formatPrice(prop.attributes.price)}
@@ -654,6 +665,7 @@ export default function LogisticsPage() {
             attributes: {
               center: e2Property.attributes.center || '',
               description: e2Property.attributes.description || '',
+              location: e2Property.attributes.location || '',
               country: e2Property.attributes.country || '',
               tileCount: e2Property.attributes.tileCount || 0,
               landfieldTier: e2Property.attributes.landfieldTier || 1,
@@ -1045,6 +1057,7 @@ export default function LogisticsPage() {
       // Create a comprehensive search that matches various location formats with priority scoring
       const searchResults = enhancedProperties.map(p => {
         const description = p.attributes.description.toLowerCase();
+        const location = (p.attributes.location || '').toLowerCase();
         const country = p.attributes.country.toLowerCase();
         const logisticsRoleLabel = p.logisticsRole ? getPropertyRoleInfo(p.logisticsRole).label.toLowerCase() : '';
         
@@ -1058,32 +1071,26 @@ export default function LogisticsPage() {
         let score = 0;
         let matched = false;
         
-        // High priority: Exact country name match
-        if (country === query) {
-          score += 100;
+        // HIGHEST priority: Full location field match (contains detailed location info)
+        if (location && location.includes(query)) {
+          score += 150;
           matched = true;
+          
+          // Extra bonus for exact match in location parts
+          const locationParts = location.split(',').map(part => part.trim());
+          if (locationParts.some(part => part === query)) {
+            score += 50; // Major bonus for exact city/region match
+          }
+          
+          // Bonus for query being at the start of location (more specific)
+          if (location.startsWith(query)) {
+            score += 25;
+          }
         }
         
-        // High priority: Country name contains query or query contains country
-        if (country.includes(query) || query.includes(country)) {
-          score += 80;
-          matched = true;
-        }
-        
-        // Enhanced country matching with common variations
-        const countryVariations = getCountryVariations(query);
-        const exactCountryMatch = countryVariations.find(variation => country === variation);
-        if (exactCountryMatch) {
-          score += 90;
-          matched = true;
-        } else if (countryVariations.some(variation => country.includes(variation))) {
-          score += 70;
-          matched = true;
-        }
-        
-        // Medium-high priority: Property description contains query
+        // High priority: Property description contains query
         if (description.includes(query)) {
-          score += 60;
+          score += 70;
           matched = true;
         }
         
@@ -1112,8 +1119,14 @@ export default function LogisticsPage() {
           matched = true;
         }
         
+        // Country match only as fallback (much lower priority)
+        if (country.includes(query)) {
+          score += 20;
+          matched = true;
+        }
+        
         // Lowest priority: Any partial text match in combined searchable text
-        const searchableText = [description, country, logisticsRoleLabel, locationContext].join(' ');
+        const searchableText = [description, location, country, logisticsRoleLabel, locationContext].join(' ');
         if (searchableText.includes(query) && !matched) {
           score += 10;
           matched = true;
@@ -1816,7 +1829,7 @@ export default function LogisticsPage() {
                   <div className="relative flex-grow">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input 
-                      placeholder="Search by country, property name, or location..."
+                      placeholder="Search locations, cities, regions, or property names..."
                       value={searchQuery}
                       onChange={handleSearchChange}
                       className="pl-10 bg-gray-800/60 backdrop-blur-sm border-cyan-400/30 focus:border-cyan-400"
