@@ -17,7 +17,9 @@ import {
   UserIcon, 
   Book, 
   Building,
-  FileText 
+  FileText,
+  MapPin,
+  Truck 
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
@@ -205,6 +207,16 @@ export default function HomePageClientContent() {
               <h3 className="text-xl font-bold text-white flex items-center gap-2">Essence Report</h3>
               <p className="text-center text-gray-300 text-sm flex-grow"> Comprehensive analytics and insights for the E2-E token ecosystem with historical data tracking and weekly reports. </p>
               <Link href="/hub/essence-report" passHref className="mt-auto pt-4"> <Button variant="outline" className="bg-[#343547] text-[#50E3C1] border-[#50E3C1] hover:bg-[#50E3C1]/10 hover:text-[#50E3C1]"> View Report <ArrowRight className="ml-2 h-4 w-4" /> </Button> </Link>
+            </div>
+            {/* Logistics Command Center */}
+            <div className="flex flex-col items-center space-y-4 p-6 rounded-2xl bg-gradient-to-br from-[#0b0e13]/80 to-[#23243a]/70 border border-[#1d1f24] relative">
+              {userLoaded && !user && (
+                <span className="absolute top-3 right-3 px-2 py-0.5 text-xs rounded bg-rose-500/30 text-rose-200 animate-pulse shadow-sm" style={{zIndex:2, fontWeight:500, letterSpacing:'0.02em'}}>Login Required</span>
+              )}
+              <div className="p-3 rounded-full bg-cyan-400/20"> <Truck className="w-8 h-8 text-cyan-400" /> </div>
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">Logistics Command Center</h3>
+              <p className="text-center text-gray-300 text-sm flex-grow"> Advanced property logistics planning with interactive satellite maps, intelligent routing, multi-modal transport, and country-based search capabilities. </p>
+              <Link href="/hub/logistics" passHref className="mt-auto pt-4"> <Button variant="outline" className="bg-[#343547] text-cyan-400 border-cyan-400 hover:bg-cyan-400/10 hover:text-cyan-400"> Open Command Center <ArrowRight className="ml-2 h-4 w-4" /> </Button> </Link>
             </div>
           </div>
         </div>
