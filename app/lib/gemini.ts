@@ -44,7 +44,7 @@ import {
   
   // Define types for our chat (using "model" role for Gemini)
   export type Message = {
-    role: "user" | "model";
+    role: "user" | "model" | "assistant";
     content: string;
   };
   export type ChatHistory = Message[];
@@ -317,7 +317,7 @@ import {
         const historyContents: Content[] = messages
             .filter(m => m.content?.trim()) // Filter out empty/null content
             .map(m => ({
-                role: m.role,
+                role: m.role === 'assistant' ? 'model' : m.role,
                 parts: [{ text: m.content }],
             }));
   
