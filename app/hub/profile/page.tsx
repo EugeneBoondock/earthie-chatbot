@@ -1251,8 +1251,8 @@ export default function ProfilePage() {
                                 { label: 'Class', value: attrs.tileClass !== null && attrs.tileClass !== undefined && String(attrs.tileClass).trim() !== '' ? `Class ${attrs.tileClass}` : 'N/A', icon: <Tag size={14} className="text-sky-400/90"/> },
                                 { label: 'Price', value: attrs.forSale ? attrs.price : undefined, isCurrency: true, icon: <Tag size={14} className="text-sky-400/90"/>, formatOpts: {minimumFractionDigits:2, maximumFractionDigits:2} },
                                 { label: 'Purchase Value', value: attrs.purchaseValue, isCurrency: true, icon: <Tag size={14} className="text-sky-400/90"/>, formatOpts: {minimumFractionDigits:2, maximumFractionDigits:2} },
-                                { label: 'Trading Value', value: attrs.tradingValue, isCurrency: true, icon: <Zap size={14} className="text-sky-400/90"/>, formatOpts: {minimumFractionDigits:3, maximumFractionDigits:3} },
-                                { label: 'Essence', value: attrs.claimedEssenceBalance ? parseFloat(String(attrs.claimedEssenceBalance).replace(/,/g, '')).toLocaleString(undefined, {maximumFractionDigits:2}) : '0', icon: <Gem size={14} className="text-sky-400/90"/> },
+                                { label: 'Tile Value', value: attrs.tradingValue, isCurrency: true, icon: <Zap size={14} className="text-sky-400/90"/>, formatOpts: {minimumFractionDigits:3, maximumFractionDigits:3} },
+                                { label: 'Essence Claimed', value: attrs.claimedEssenceBalance ? parseFloat(String(attrs.claimedEssenceBalance).replace(/,/g, '')).toLocaleString(undefined, {maximumFractionDigits:2}) : '0', icon: <Gem size={14} className="text-sky-400/90"/> },
                             ].map(item => item.value !== undefined && item.value !== null && (
                                 <div key={item.label} className="flex items-center space-x-1.5">
                                     {item.icon} <span className="text-sky-400/80">{item.label}:</span> 
