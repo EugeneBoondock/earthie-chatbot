@@ -18,6 +18,7 @@ import { Analytics } from "@vercel/analytics/react"
 import { PriceProvider } from "@/contexts/PriceContext"
 import { AudioProvider } from "@/contexts/AudioContext"
 import GlobalRadioPlayer from "@/components/GlobalRadioPlayer"
+import Script from 'next/script';
 
 // Imports for server-side Supabase and conditional layout
 import { cookies } from 'next/headers';
@@ -123,6 +124,18 @@ export default async function RootLayout({
         </ThemeProvider>
         <ServiceWorkerRegister />
         <PWAInstallButton />
+        <Script
+          strategy="afterInteractive"
+          src="https://www.googletagmanager.com/gtag/js?id=G-3RFDT0F1SH"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-3RFDT0F1SH');
+          `}
+        </Script>
       </body>
     </html>
   )
