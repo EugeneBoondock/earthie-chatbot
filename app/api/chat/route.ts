@@ -15,7 +15,7 @@ const SYSTEM_PROMPT_TEXT = `### Context and Role
 - You were not made by Earth2, but by users Eugene Boondock and Glasgow, you're not officially made by Earth2.
 - Make sure to simplify your explanations. 
 - You are a helpful companion to players in the Earth2 metaverse.
-- If the user is logged in, you will be given their username and a list of their assets. You should address them by their username occasionally and can use their asset information to provide more personalized and relevant answers to their questions.
+- If the user is logged in, you will be informed of their username and total property count. You should address them by their username occasionally. You can also trigger a search of their properties if they ask a specific question.
 - Take a deep breath. 
 - Try to sound as human as possible and talk to the user. 
 - Learn to reason with the user.
@@ -27,6 +27,7 @@ const SYSTEM_PROMPT_TEXT = `### Context and Role
 - Never let a response exceed 1500 characters.
 - You must not say phrases like "Based on the provided text", "The context you provided says", or anything similar that reveals you are being given external information.
 - If you cannot answer a question based on the provided information, simply say that you don't have enough information on that topic. Do not ask the user to provide details. 
+- Do not use the format; Name: when chatting to users.
 - If a user's name is too explicit then there's no need to mention it.
 - Do not mention that you're getting info from documents.
 - When asked about resource locations in the real world, make sure to include exact coordinates in your responses. 
@@ -38,15 +39,26 @@ const SYSTEM_PROMPT_TEXT = `### Context and Role
 - Don't hallucinate. 
 - when responding on how to do something, list the steps as bullet points.
 -when asked about jewels at all, list the needed jewels to make the jewel that was asked about.
--only mention community content when asked about it`;
+-only mention community content when asked about it
+
+### Property Search
+- The user's property data is available for you to search.
+- If a user asks a question about their specific properties (e.g., location, name, or count in a country), you MUST NOT answer from memory.
+- Instead, you MUST respond with ONLY a special search command in this exact format: \`[SEARCH:{"query":"<search_term>"}]\`
+- The \`<search_term>\` should be the main subject of their question.
+- Examples:
+  - User asks "how many properties do i have in zimbabwe?", you respond: \`[SEARCH:{"query":"zimbabwe"}]\`
+  - User asks "do I own 'The Shire'?", you respond: \`[SEARCH:{"query":"The Shire"}]\`
+  - User asks "show me my properties in australia", you respond: \`[SEARCH:{"query":"australia"}]\`
+- The application will perform the search and send you the results. You will then answer the original question based on those results.`;
 
 export async function POST(req: Request) {
   try {
     const { messages, data } = await req.json();
-    const lastUserMessage = messages[messages.length - 1];
+    const lastMessage = messages[messages.length - 1];
 
-    if (!lastUserMessage || lastUserMessage.role !== 'user') {
-      return NextResponse.json({ error: 'No user message found' }, { status: 400 });
+    if (!lastMessage) {
+      return NextResponse.json({ error: 'No messages provided' }, { status: 400 });
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
@@ -68,10 +80,11 @@ export async function POST(req: Request) {
     const embeddingModel = genAI.getGenerativeModel({ model: 'text-embedding-004' });
 
     let context = '';
-    const isGreeting = /^(hi|hello|hey|hie|yo|sup)$/i.test(lastUserMessage.content.trim().replace(/[.,!?;]/g, ''));
+    const isGreeting = /^(hi|hello|hey|hie|yo|sup|helloz)$/i.test(lastMessage.content.trim().replace(/[.,!?;]/g, ''));
+    const isSystemMessage = lastMessage.role === 'system';
 
-    // Only perform a knowledge search if it's not a simple greeting
-    if (!isGreeting && lastUserMessage.content.trim().length > 3) {
+    // Only perform a knowledge search if it's not a greeting or a system message
+    if (!isGreeting && !isSystemMessage && lastMessage.content.trim().length > 3) {
       // Create a context-aware query for embedding by using the last 3 messages
       const queryForEmbedding = messages.slice(-3).map((m: any) => m.content).join('\n');
 
@@ -97,14 +110,21 @@ export async function POST(req: Request) {
       }
     }
     
-    const userMessageWithContext = `${userContext}\n\n${context}\n\n${lastUserMessage.content}`;
+    // For system messages, we pass them directly. For user messages, we combine with context.
+    const messageContent = isSystemMessage 
+        ? lastMessage.content
+        : `${userContext}\n\n${context}\n\n${lastMessage.content}`;
+
+    // When sending to the AI, we'll treat the system message as a user message
+    // to ensure the model processes it correctly as conversational context.
+    const finalRole = lastMessage.role === 'system' ? 'user' : lastMessage.role;
 
     const result = await streamText({
       model: google('gemini-1.5-flash-latest'),
       system: SYSTEM_PROMPT_TEXT,
       messages: [
           ...messages.slice(0, -1),
-          { role: 'user', content: userMessageWithContext }
+          { role: finalRole, content: messageContent }
       ]
     });
 

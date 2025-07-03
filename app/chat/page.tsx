@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { get as idbGet } from 'idb-keyval'
+import { Loader2, CheckCircle } from "lucide-react";
 
 
 interface E2Property {
@@ -16,6 +17,7 @@ interface E2Property {
   type: string;
   attributes: {
     description: string;
+    location?: string;
     // other attributes can be added if needed for context
   };
 }
@@ -35,10 +37,25 @@ const TypingIndicator = () => (
     </div>
 );
 
+// --- Custom Search Indicator Component ---
+const PropertySearchIndicator = ({ query, status }: { query: string; status: 'searching' | 'done' }) => (
+    <div className="flex items-center space-x-3 text-[#50E3C1]">
+      {status === 'searching' ? (
+        <Loader2 className="h-5 w-5 animate-spin" />
+      ) : (
+        <CheckCircle className="h-5 w-5" />
+      )}
+      <span className="text-sm font-semibold">
+        {status === 'searching' ? `Searching your properties for "${query}"...` : `Search complete for "${query}"`}
+      </span>
+    </div>
+  );
+
 // --- Main Chat Component ---
 export default function ChatPage() {
     const [userContext, setUserContext] = useState<string | null>(null);
-    const { messages, input, handleInputChange, handleSubmit, isLoading, setMessages } = useChat({
+    const [properties, setProperties] = useState<E2Property[]>([]);
+    const { messages, input, handleInputChange, handleSubmit, isLoading, setMessages, append } = useChat({
         api: '/api/chat',
         body: {
             data: {
@@ -50,6 +67,7 @@ export default function ChatPage() {
             // you can add logic here if needed
         },
     });
+    const processedMessageIds = useRef(new Set());
     const scrollAreaRef = useRef<HTMLDivElement>(null);
 
     // Auto-scroll to bottom
@@ -67,10 +85,9 @@ export default function ChatPage() {
     useEffect(() => {
         const fetchUserData = async () => {
             try {
-                // Step 1: Fetch the linked E2 User ID
+                // Step 1: Fetch user profile and E2 User ID
                 const profileRes = await fetch('/api/me/e2profile');
                 if (!profileRes.ok) {
-                    // User is likely not logged in or has no linked profile
                     setUserContext("The user is not logged in.");
                     return;
                 }
@@ -81,6 +98,13 @@ export default function ChatPage() {
                     const propertyCount = user_info.userLandfieldCount || 0;
                     let context = `The user is logged in. Their username is ${user_info.username}. They own ${propertyCount} properties. I have access to their property list if they ask specific questions.`;
                     setUserContext(context);
+                    
+                    // Step 2: Load properties from IndexedDB into state
+                    const cacheKey = `e2_properties_${e2_user_id}`;
+                    const cachedProps: E2Property[] | undefined = await idbGet(cacheKey);
+                    if (cachedProps) {
+                        setProperties(cachedProps);
+                    }
                 } else if (username) {
                     setUserContext(`The user is logged in. Their username is ${username}, but they have not linked an Earth 2 profile.`);
                 } else {
@@ -95,6 +119,66 @@ export default function ChatPage() {
         fetchUserData();
     }, []);
 
+    // Effect to handle property search commands from the AI
+    useEffect(() => {
+        const lastMessage = messages[messages.length - 1];
+
+        if (lastMessage && lastMessage.role === 'assistant' && !isLoading && !processedMessageIds.current.has(lastMessage.id)) {
+            const content = lastMessage.content.trim();
+            
+            if (content.startsWith('[SEARCH:') && content.endsWith(']')) {
+                processedMessageIds.current.add(lastMessage.id); // Mark as processed to prevent re-triggering
+
+                let query = '';
+                try {
+                    const jsonString = content.substring(8, content.length - 1);
+                    query = JSON.parse(jsonString).query;
+                } catch (e) {
+                    console.error("Failed to parse search JSON:", e);
+                    append({ role: 'user', content: "(System: I had a problem understanding the search request. Please try again.)" });
+                    return;
+                }
+
+                // Stage 1: Update the UI to show the "searching" indicator
+                const messageId = lastMessage.id;
+                setMessages(prev => prev.map(msg => 
+                    msg.id === messageId 
+                    ? { ...msg, content: `SEARCH_UI:${JSON.stringify({ query, status: 'searching' })}` } 
+                    : msg
+                ));
+                
+                // Stage 2: Perform the search and update UI to "done"
+                setTimeout(() => {
+                    const searchResults = properties.filter(p => 
+                        (p.attributes.description && p.attributes.description.toLowerCase().includes(query.toLowerCase())) ||
+                        (p.attributes.location && p.attributes.location.toLowerCase().includes(query.toLowerCase()))
+                    );
+
+                    setMessages(prev => prev.map(msg => 
+                        msg.id === messageId 
+                        ? { ...msg, content: `SEARCH_UI:${JSON.stringify({ query, status: 'done' })}` } 
+                        : msg
+                    ));
+
+                    const propertyCount = searchResults.length;
+                    let searchResultSummary;
+                    if (propertyCount > 0) {
+                        const propertyList = searchResults.map(p => p.attributes.description).slice(0, 5).join(', ');
+                        searchResultSummary = `I found ${propertyCount} properties matching "${query}". The first few are: ${propertyList}.`;
+                    } else {
+                        searchResultSummary = `I couldn't find any properties matching "${query}".`;
+                    }
+                    
+                    // Stage 3: Send results to AI silently
+                    append({
+                        role: 'system',
+                        content: `(System: Here are the search results for "${query}". Use them to answer my original question.)\n${searchResultSummary}`
+                    });
+                }, 1000); // Increased delay to make the UI transition clear
+            }
+        }
+    }, [messages, isLoading, properties, append, setMessages]);
+
     // Handle clearing the chat history
     const handleClearChat = () => {
         setMessages([{ id: '1', role: 'assistant', content: "Hi there! I'm **Earthie**, your guide to *Earth 2*. Ask me anything!" }]);
@@ -105,55 +189,67 @@ export default function ChatPage() {
         <div className="grid grid-rows-[1fr_auto] h-full bg-transparent overflow-hidden">
             <ScrollArea className="overflow-y-auto min-h-0" ref={scrollAreaRef}>
                 <div className="space-y-4 p-4 md:p-6 pb-4">
-                    {messages.map((msg) => (
-                        <div key={msg.id} className={`flex items-end space-x-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                            {msg.role === 'assistant' && (
-                                <Avatar className="h-8 w-8 flex-shrink-0 self-start">
-                                    <AvatarImage src="/images/earthie_logo.png" alt="Earthie" />
-                                    <AvatarFallback>E</AvatarFallback>
-                                </Avatar>
-                            )}
+                    {messages.filter(m => m.role !== 'system').map((msg) => {
+                        const isSearchMessage = msg.content.startsWith('SEARCH_UI:');
+                        let searchInfo = { query: '', status: 'searching' as 'searching' | 'done' };
+                        if (isSearchMessage) {
+                          try {
+                            searchInfo = JSON.parse(msg.content.substring(10));
+                          } catch {}
+                        }
 
-                            <div className={`p-3 rounded-lg max-w-[75%] break-words ${
-                                msg.role === 'user'
-                                ? 'bg-[#383A4B] text-white'
-                                : 'bg-gray-700 text-gray-100'
-                            }`}>
-                                {msg.role === 'assistant' ? (
-                                    <ReactMarkdown
-                                        remarkPlugins={[remarkGfm]}
-                                        components={{
-                                            a: ({ node, ...props }) => <a {...props} className="text-[#50E3C1] hover:underline" target="_blank" rel="noopener noreferrer" />,
-                                            ul: ({ node, ...props }) => <ul {...props} className="list-disc list-inside pl-4 my-2" />,
-                                            ol: ({ node, ...props }) => <ol {...props} className="list-decimal list-inside pl-4 my-2" />,
-                                            li: ({ node, ...props }) => <li {...props} className="mb-1" />,
-                                            pre: ({ node, ...props }) => <pre {...props} className="bg-gray-800 p-2 rounded-md my-2 overflow-x-auto text-sm" />,
-                                            code: ({ node, className, children, ...props }) => {
-                                                const match = /language-(\w+)/.exec(className || '');
-                                                return match ? (
-                                                    <code className={`block whitespace-pre overflow-x-auto ${className || ''}`} {...props}> {children} </code>
-                                                ) : (
-                                                    <code className={`bg-gray-600 px-1 py-0.5 rounded text-sm ${className || ''}`} {...props}> {children} </code>
-                                                );
-                                            },
-                                            p: ({node, ...props}) => <p {...props} className="mb-2 last:mb-0" />
-                                         }}
-                                    >
-                                        {msg.content}
-                                    </ReactMarkdown>
-                                ) : (
-                                    <span className="whitespace-pre-wrap">{msg.content}</span>
-                                )}
-                            </div>
+                        return (
+                          <div key={msg.id} className={`flex items-end space-x-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                              {msg.role === 'assistant' && (
+                                  <Avatar className="h-8 w-8 flex-shrink-0 self-start">
+                                      <AvatarImage src="/images/earthie_logo.png" alt="Earthie" />
+                                      <AvatarFallback>E</AvatarFallback>
+                                  </Avatar>
+                              )}
 
-                            {msg.role === 'user' && (
-                                <Avatar className="h-8 w-8 flex-shrink-0 self-start">
-                                    <AvatarImage src="/images/user_beard.png" alt="User Avatar" />
-                                    <AvatarFallback>U</AvatarFallback>
-                                </Avatar>
-                            )}
-                        </div>
-                    ))}
+                              <div className={`p-3 rounded-lg max-w-[75%] break-words ${
+                                  msg.role === 'user'
+                                  ? 'bg-[#383A4B] text-white'
+                                  : 'bg-gray-700 text-gray-100'
+                              }`}>
+                                  {isSearchMessage ? (
+                                    <PropertySearchIndicator query={searchInfo.query} status={searchInfo.status} />
+                                  ) : msg.role === 'assistant' ? (
+                                      <ReactMarkdown
+                                          remarkPlugins={[remarkGfm]}
+                                          components={{
+                                              a: ({ node, ...props }) => <a {...props} className="text-[#50E3C1] hover:underline" target="_blank" rel="noopener noreferrer" />,
+                                              ul: ({ node, ...props }) => <ul {...props} className="list-disc list-inside pl-4 my-2" />,
+                                              ol: ({ node, ...props }) => <ol {...props} className="list-decimal list-inside pl-4 my-2" />,
+                                              li: ({ node, ...props }) => <li {...props} className="mb-1" />,
+                                              pre: ({ node, ...props }) => <pre {...props} className="bg-gray-800 p-2 rounded-md my-2 overflow-x-auto text-sm" />,
+                                              code: ({ node, className, children, ...props }) => {
+                                                  const match = /language-(\w+)/.exec(className || '');
+                                                  return match ? (
+                                                      <code className={`block whitespace-pre overflow-x-auto ${className || ''}`} {...props}> {children} </code>
+                                                  ) : (
+                                                      <code className={`bg-gray-600 px-1 py-0.5 rounded text-sm ${className || ''}`} {...props}> {children} </code>
+                                                  );
+                                              },
+                                              p: ({node, ...props}) => <p {...props} className="mb-2 last:mb-0" />
+                                           }}
+                                      >
+                                          {msg.content}
+                                      </ReactMarkdown>
+                                  ) : (
+                                      <span className="whitespace-pre-wrap">{msg.content}</span>
+                                  )}
+                              </div>
+
+                              {msg.role === 'user' && (
+                                  <Avatar className="h-8 w-8 flex-shrink-0 self-start">
+                                      <AvatarImage src="/images/user_beard.png" alt="User Avatar" />
+                                      <AvatarFallback>U</AvatarFallback>
+                                  </Avatar>
+                              )}
+                          </div>
+                        )
+                    })}
                     {isLoading && <TypingIndicator />}
                 </div>
             </ScrollArea>
