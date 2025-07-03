@@ -84,7 +84,8 @@ export async function GET(request: Request) {
       return NextResponse.json({
         e2_user_id: null,
         username: userProfile.username,
-        avatar_url: userProfile.avatar_url
+        avatar_url: userProfile.avatar_url,
+        user_info: null
       });
     }
 
@@ -153,8 +154,9 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       e2_user_id: e2Profile?.e2_user_id || null,
-      username: userProfile?.username || e2UserInfo?.username || null,
-      avatar_url: e2UserInfo?.customPhoto || e2UserInfo?.picture || userProfile?.avatar_url || null
+      username: e2UserInfo?.username || userProfile?.username || null,
+      avatar_url: e2UserInfo?.customPhoto || e2UserInfo?.picture || userProfile?.avatar_url || null,
+      user_info: e2UserInfo
     });
   } catch (error: any) {
     console.error('Catch block error in GET E2 profile:', error.message);

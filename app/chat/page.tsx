@@ -75,22 +75,14 @@ export default function ChatPage() {
                     return;
                 }
                 
-                const { e2_user_id, username } = await profileRes.json();
+                const { e2_user_id, user_info, username } = await profileRes.json();
                 
-                if (e2_user_id && username) {
-                    let context = `The user is logged in. Their username is ${username}.`;
-                    
-                    // Step 2: Try to load properties from IndexedDB
-                    const cacheKey = `e2_properties_${e2_user_id}`;
-                    const cachedProps: E2Property[] | undefined = await idbGet(cacheKey);
-
-                    if (cachedProps && cachedProps.length > 0) {
-                        const propertyNames = cachedProps.map(p => p.attributes.description).slice(0, 10).join(', ');
-                        context += ` Their cached assets include: ${propertyNames}.`;
-                    } else {
-                        context += " The user's assets are not currently cached in the browser.";
-                    }
+                if (e2_user_id && user_info) {
+                    const propertyCount = user_info.userLandfieldCount || 0;
+                    let context = `The user is logged in. Their username is ${user_info.username}. They own ${propertyCount} properties. I have access to their property list if they ask specific questions.`;
                     setUserContext(context);
+                } else if (username) {
+                    setUserContext(`The user is logged in. Their username is ${username}, but they have not linked an Earth 2 profile.`);
                 } else {
                     setUserContext("User is logged in but has not linked an Earth 2 profile.");
                 }
