@@ -15,8 +15,7 @@ const SYSTEM_PROMPT_TEXT = `### Context and Role
 - You were not made by Earth2, but by users Eugene Boondock and Glasgow, you're not officially made by Earth2.
 - Make sure to simplify your explanations. 
 - You are a helpful companion to players in the Earth2 metaverse.
-- Double check before answering a question, make sure you check the sources thoroughly before claiming that there is no information provided, triple check too. 
-- If a user asks you general questions unrelated to Earth2, you're allowed to also respond in a general way to that general prompt, be versatile.
+- If the user is logged in, you will be given their username and a list of their assets. You should address them by their username occasionally and can use their asset information to provide more personalized and relevant answers to their questions.
 - Take a deep breath. 
 - Try to sound as human as possible and talk to the user. 
 - Learn to reason with the user.
@@ -28,7 +27,6 @@ const SYSTEM_PROMPT_TEXT = `### Context and Role
 - Never let a response exceed 1500 characters.
 - You must not say phrases like "Based on the provided text", "The context you provided says", or anything similar that reveals you are being given external information.
 - If you cannot answer a question based on the provided information, simply say that you don't have enough information on that topic. Do not ask the user to provide details. 
-- Do not use the format; Name: when chatting to users.
 - If a user's name is too explicit then there's no need to mention it.
 - Do not mention that you're getting info from documents.
 - When asked about resource locations in the real world, make sure to include exact coordinates in your responses. 
@@ -44,7 +42,7 @@ const SYSTEM_PROMPT_TEXT = `### Context and Role
 
 export async function POST(req: Request) {
   try {
-    const { messages } = await req.json();
+    const { messages, data } = await req.json();
     const lastUserMessage = messages[messages.length - 1];
 
     if (!lastUserMessage || lastUserMessage.role !== 'user') {
@@ -60,38 +58,46 @@ export async function POST(req: Request) {
     if (!supabaseUrl || !supabaseServiceKey) {
       throw new Error('Supabase environment variables are not set.');
     }
+    
+    const userContext = data?.userContext || "The user is not logged in.";
 
     // Initialize clients
-    // Vercel AI SDK client for streaming chat
     const google = createGoogleGenerativeAI({ apiKey });
-    // Google AI SDK client for embeddings
     const genAI = new GoogleGenerativeAI(apiKey);
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const embeddingModel = genAI.getGenerativeModel({ model: 'text-embedding-004' });
 
-    // Create a context-aware query for embedding by using the last 3 messages
-    const queryForEmbedding = messages.slice(-3).map((m: any) => m.content).join('\n');
+    let context = '';
+    const isGreeting = /^(hi|hello|hey|hie|yo|sup)$/i.test(lastUserMessage.content.trim().replace(/[.,!?;]/g, ''));
 
-    // 1. Get embedding for the user's query
-    const embeddingResult = await embeddingModel.embedContent(queryForEmbedding);
-    const userQueryEmbedding = embeddingResult.embedding.values;
+    // Only perform a knowledge search if it's not a simple greeting
+    if (!isGreeting && lastUserMessage.content.trim().length > 3) {
+      // Create a context-aware query for embedding by using the last 3 messages
+      const queryForEmbedding = messages.slice(-3).map((m: any) => m.content).join('\n');
 
-    // 2. Query Supabase for relevant knowledge
-    const { data: knowledge, error: rpcError } = await supabase.rpc('match_knowledge', {
-      query_embedding: userQueryEmbedding,
-      match_threshold: 0.5,
-      match_count: 20
-    });
+      // 1. Get embedding for the user's query
+      const embeddingResult = await embeddingModel.embedContent(queryForEmbedding);
+      const userQueryEmbedding = embeddingResult.embedding.values;
 
-    if (rpcError) {
-      console.error('Error fetching knowledge from Supabase:', rpcError);
-      throw new Error('Failed to fetch knowledge from database.');
+      // 2. Query Supabase for relevant knowledge
+      const { data: knowledge, error: rpcError } = await supabase.rpc('match_knowledge', {
+        query_embedding: userQueryEmbedding,
+        match_threshold: 0.5,
+        match_count: 20,
+      });
+
+      if (rpcError) {
+        console.error('Error fetching knowledge from Supabase:', rpcError);
+        // We can choose to continue without context or throw an error.
+        // For now, let's just log it and continue.
+      }
+      
+      if (knowledge && knowledge.length > 0) {
+        context = knowledge.map((k: any) => k.content).join('\n\n---\n\n');
+      }
     }
-
-    // 3. Construct context from retrieved knowledge
-    const context = knowledge.map((k: any) => k.content).join('\n\n---\n\n');
     
-    const userMessageWithContext = `${context}\n\n${lastUserMessage.content}`;
+    const userMessageWithContext = `${userContext}\n\n${context}\n\n${lastUserMessage.content}`;
 
     const result = await streamText({
       model: google('gemini-1.5-flash-latest'),

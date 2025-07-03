@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useEffect } from "react"
+import { useRef, useEffect, useState } from "react"
 import { useChat } from 'ai/react';
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,6 +8,17 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { get as idbGet } from 'idb-keyval'
+
+
+interface E2Property {
+  id: string;
+  type: string;
+  attributes: {
+    description: string;
+    // other attributes can be added if needed for context
+  };
+}
 
 // --- Typing Indicator Component ---
 const TypingIndicator = () => (
@@ -26,8 +37,18 @@ const TypingIndicator = () => (
 
 // --- Main Chat Component ---
 export default function ChatPage() {
+    const [userContext, setUserContext] = useState<string | null>(null);
     const { messages, input, handleInputChange, handleSubmit, isLoading, setMessages } = useChat({
+        api: '/api/chat',
+        body: {
+            data: {
+                userContext
+            }
+        },
         initialMessages: [{ id: '1', role: 'assistant', content: "Hi there! I'm **Earthie**, your guide to *Earth 2*. Ask me anything!" }],
+        onFinish() {
+            // you can add logic here if needed
+        },
     });
     const scrollAreaRef = useRef<HTMLDivElement>(null);
 
@@ -43,6 +64,44 @@ export default function ChatPage() {
       }
     }, [messages, isLoading]);
 
+    useEffect(() => {
+        const fetchUserData = async () => {
+            try {
+                // Step 1: Fetch the linked E2 User ID
+                const profileRes = await fetch('/api/me/e2profile');
+                if (!profileRes.ok) {
+                    // User is likely not logged in or has no linked profile
+                    setUserContext("The user is not logged in.");
+                    return;
+                }
+                
+                const { e2_user_id, username } = await profileRes.json();
+                
+                if (e2_user_id && username) {
+                    let context = `The user is logged in. Their username is ${username}.`;
+                    
+                    // Step 2: Try to load properties from IndexedDB
+                    const cacheKey = `e2_properties_${e2_user_id}`;
+                    const cachedProps: E2Property[] | undefined = await idbGet(cacheKey);
+
+                    if (cachedProps && cachedProps.length > 0) {
+                        const propertyNames = cachedProps.map(p => p.attributes.description).slice(0, 10).join(', ');
+                        context += ` Their cached assets include: ${propertyNames}.`;
+                    } else {
+                        context += " The user's assets are not currently cached in the browser.";
+                    }
+                    setUserContext(context);
+                } else {
+                    setUserContext("User is logged in but has not linked an Earth 2 profile.");
+                }
+            } catch (error) {
+                console.error("Error fetching user data for chat:", error);
+                setUserContext("The user is not logged in or an error occurred.");
+            }
+        };
+
+        fetchUserData();
+    }, []);
 
     // Handle clearing the chat history
     const handleClearChat = () => {
