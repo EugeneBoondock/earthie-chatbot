@@ -76,9 +76,15 @@ export default function ChatPage() {
         initialMessages: [{ id: '1', role: 'assistant', content: "Hi there! I'm **Earthie**, your guide to *Earth 2*. Ask me anything!" }],
         onFinish(message: Message) {
             if (isVoiceModeActive) {
-                const cleanContent = message.content.replace(/\[SEARCH:.*?\]/g, '').trim();
-                if (cleanContent) {
-                    setTextToSpeak(cleanContent);
+                const content = message.content;
+                // Don't speak messages that are search commands.
+                // The actual answer will arrive in a subsequent message after the search is complete.
+                const isSearchCommand = content.includes('[SEARCH:');
+                
+                if (!isSearchCommand && content.trim()) {
+                    // Clean up any markdown that shouldn't be spoken
+                    const textToSpeak = content.replace(/(\*|_|`)/g, '');
+                    setTextToSpeak(textToSpeak);
                 }
             }
         },
