@@ -120,6 +120,14 @@ const podcasts: Podcast[] = [
     duration: "48:00",
     image: "/images/radio_thumbnail.jpeg",
     audioUrl: "/radio/feb92025ep13.mp3"
+  },
+  {
+    id: "14",
+    title: "Chapter 2: Teleportation",
+    description: "Fourteenth episode of the Earth2 Radio show.",
+    duration: "17:38",
+    image: "/images/radio_thumbnail.jpeg",
+    audioUrl: "/radio/may82025ep14.mp3"
   }
 ]
 

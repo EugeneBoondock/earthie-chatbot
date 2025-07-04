@@ -1,0 +1,9 @@
+# *
+User-agent: *
+Allow: /
+
+# Host
+Host: https://www.earthie.world
+
+# Sitemaps
+Sitemap: https://www.earthie.world/sitemap.xml
