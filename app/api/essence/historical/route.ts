@@ -1,6 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 const ESSENCE_TOKEN_ADDRESS = "0x2c0687215aca7f5e2792d956e170325e92a02aca";
 const EARTH2_WITHDRAWAL_ADDRESS = "0x68d332EC97800Aa1a112160195cc281978eC8Eea";
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
