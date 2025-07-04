@@ -5,6 +5,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { Metadata } from 'next';
 import {
   Select,
   SelectContent,
@@ -29,6 +30,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { PropertyMap } from "@/components/PropertyMap";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useAudioPlayer } from "@/contexts/AudioContext"; // Import the global audio player hook
+
+export const metadata: Metadata = {
+  title: "Know Your Land | In-Depth Earth 2 Property Analysis",
+  description: "Get detailed insights into your Earth 2 properties with Know Your Land. Analyze location data, historical information, and local resources to make informed decisions about your land assets.",
+};
 
 // Types for property data
 interface PropertyData {

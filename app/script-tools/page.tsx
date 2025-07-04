@@ -11,8 +11,14 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert" 
 import { AlertTriangle } from "lucide-react"
 import Link from "next/link"
+import type { Metadata } from 'next';
 // Ensure all necessary icons are imported
 import { Upload, Check, X, Loader2, Download, Heart, Link as LinkIcon } from "lucide-react"
+
+export const metadata: Metadata = {
+  title: "Earth 2 Script Tools | Community-Driven Scripts & Utilities",
+  description: "Browse and share community-created scripts for Earth 2. Find tools for property analysis, raid assistance, and more. Enhance your gameplay with scripts from the Earthie community.",
+};
 
 // --- Supabase Configuration ---
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;

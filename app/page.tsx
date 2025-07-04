@@ -5,6 +5,12 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { Database } from '@/lib/database.types';
 import HomePageClientContent from '@/components/HomePageClientContent'; // Import the new client component
 import HubOverview from '@/components/HubOverview';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: "Earthie: The Essential Earth 2 Dashboard for Tools & Analytics",
+  description: "Get the competitive edge in Earth 2 with Earthie's comprehensive dashboard. Access advanced player tools, property insights, live Essence price tracking, and community-driven scripts. Your all-in-one hub for Earth 2.",
+};
 
 export default async function Home() {
   // NOTE: We might still need Supabase instance here if HomePageClientContent needs initial data

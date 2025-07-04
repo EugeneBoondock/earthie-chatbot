@@ -1,6 +1,12 @@
 import React from 'react';
 import Link from 'next/link'; // Import Link for potential future links
 import { Bot } from 'lucide-react'; // Example icon
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: "About Earthie | The AI-Powered Earth 2 Companion",
+  description: "Learn about Earthie, the AI-powered companion for Earth 2, created by Eugene Boondock and Mitch Glasgow. Discover how our Google Gemini-powered assistant provides players with expert insights, data, and tools.",
+};
 
 export default function AboutPage() {
   return (

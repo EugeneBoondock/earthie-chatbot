@@ -29,8 +29,11 @@ import ConditionalLayoutRenderer from '@/components/ConditionalLayoutRenderer';
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Earthie",
-  description: "Your Earth2 companion",
+  title: {
+    default: "Earthie: Your Ultimate Earth 2 Companion for Stats & Tools",
+    template: "%s | Earthie",
+  },
+  description: "Enhance your Earth 2 experience with Earthie, the all-in-one platform for player tools, property analysis, live Essence tracking, community scripts, and the latest news. Your essential Earth2 companion.",
   themeColor: "#50E3C1",
   manifest: "/manifest.json",
   icons: {

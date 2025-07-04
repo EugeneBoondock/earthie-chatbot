@@ -19,6 +19,12 @@ import {
 } from 'chart.js';
 import { createClient } from '@supabase/supabase-js';
 import { usePriceContext } from '@/contexts/PriceContext';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: "Live Earth 2 Essence Tracker | Price, Charts & Analytics",
+  description: "Track the live price of Earth 2's Essence token with real-time charts and analytics. Monitor market cap, trading volume, and wallet transactions with our comprehensive Essence tracker.",
+};
 
 ChartJS.register(
   CategoryScale,

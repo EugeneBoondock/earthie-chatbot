@@ -6,6 +6,7 @@ import LobbyistPost from './components/LobbyistPost';
 import CreatePostModal from './components/CreatePostModal';
 import PostSkeleton from './components/PostSkeleton';
 import DiscoverPeopleModal from './components/DiscoverPeopleModal';
+import type { Metadata } from 'next';
 import { 
   MessageSquare, 
   Users, 
@@ -34,6 +35,11 @@ import { Input } from '@/components/ui/input';
 import { supabase } from '@/lib/supabase';
 import type { User } from '@supabase/supabase-js';
 import dynamic from 'next/dynamic';
+
+export const metadata: Metadata = {
+  title: "The Lobbyist | Earth 2 Social Hub & Community Forum",
+  description: "Join The Lobbyist, the official social hub for Earth 2 players. Share posts, discuss strategies, and connect with the community in our interactive forum.",
+};
 
 interface Reaction {
   reaction_type: string;

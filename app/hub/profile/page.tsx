@@ -5,6 +5,13 @@ import { usePriceContext } from '@/contexts/PriceContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"; 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: "My Earth 2 Profile | Stats, Properties & Portfolio",
+  description: "View your complete Earth 2 profile on Earthie. Track your net worth, property portfolio, and key statistics in one convenient dashboard. Analyze your performance and manage your assets.",
+};
+
 import { Loader2, AlertCircle, MapPin, Maximize, Building, Zap, Tag, Landmark, CheckCircle, XCircle, Gem, ShieldCheck, User, Globe, ArrowUpRight, LinkIcon, RefreshCw } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer, Sector } from 'recharts';
 import { BarChart, CartesianGrid, XAxis, YAxis, Bar } from 'recharts';

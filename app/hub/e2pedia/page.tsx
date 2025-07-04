@@ -7,6 +7,12 @@ import { createClient } from '@supabase/supabase-js';
 
 import E2PediaClientContent from './E2PediaClientContent';
 import { Database } from '@/lib/database.types'; // Assuming type generation
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: "E2Pedia | The Official Earth 2 Knowledge Base & Announcements",
+  description: "Explore E2Pedia, the comprehensive knowledge base for Earth 2. Find official announcements, articles, and updates to stay informed on all aspects of the metaverse.",
+};
 
 // Define a type for our articles fetched from Supabase
 export interface Article {
