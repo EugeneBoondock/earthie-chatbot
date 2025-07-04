@@ -192,6 +192,24 @@ export default function ChatPage() {
         }
     }, [messages, isLoading, properties, append, setMessages]);
 
+    // Effect to clean up search-related UI messages after the AI has responded
+    useEffect(() => {
+        const lastMessage = messages[messages.length - 1];
+        const secondLastMessage = messages[messages.length - 2];
+
+        // Check if the last two messages indicate the end of a search cycle
+        if (
+            lastMessage?.role === 'assistant' &&
+            secondLastMessage?.role === 'system'
+        ) {
+            // Only remove the SEARCH_UI message which is for the user's benefit.
+            // Keep the system message in the history for the AI's context (it's filtered out in render anyway).
+            setMessages(prevMessages =>
+                prevMessages.filter(msg => !msg.content.startsWith('SEARCH_UI:'))
+            );
+        }
+    }, [messages, setMessages]);
+
     // Handle clearing the chat history
     const handleClearChat = () => {
         setMessages([{ id: '1', role: 'assistant', content: "Hi there! I'm **Earthie**, your guide to *Earth 2*. Ask me anything!" }]);

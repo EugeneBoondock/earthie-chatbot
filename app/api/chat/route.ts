@@ -80,11 +80,22 @@ export async function POST(req: Request) {
     const embeddingModel = genAI.getGenerativeModel({ model: 'text-embedding-004' });
 
     let context = '';
-    const isGreeting = /^(hi|hello|hey|hie|yo|sup|helloz)$/i.test(lastMessage.content.trim().replace(/[.,!?;]/g, ''));
+    const messageText = lastMessage.content.trim().toLowerCase().replace(/[.,!?;]/g, '');
+    
+    // Check for greetings
+    const isGreeting = /^(hi|hello|hey|hie|yo|sup|helloz)$/i.test(messageText);
+    
+    // Check for simple conversational responses that don't need knowledge search
+    const isSimpleConversation = /^(ok|okay|thanks|thank you|yeah|yes|no|lol|haha|cool|nice|good|great|awesome|perfect|sure|alright|right|got it|i see|makes sense|understood|k|kk|thx|ty|yep|nope|indeed|absolutely|exactly|true|correct|wrong|maybe|perhaps|probably|definitely|certainly|obviously|clearly|interesting|wow|oh|ah|hmm|well|actually|really|seriously|honestly|basically|generally|specifically|particularly|especially|mainly|mostly|usually|typically|normally|commonly|rarely|never|always|sometimes|often|occasionally|frequently|regularly|daily|weekly|monthly|yearly|recently|lately|soon|later|tomorrow|yesterday|today|now|then|here|there|everywhere|anywhere|nowhere|somewhere|everyone|anyone|someone|nobody|everything|anything|something|nothing|whatever|whenever|wherever|whoever|however|why|what|when|where|how|which|who|whose|whom)$/i.test(messageText);
+    
+    // Check for acknowledgments and short responses
+    const isAcknowledgment = messageText.length <= 15 && /^(ok|okay|thanks|thank you|yeah|yes|no|lol|haha|cool|nice|good|great|awesome|perfect|sure|alright|right|got it|i see|makes sense|understood|k|kk|thx|ty|yep|nope|hmm|oh|ah|wow|interesting)( thanks| thx| ty)?$/i.test(messageText);
+    
     const isSystemMessage = lastMessage.role === 'system';
+    const isSearchResultMessage = lastMessage.content.includes('(System: Here are the search results');
 
-    // Only perform a knowledge search if it's not a greeting or a system message
-    if (!isGreeting && !isSystemMessage && lastMessage.content.trim().length > 3) {
+    // Only perform a knowledge search if it's not a simple conversation, greeting, system message, or search result message
+    if (!isGreeting && !isSimpleConversation && !isAcknowledgment && !isSystemMessage && !isSearchResultMessage && lastMessage.content.trim().length > 3) {
       // Create a context-aware query for embedding by using the last 3 messages
       const queryForEmbedding = messages.slice(-3).map((m: any) => m.content).join('\n');
 
@@ -115,6 +126,14 @@ export async function POST(req: Request) {
         ? lastMessage.content
         : `${userContext}\n\n${context}\n\n${lastMessage.content}`;
 
+    // Sanitize the message history to conform to the AI's expectations.
+    // The AI API expects alternating user/assistant roles, and system messages are not allowed in the middle.
+    // We'll convert any mid-history system messages to user messages to provide context without breaking the API contract.
+    const sanitizedHistory = messages.slice(0, -1).map((msg: any) => ({
+        role: msg.role === 'system' ? 'user' : msg.role,
+        content: msg.content
+    }));
+
     // When sending to the AI, we'll treat the system message as a user message
     // to ensure the model processes it correctly as conversational context.
     const finalRole = lastMessage.role === 'system' ? 'user' : lastMessage.role;
@@ -123,7 +142,7 @@ export async function POST(req: Request) {
       model: google('gemini-1.5-flash-latest'),
       system: SYSTEM_PROMPT_TEXT,
       messages: [
-          ...messages.slice(0, -1),
+          ...sanitizedHistory,
           { role: finalRole, content: messageContent }
       ]
     });
