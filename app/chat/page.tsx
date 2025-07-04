@@ -118,7 +118,11 @@ export default function ChatPage() {
                 
                 if (e2_user_id && user_info) {
                     const propertyCount = user_info.userLandfieldCount || 0;
-                    let context = `The user is logged in. Their username is ${user_info.username}. They own ${propertyCount} properties. I have access to their property list if they ask specific questions.`;
+                    const tileCount = user_info.userNetworth?.totalTiles || 0;
+                    const networth = user_info.userNetworth?.networth || 0;
+                    const spent = user_info.userNetworth?.spent || 0;
+
+                    let context = `The user is logged in. Their username is ${user_info.username}. They own ${propertyCount} properties with a total of ${tileCount} tiles. Their current net worth is $${networth.toFixed(2)} and they have spent a total of $${spent.toFixed(2)}. I have access to their property list if they ask specific questions.`;
                     setUserContext(context);
                     
                     // Step 2: Load properties from IndexedDB into state
