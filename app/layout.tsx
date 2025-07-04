@@ -107,6 +107,35 @@ export default async function RootLayout({
 
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            "name": "Earthie",
+            "url": "https://www.earthie.world",
+            "logo": "https://www.earthie.world/images/earthie_logo_192.png",
+            "sameAs": [
+              "https://x.com/EarthieAi"
+            ]
+          }) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "WebSite",
+            "name": "Earthie",
+            "url": "https://www.earthie.world",
+            "potentialAction": {
+              "@type": "SearchAction",
+              "target": "https://www.earthie.world/search?q={search_term_string}",
+              "query-input": "required name=search_term_string"
+            }
+          }) }}
+        />
+      </head>
       <body className={`${inter.className} text-white`}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} forcedTheme="dark">
           <TopographicBackground />
