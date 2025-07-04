@@ -140,63 +140,70 @@ export default function ChatPage() {
         const lastMessage = messages[messages.length - 1];
 
         if (lastMessage && lastMessage.role === 'assistant' && !isLoading && !processedMessageIds.current.has(lastMessage.id)) {
-            const content = lastMessage.content.trim();
+            const content = lastMessage.content;
             
-            if (content.startsWith('[SEARCH:') && content.endsWith(']')) {
-                processedMessageIds.current.add(lastMessage.id); // Mark as processed to prevent re-triggering
+            // A more robust way to find the search command, even inside markdown blocks.
+            if (content.includes('[SEARCH:')) {
+                const startIndex = content.indexOf('{');
+                const endIndex = content.lastIndexOf('}');
 
-                let parsedSearch: { filters: Filter[] } = { filters: [] };
-                try {
-                    const jsonString = content.substring(8, content.length - 1);
-                    parsedSearch = JSON.parse(jsonString);
-                } catch (e) {
-                    console.error("Failed to parse search JSON:", e);
-                    append({ role: 'user', content: "(System: I had a problem understanding the search request. Please try again.)" });
-                    return;
-                }
+                if (startIndex !== -1 && endIndex !== -1 && endIndex > startIndex) {
+                    processedMessageIds.current.add(lastMessage.id); // Mark as processed to prevent re-triggering
+                    
+                    const jsonString = content.substring(startIndex, endIndex + 1);
+                    let parsedSearch: { filters: Filter[] } = { filters: [] };
 
-                const queryForDisplay = parsedSearch.filters.map(f => `${f.field} ${f.operator} ${f.value || ''}`).join(', ');
+                    try {
+                        parsedSearch = JSON.parse(jsonString);
+                    } catch (e) {
+                        console.error("Failed to parse search JSON:", e, "Content was:", jsonString);
+                        append({ role: 'user', content: "(System: I had a problem understanding the search request. Please try again.)" });
+                        return; // Exit early
+                    }
 
-                // Stage 1: Update the UI to show the "searching" indicator
-                const messageId = lastMessage.id;
-                setMessages(prev => prev.map(msg => 
-                    msg.id === messageId 
-                    ? { ...msg, content: `SEARCH_UI:${JSON.stringify({ query: queryForDisplay, status: 'searching' })}` } 
-                    : msg
-                ));
-                
-                // Stage 2: Perform the search and update UI to "done"
-                setTimeout(() => {
-                    const searchResults = applyFilters(properties, parsedSearch.filters);
+                    const queryForDisplay = parsedSearch.filters.map(f => `${f.field} ${f.operator} ${f.value || ''}`).join(', ');
 
+                    // Stage 1: Update the UI to show the "searching" indicator
+                    const messageId = lastMessage.id;
                     setMessages(prev => prev.map(msg => 
                         msg.id === messageId 
-                        ? { ...msg, content: `SEARCH_UI:${JSON.stringify({ query: queryForDisplay, status: 'done' })}` } 
+                        ? { ...msg, content: `SEARCH_UI:${JSON.stringify({ query: queryForDisplay, status: 'searching' })}` } 
                         : msg
                     ));
+                    
+                    // Stage 2: Perform the search and update UI to "done"
+                    setTimeout(() => {
+                        const searchResults = applyFilters(properties, parsedSearch.filters);
 
-                    const propertyCount = searchResults.length;
-                    let searchResultSummary = `I found ${propertyCount} properties matching your search.`;
+                        setMessages(prev => prev.map(msg => 
+                            msg.id === messageId 
+                            ? { ...msg, content: `SEARCH_UI:${JSON.stringify({ query: queryForDisplay, status: 'done' })}` } 
+                            : msg
+                        ));
 
-                    if (propertyCount > 0) {
-                        const totalTiles = searchResults.reduce((sum, p) => sum + (p.attributes.tileCount || 0), 0);
-                        searchResultSummary += ` Total tiles: ${totalTiles}.`;
+                        const propertyCount = searchResults.length;
+                        let searchResultSummary = `I found ${propertyCount} properties matching your search.`;
 
-                        const epls = searchResults.map(p => p.attributes.epl).filter(Boolean);
-                        if (epls.length > 0) {
-                            searchResultSummary += ` EPLs found: ${epls.slice(0, 5).join(', ')}.`;
+                        if (propertyCount > 0) {
+                            const totalTiles = searchResults.reduce((sum, p) => sum + (p.attributes.tileCount || 0), 0);
+                            searchResultSummary += ` Total tiles: ${totalTiles}.`;
+
+                            const epls = searchResults.map(p => p.attributes.epl).filter(Boolean);
+                            if (epls.length > 0) {
+                                searchResultSummary += ` EPLs found: ${epls.slice(0, 5).join(', ')}.`;
+                            }
+                            
+                            const propertyList = searchResults.map(p => p.attributes.description).slice(0, 5).join(', ');
+                            searchResultSummary += ` The first few are: ${propertyList}.`;
                         }
                         
-                        const propertyList = searchResults.map(p => p.attributes.description).slice(0, 5).join(', ');
-                        searchResultSummary += ` The first few are: ${propertyList}.`;
-                    }
-                    
-                    // Stage 3: Send results to AI silently
-                    append({
-                        role: 'system',
-                        content: `(System: Here are the search results for the user's query. Use them to answer their original question.)\n${searchResultSummary}`
-                    });
-                }, 1000); // Increased delay to make the UI transition clear
+                        // Stage 3: Send results to AI silently
+                        append({
+                            role: 'system',
+                            content: `(System: Here are the search results for the user's query. Use them to answer their original question.)\n${searchResultSummary}`
+                        });
+                    }, 1000); // Increased delay to make the UI transition clear
+                }
             }
         }
     }, [messages, isLoading, properties, append, setMessages]);
