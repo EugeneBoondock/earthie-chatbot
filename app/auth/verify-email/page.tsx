@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 
 // Verify Email Page Component
 export default function VerifyEmailPage() {
@@ -8,7 +9,16 @@ export default function VerifyEmailPage() {
     <div className="w-full min-h-screen flex items-center justify-center bg-gray-950">
       <div className="max-w-md w-full bg-gray-900/70 border border-sky-400/30 shadow-2xl shadow-sky-400/10 rounded-2xl p-8 backdrop-blur-lg text-center">
         <div className="flex flex-col items-center mb-6">
-          <img src="/images/earthie_logo.png" alt="Earthie Logo" className="w-16 h-16 mb-3" />
+          <picture>
+            <source srcSet="/images/optimized/earthie_logo.webp" type="image/webp" />
+            <Image 
+              src="/images/optimized/earthie_logo_optimized.png" 
+              alt="Earthie Logo" 
+              width={64} 
+              height={64} 
+              className="mb-3"
+            />
+          </picture>
           <h1 className="text-3xl font-bold tracking-tight text-sky-300">Check Your Email</h1>
         </div>
         <p className="text-cyan-100/90 mb-6">

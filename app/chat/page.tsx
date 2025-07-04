@@ -34,7 +34,7 @@ interface E2Property {
 const TypingIndicator = () => (
     <div className="flex items-center space-x-2 p-2 justify-start">
       <Avatar className="h-8 w-8">
-        <AvatarImage src="/images/earthie_logo.png" alt="Earthie" />
+        <AvatarImage src="/images/optimized/earthie_logo.webp" alt="Earthie" />
         <AvatarFallback>E</AvatarFallback>
       </Avatar>
       <div className="flex space-x-1.5 p-2 bg-gray-700 rounded-lg">
@@ -269,7 +269,7 @@ export default function ChatPage() {
                           <div key={msg.id} className={`flex items-end space-x-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                               {msg.role === 'assistant' && (
                                   <Avatar className="h-8 w-8 flex-shrink-0 self-start">
-                                      <AvatarImage src="/images/earthie_logo.png" alt="Earthie" />
+                                      <AvatarImage src="/images/optimized/earthie_logo.webp" alt="Earthie" />
                                       <AvatarFallback>E</AvatarFallback>
                                   </Avatar>
                               )}

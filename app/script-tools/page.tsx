@@ -11,14 +11,8 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert" 
 import { AlertTriangle } from "lucide-react"
 import Link from "next/link"
-import type { Metadata } from 'next';
 // Ensure all necessary icons are imported
 import { Upload, Check, X, Loader2, Download, Heart, Link as LinkIcon } from "lucide-react"
-
-export const metadata: Metadata = {
-  title: "Earth 2 Script Tools | Community-Driven Scripts & Utilities",
-  description: "Browse and share community-created scripts for Earth 2. Find tools for property analysis, raid assistance, and more. Enhance your gameplay with scripts from the Earthie community.",
-};
 
 // --- Supabase Configuration ---
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -742,11 +736,11 @@ export default function DevToolsPage() {
                                     </a>
                                   </Link>
                                 )}
-                                {script.code && (
-                                    <Button variant="outline" size="sm" className={`text-earthie-mint border-earthie-mint hover:bg-earthie-mint/10 active:bg-earthie-mint/20 w-full sm:w-auto ${downloadingStatus[script.id] ? 'opacity-50 cursor-wait' : ''}`} onClick={(e) => { if (downloadingStatus[script.id]) return; handleDownload(script.id, () => { const blob = new Blob([script.code ?? ''], { type: 'text/plain;charset=utf-8' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = generateFilename(script.title, 'txt'); document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); }); }} disabled={downloadingStatus[script.id]} >
-                                        <Download className="mr-2 h-4 w-4" /> Download Code Snippet
-                                    </Button>
-                                )}
+                            {script.code && (
+                                <Button variant="outline" size="sm" className={`text-earthie-mint border-earthie-mint hover:bg-earthie-mint/10 active:bg-earthie-mint/20 w-full sm:w-auto ${downloadingStatus[script.id] ? 'opacity-50 cursor-wait' : ''}`} onClick={(e) => { if (downloadingStatus[script.id]) return; handleDownload(script.id, () => { const blob = new Blob([script.code ?? ''], { type: 'text/plain;charset=utf-8' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = generateFilename(script.title, 'txt'); document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); }); }} disabled={downloadingStatus[script.id]} >
+                                    <Download className="mr-2 h-4 w-4" /> Download Code Snippet
+                                </Button>
+                            )}
                             </div>
                             {!script.code && script.file_url && (
                                 <div className="text-sm text-gray-500 italic text-right w-full sm:w-auto">(File attached)</div>

@@ -129,7 +129,16 @@ const VoiceMode: React.FC<VoiceModeProps> = ({
             isSpeaking ? 'border-[#50E3C1] shadow-lg shadow-[#50E3C1]/50' :
             'border-gray-600'
           }`}>
-            <Image src="/images/earthie_logo.png" alt="Earthie" fill className="object-cover" priority />
+            <picture>
+              <source srcSet="/images/optimized/earthie_logo.webp" type="image/webp" />
+              <Image 
+                src="/images/optimized/earthie_logo_optimized.png" 
+                alt="Earthie" 
+                fill 
+                className="object-cover" 
+                priority 
+              />
+            </picture>
             {isSpeaking && <div className="absolute inset-0 bg-[#50E3C1]/20 animate-pulse"></div>}
           </div>
         </div>

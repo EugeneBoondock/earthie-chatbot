@@ -11,12 +11,6 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import dynamic from 'next/dynamic';
-import type { Metadata } from 'next';
-
-export const metadata: Metadata = {
-  title: "Logistics Planner | Earth 2 Route & Property Visualization",
-  description: "Plan your Earth 2 logistics with our advanced planner. Visualize your property network, calculate optimal routes between properties, and manage your in-game supply chain efficiently.",
-};
 
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';

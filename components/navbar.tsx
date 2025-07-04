@@ -139,7 +139,17 @@ export default function Navbar() {
         <div className="flex items-center gap-2 z-30 flex-shrink-0 min-w-[40px] sm:min-w-[120px]">
           <Link href="/" className="flex items-center gap-2">
             <div className="relative w-8 h-8 md:w-10 md:h-10 overflow-hidden rounded-full">
-              <Image src="/images/earthie_logo.png" alt="Earthie Logo" width={40} height={40} className="object-cover rounded-full" priority /> 
+              <picture>
+                <source srcSet="/images/optimized/earthie_logo.webp" type="image/webp" />
+                <Image 
+                  src="/images/optimized/earthie_logo_optimized.png" 
+                  alt="Earthie Logo" 
+                  width={40} 
+                  height={40} 
+                  className="object-cover rounded-full" 
+                  priority 
+                />
+              </picture>
             </div>
             <div className="hidden sm:block relative overflow-hidden">
               <span className="font-bold text-lg md:text-xl earthie-text-gradient">Earthie</span>

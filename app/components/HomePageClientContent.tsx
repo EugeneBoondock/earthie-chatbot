@@ -100,7 +100,19 @@ export default function HomePageClientContent() {
               <Link href="/radio" passHref> <Button size="lg" variant="outline" className="bg-[#343547] text-white border-gray-600 hover:bg-gray-700 hover:text-white rounded-md w-full sm:w-auto px-8"> Listen to Radio </Button> </Link>
             </div>
           </div>
-          <div className="flex-shrink-0"> <Image src="/images/earthie_cover.png" alt="Earthie Hero Image" width={300} height={300} className="rounded-lg shadow-lg object-contain" /> </div>
+          <div className="flex-shrink-0"> 
+            <picture>
+              <source srcSet="/images/optimized/earthie_cover.webp" type="image/webp" />
+              <Image 
+                src="/images/optimized/earthie_cover_optimized.png" 
+                alt="Earthie Hero Image" 
+                width={300} 
+                height={300} 
+                className="rounded-lg shadow-lg object-contain" 
+                priority
+              />
+            </picture>
+          </div>
         </div>
       </section>
 

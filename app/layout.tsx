@@ -37,8 +37,8 @@ export const metadata: Metadata = {
   themeColor: "#50E3C1",
   manifest: "/manifest.json",
   icons: {
-    icon: "/images/earthie_logo.png",
-    apple: "/images/earthie_logo.png"
+    icon: "/images/earthie_logo_192.png",
+    apple: "/images/earthie_logo_192.png"
   },
   appleWebApp: {
     capable: true,

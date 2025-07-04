@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "next lint",
     "build:cache": "node scripts/generate-cache.mjs",
-    "generate:splash": "node scripts/generate-splash-screens.js"
+    "generate:splash": "node scripts/generate-splash-screens.js",
+    "optimize:images": "node scripts/optimize-images.js",
+    "analyze": "cross-env ANALYZE=true next build"
   },
   "dependencies": {
     "@ai-sdk/google": "^1.2.22",
@@ -100,6 +102,7 @@
     "zod": "^3.25.71"
   },
   "devDependencies": {
+    "@next/bundle-analyzer": "^15.3.5",
     "@types/d3-array": "^3.2.1",
     "@types/hls.js": "^0.13.3",
     "@types/mime-types": "^2.1.4",
@@ -109,6 +112,7 @@
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "autoprefixer": "^10.4.21",
+    "cross-env": "^7.0.3",
     "dotenv": "^16.6.1",
     "eslint": "^9.26.0",
     "eslint-config-next": "^15.3.2",

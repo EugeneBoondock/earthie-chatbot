@@ -18,12 +18,6 @@ import RaidHelperPreview from '@/components/RaidHelperPreview';
 import { TargetRankingTable } from '@/components/TargetRankingTable'; // Ensure this component is updated for pagination
 import { OwnerPerformanceTable } from '@/components/OwnerPerformanceTable'; // Ensure this component is updated for pagination
 import Link from "next/link"
-import type { Metadata } from 'next';
-
-export const metadata: Metadata = {
-  title: "Earth 2 Raid Helper | Optimize Your Strategy & Performance",
-  description: "Analyze your Earth 2 raid history with the Raid Helper. Upload your data to get detailed performance insights, track your success rate, and optimize your raiding strategy.",
-};
 
 // --- Constants ---
 const ITEMS_PER_PAGE = 5; // Changed to 5

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
@@ -38,7 +39,16 @@ export default function SignUpForm() {
     <div className="w-full min-h-screen flex items-center justify-center">
       <div className="w-96 bg-gray-900/60 border border-emerald-400/40 shadow-2xl shadow-emerald-400/20 rounded-2xl px-8 py-8 backdrop-blur-lg flex flex-col items-center justify-start">
         <div className="flex flex-col items-center mb-6 mt-2">
-          <img src="/images/earthie_logo.png" alt="Earthie Logo" className="w-14 h-14 mb-2" />
+          <picture>
+            <source srcSet="/images/optimized/earthie_logo.webp" type="image/webp" />
+            <Image 
+              src="/images/optimized/earthie_logo_optimized.png" 
+              alt="Earthie Logo" 
+              width={56} 
+              height={56} 
+              className="mb-2" 
+            />
+          </picture>
           <span className="text-cyan-200 text-xl font-semibold tracking-wide">Earthie</span>
         </div>
         <form onSubmit={handleSignUp} className="space-y-5 w-full mt-2">

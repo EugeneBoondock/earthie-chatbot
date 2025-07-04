@@ -5,7 +5,6 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { Metadata } from 'next';
 import {
   Select,
   SelectContent,
@@ -19,22 +18,30 @@ import { Input } from "@/components/ui/input";
 import { 
   Loader2, MapPin, Landmark, Globe, Mountain, Map, ArrowLeft, ExternalLink, 
   ChevronUp, ChevronDown, Search, Camera, Book, Users, Radio, Tv, Music, PlayCircle, X, Info, AlertCircle, Clock, History,
-  Volume2, Youtube, Pause, Play, Sun, FileText, ArrowUpRight, Badge as LucideBadge, RefreshCw, Maximize2
+  Volume2, Youtube, Pause, Play, Sun, FileText, ArrowUpRight, Badge as LucideBadge, RefreshCw, Maximize2, Settings, VolumeX, Volume1, Minimize2
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import Hls from 'hls.js';
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PropertyMap } from "@/components/PropertyMap";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useAudioPlayer } from "@/contexts/AudioContext"; // Import the global audio player hook
+import dynamic from 'next/dynamic';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
-export const metadata: Metadata = {
-  title: "Know Your Land | In-Depth Earth 2 Property Analysis",
-  description: "Get detailed insights into your Earth 2 properties with Know Your Land. Analyze location data, historical information, and local resources to make informed decisions about your land assets.",
-};
+// Dynamic import for PropertyMap
+const PropertyMap = dynamic(() => import("@/components/PropertyMap").then(mod => ({ default: mod.PropertyMap })), {
+  ssr: false,
+  loading: () => (
+    <div className="aspect-video bg-gray-800/50 rounded-md border border-gray-700/50 flex items-center justify-center">
+      <div className="text-center">
+        <Loader2 className="h-8 w-8 animate-spin text-earthie-mint mx-auto mb-2" />
+        <p className="text-sm text-gray-300">Loading map...</p>
+      </div>
+    </div>
+  )
+});
 
 // Types for property data
 interface PropertyData {
@@ -213,8 +220,10 @@ export default function KnowYourLandPage() {
   }, [activeTab, locationInfo]);
   const [showMoreHistory, setShowMoreHistory] = useState(false);
   const [showMoreOverview, setShowMoreOverview] = useState(false);
-  // Map loading state is now managed by PropertyMap component
   const [currentTvStation, setCurrentTvStation] = useState<string | null>(null);
+  const [showTVModal, setShowTVModal] = useState(false);
+  const [currentTVEmbedUrl, setCurrentTVEmbedUrl] = useState<string | null>(null);
+  const [currentTVStreamType, setCurrentTVStreamType] = useState<string | null>(null);
   const latestPropertyIdRef = useRef<string | null>(null);
 
   // Use the global audio player context
@@ -1676,417 +1685,372 @@ export default function KnowYourLandPage() {
   } | null>(null);
 
   // Function to handle TV station playing
-  const handleShowTV = (stationId: string, embedUrl?: string, streamType?: string) => {
-    if (!embedUrl) {
-      toast.error('No stream available for this station');
-      return;
+  const handleShowTV = (embedUrl?: string) => {
+    if (embedUrl) {
+      setCurrentTVEmbedUrl(embedUrl);
+      setShowTVModal(true);
+    } else {
+      toast.error('No stream available for this station.');
     }
-
-    // If clicking the same station, toggle the player
-    if (currentTvStation === stationId) {
-      setCurrentTvStation(null);
-      setCurrentStream(null);
-      return;
-    }
-    
-    console.log("Playing TV station:", stationId, embedUrl, streamType);
-    
-    // Set loading state
-    setCurrentTvStation(stationId);
-    setCurrentStream({
-      url: embedUrl,
-      type: streamType || 'unknown',
-      name: stationId,
-      error: false,
-      loading: true
-    });
-
-    // For HLS streams, we'll handle them in the component
-    if (streamType === 'hls' || embedUrl.endsWith('.m3u8')) {
-      // The actual playback will be handled by the HLS.js in the component
-      return;
-    }
-    
-    // For YouTube or Twitch, we'll embed them directly
-    if (streamType === 'youtube' || streamType === 'twitch') {
-      setCurrentStream(prev => prev ? { ...prev, loading: false } : null);
-      return;
-    }
-    
-    // For other types, open in new window
-    window.open(embedUrl, '_blank');
-    setCurrentTvStation(null);
-    setCurrentStream(null);
   };
 
-  // HLS Player component with improved error handling and performance optimizations
-  const HLSPlayer = React.useCallback(({ url, onError }: { url: string; onError: () => void }) => {
-    // Helper function to format time (mm:ss)
-    const formatTime = useCallback((seconds: number): string => {
-      const mins = Math.floor(seconds / 60);
-      const secs = Math.floor(seconds % 60);
-      return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    }, []);
-    
-    const videoRef = React.useRef<HTMLVideoElement>(null);
-    const [error, setError] = React.useState(false);
-    const [loading, setLoading] = React.useState(true);
-    const [hlsInstance, setHlsInstance] = React.useState<Hls | null>(null);
-    const [retryCount, setRetryCount] = React.useState(0);
-    const [errorMessage, setErrorMessage] = React.useState('');
-    const maxRetries = 3;
-    const retryDelay = 1000; // 1 second initial delay
+  // TV Stream Player Component
+  const TVStreamPlayer = ({ url, onClose }: { url: string; onClose: () => void; }) => {
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const playerContainerRef = useRef<HTMLDivElement>(null);
+    const [error, setError] = useState<string | null>(null);
+    const [loading, setLoading] = useState(true);
+    const hlsRef = useRef<any>(null);
+    const [levels, setLevels] = useState<any[]>([]);
+    const [currentLevel, setCurrentLevel] = useState(-1); // -1 for auto
 
-    // Handle HLS initialization and error recovery
-    const initHLS = useCallback(() => {
-      if (!videoRef.current) return () => {};
+    const [isPlaying, setIsPlaying] = useState(true);
+    const [volume, setVolume] = useState(1);
+    const [isMuted, setIsMuted] = useState(true);
+    const [currentTime, setCurrentTime] = useState(0);
+    const [duration, setDuration] = useState(0);
+    const [isFullscreen, setIsFullscreen] = useState(false);
+    const [controlsVisible, setControlsVisible] = useState(true);
+    const inactivityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+    const showControls = () => {
+      setControlsVisible(true);
+      if (inactivityTimeoutRef.current) {
+        clearTimeout(inactivityTimeoutRef.current);
+      }
+      inactivityTimeoutRef.current = setTimeout(() => {
+        setControlsVisible(false);
+      }, 3000);
+    };
+
+    useEffect(() => {
       const video = videoRef.current;
-      let hls: Hls | null = null;
-      
-      // Try to use native HLS first (Safari, iOS)
-      const canPlayNativeHLS = video.canPlayType('application/vnd.apple.mpegurl');
-      
-      if (canPlayNativeHLS) {
-        console.log('Using native HLS playback');
-        video.src = url;
-        setLoading(false);
-        
-        // Handle native HLS errors
-        const handleError = () => {
-          console.error('Native HLS playback error');
-          setError(true);
-          setErrorMessage('Failed to load stream using native player');
-          onError();
-        };
-        
-        video.addEventListener('error', handleError);
-        return () => video.removeEventListener('error', handleError);
+      if (!video) return;
+
+      const playerElement = playerContainerRef.current;
+      if(playerElement) {
+        playerElement.addEventListener('mousemove', showControls);
+        playerElement.addEventListener('mouseleave', () => {
+          if (inactivityTimeoutRef.current) {
+            clearTimeout(inactivityTimeoutRef.current);
+          }
+          if (isPlaying) {
+            setControlsVisible(false);
+          }
+        });
       }
-      
-      // Fallback to HLS.js
-      if (Hls.isSupported()) {
-        console.log('Using HLS.js for playback');
-        
-        // Create HLS instance with minimal configuration
-        // Using type assertion to avoid TypeScript errors with HLS.js types
-        hls = new Hls({
-          // Basic settings
-          maxBufferSize: 60 * 1000 * 1000, // 60MB
-          maxBufferLength: 30, // 30 seconds
-          maxMaxBufferLength: 60, // 60 seconds
-          
-          // Network settings
-          xhrSetup: (xhr: XMLHttpRequest) => {
-            xhr.withCredentials = false; // Handle CORS if needed
-          },
-          
-          // Error handling
-          fragLoadingMaxRetry: 6,
-          fragLoadingMaxRetryTimeout: 64000,
-          fragLoadingRetryDelay: 1000,
-          
-          // Performance
+
+      const setupPlayer = async () => {
+        setLoading(true);
+        setError(null);
+        setLevels([]);
+        setCurrentLevel(-1);
+        setIsPlaying(true);
+        setCurrentTime(0);
+        setDuration(0);
+
+        if (url.endsWith('.m3u8')) {
+          try {
+            const Hls = (await import('hls.js')).default;
+            if (Hls.isSupported()) {
+              if (hlsRef.current) {
+                hlsRef.current.destroy();
+              }
+              const hls = new Hls({
+                // Ensure high quality streams can be loaded
+                maxBufferSize: 0, // no limit
+                maxBufferLength: 30,
           enableWorker: true,
-          enableSoftwareAES: true,
-          startLevel: -1, // Auto quality
-        } as any); // Using 'any' to bypass TypeScript errors with HLS.js types
-        
-        // Handle successful manifest parsing
-        hls.on(Hls.Events.MANIFEST_PARSED, (event: any, data: any) => {
-          console.log('Manifest parsed, available quality levels:', data.levels);
+              });
+              hlsRef.current = hls;
+              hls.loadSource(url);
+              hls.attachMedia(video);
+
+              hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
           setLoading(false);
-          
-          // Try to play the video
-          const playPromise = video.play();
-          
-          if (playPromise !== undefined) {
-            playPromise.catch((e: Error) => {
-              console.error('Error playing video:', e);
-              handlePlaybackError('playback_failed', e.message);
-            });
-          }
-        });
-        
-        // Handle fragment loading
-        hls.on(Hls.Events.FRAG_LOADED, (event: any, data: any) => {
-          console.debug('Fragment loaded:', data.frag.url);
-        });
-        
-        // Handle HLS errors
-        hls.on(Hls.Events.ERROR, (event: any, data: any) => {
-          console.error('HLS Error:', data);
-          
-          if (data.fatal) {
-            handleFatalError(data);
+                setLevels(data.levels);
+                video.play().catch(() => {});
+              });
+              hls.on(Hls.Events.ERROR, (event, data) => {
+                if (data.fatal) {
+                  setError('Failed to load the video stream.');
+                  setLoading(false);
+                }
+              });
           } else {
-            console.warn('Non-fatal HLS error:', data);
-          }
-        });
-        
-        // Handle quality level changes
-        hls.on(Hls.Events.LEVEL_SWITCHED, (event: any, data: any) => {
-          console.log('Quality level changed to:', data.level);
-        });
-        
-        // Start loading the source
-        try {
-          hls.loadSource(url);
-          hls.attachMedia(video);
-          setHlsInstance(hls);
-        } catch (e) {
-          const errorMessage = e instanceof Error ? e.message : 'Unknown error';
-          console.error('Error initializing HLS:', errorMessage);
-          handleFatalError({ type: 'init_error', details: errorMessage, fatal: true });
+              setError('HLS playback is not supported in your browser.');
+              setLoading(false);
+            }
+          } catch {
+            setError('Failed to load HLS player.');
+            setLoading(false);
         }
       } else {
-        // HLS not supported
-        console.error('HLS not supported in this browser');
-        setError(true);
-        setErrorMessage('Your browser does not support HLS streaming');
-        onError();
-      }
-      
-      // Cleanup function
-      return () => {
-        if (hls) {
-          console.log('Destroying HLS instance');
-          hls.destroy();
+          video.src = url;
+          video.addEventListener('loadeddata', () => setLoading(false));
+          video.addEventListener('error', () => {
+            setError('Failed to load the video.');
+            setLoading(false);
+          });
+          video.play().catch(() => {});
         }
       };
-    }, [url, retryCount]);
-    
-    // Handle fatal HLS errors
-    const handleFatalError = useCallback((errorData: any) => {
-      console.error('Fatal HLS error:', errorData);
-      
-      // Set appropriate error message
-      let errorMsg = 'Failed to load stream';
-      
-      switch (errorData.type) {
-        case Hls.ErrorTypes.NETWORK_ERROR:
-          errorMsg = 'Network error. Please check your connection.';
-          if (retryCount < maxRetries) {
-            const delay = retryDelay * (retryCount + 1);
-            console.log(`Retrying in ${delay}ms... (${retryCount + 1}/${maxRetries})`);
-            setTimeout(() => {
-              setRetryCount(prev => prev + 1);
-            }, delay);
-            return; // Don't show error UI yet
-          }
-          break;
-          
-        case Hls.ErrorTypes.MEDIA_ERROR:
-          errorMsg = 'Media error. The stream may be corrupted or unsupported.';
-          // Try to recover from media errors
-          if (hlsInstance) {
-            console.log('Attempting to recover from media error...');
-            hlsInstance.recoverMediaError();
-            return;
-          }
-          break;
-          
-        case Hls.ErrorTypes.OTHER_ERROR:
-          errorMsg = 'An unexpected error occurred';
-          break;
-      }
-      
-      setError(true);
-      setErrorMessage(errorMsg);
-      onError();
-    }, [hlsInstance, retryCount]);
-    
-    // Handle playback errors (e.g., autoplay blocked)
-    const handlePlaybackError = useCallback((errorType: string, message: string) => {
-      console.error('Playback error:', message);
-      
-      if (errorType === 'autoplay_denied') {
-        setErrorMessage('Autoplay was blocked. Please click play to start the stream.');
-        setLoading(false);
-        return;
-      }
-      
-      if (retryCount < maxRetries) {
-        const delay = retryDelay * (retryCount + 1);
-        console.log(`Retrying playback in ${delay}ms... (${retryCount + 1}/${maxRetries})`);
-        setTimeout(() => {
-          setRetryCount(prev => prev + 1);
-          videoRef.current?.load();
-          videoRef.current?.play().catch(console.error);
-        }, delay);
-      } else {
-        setError(true);
-        setErrorMessage('Failed to play the stream. Please try again later.');
-        onError();
-      }
-    }, [retryCount]);
-    
-    // Initialize HLS when component mounts or URL changes
-    React.useEffect(() => {
-      const cleanup = initHLS();
-      return () => {
-        cleanup?.();
-        if (hlsInstance) {
-          hlsInstance.destroy();
-          setHlsInstance(null);
-        }
-      };
-    }, [url, retryCount]);
 
-    if (error) {
+      setupPlayer();
+      
+      const handleTimeUpdate = () => setCurrentTime(video.currentTime);
+      const handleDurationChange = () => setDuration(video.duration);
+      const handlePlay = () => setIsPlaying(true);
+      const handlePause = () => setIsPlaying(false);
+      const handleVolumeChange = () => {
+        setVolume(video.volume);
+        setIsMuted(video.muted);
+      };
+
+      video.addEventListener('timeupdate', handleTimeUpdate);
+      video.addEventListener('durationchange', handleDurationChange);
+      video.addEventListener('play', handlePlay);
+      video.addEventListener('pause', handlePause);
+      video.addEventListener('volumechange', handleVolumeChange);
+
+      const handleFullscreenChange = () => {
+        setIsFullscreen(!!document.fullscreenElement);
+      };
+      document.addEventListener('fullscreenchange', handleFullscreenChange);
+
+      return () => {
+        if (hlsRef.current) {
+          hlsRef.current.destroy();
+        }
+        video.removeEventListener('timeupdate', handleTimeUpdate);
+        video.removeEventListener('durationchange', handleDurationChange);
+        video.removeEventListener('play', handlePlay);
+        video.removeEventListener('pause', handlePause);
+        video.removeEventListener('volumechange', handleVolumeChange);
+        document.removeEventListener('fullscreenchange', handleFullscreenChange);
+
+        if(playerElement) {
+          playerElement.removeEventListener('mousemove', showControls);
+          playerElement.removeEventListener('mouseleave', () => {
+            if (inactivityTimeoutRef.current) {
+              clearTimeout(inactivityTimeoutRef.current);
+            }
+             if (isPlaying) {
+              setControlsVisible(false);
+            }
+          });
+        }
+      };
+    }, [url, isPlaying]);
+
+    const handleLevelChange = (levelIndex: number) => {
+      if (hlsRef.current) {
+        setCurrentLevel(levelIndex);
+        hlsRef.current.currentLevel = levelIndex;
+      }
+    };
+
+    const togglePlay = () => {
+      const video = videoRef.current;
+      if (!video) return;
+      if (video.paused) {
+        video.play();
+        showControls();
+      } else {
+        video.pause();
+        // Keep controls visible when paused
+        if (inactivityTimeoutRef.current) clearTimeout(inactivityTimeoutRef.current);
+        setControlsVisible(true);
+      }
+      setIsPlaying(!video.paused);
+    };
+
+    const handleVolumeChangeSlider = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const video = videoRef.current;
+      if (!video) return;
+      const newVolume = parseFloat(e.target.value);
+      video.volume = newVolume;
+      setVolume(newVolume);
+      if (newVolume > 0) {
+        video.muted = false;
+        setIsMuted(false);
+      }
+    };
+    
+    const toggleMute = () => {
+      const video = videoRef.current;
+      if (!video) return;
+      video.muted = !video.muted;
+      setIsMuted(video.muted);
+      if (!video.muted && video.volume === 0) {
+        video.volume = 1;
+        setVolume(1);
+      }
+    };
+
+    const seek = (offset: number) => {
+      const video = videoRef.current;
+      if (!video) return;
+      video.currentTime += offset;
+    };
+
+    const handleProgressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const video = videoRef.current;
+      if (!video) return;
+      const newTime = parseFloat(e.target.value);
+      video.currentTime = newTime;
+      setCurrentTime(newTime);
+    };
+
+    const formatTime = (time: number) => {
+      const minutes = Math.floor(time / 60);
+      const seconds = Math.floor(time % 60);
+      return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    };
+
+    const toggleFullscreen = () => {
+      const playerElement = playerContainerRef.current;
+      if (!playerElement) return;
+
+      if (!document.fullscreenElement) {
+        playerElement.requestFullscreen().catch(err => {
+          toast.error(`Error attempting to enable full-screen mode: ${err.message}`);
+        });
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        }
+      }
+    };
+
       return (
-        <div className="aspect-video bg-gray-800 rounded-md flex items-center justify-center">
-          <div className="text-center p-4 max-w-md">
-            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-3" />
-            <h3 className="text-lg font-medium text-gray-100 mb-1">Stream Unavailable</h3>
-            <p className="text-gray-300 text-sm mb-4">
-              {errorMessage || 'Failed to load the stream. Please try again later.'}
-            </p>
-            <div className="flex gap-3 justify-center">
-              <Button 
-                variant="outline" 
-                className="text-earthie-mint border-earthie-mint/30 hover:bg-earthie-mint/10"
-                onClick={() => {
-                  setError(false);
-                  setRetryCount(0);
-                }}
-              >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Retry
-              </Button>
-              <Button 
-                variant="ghost" 
-                className="text-gray-300 hover:bg-gray-700/50"
-                onClick={() => {
-                  window.open(url, '_blank');
-                }}
-              >
-                <ExternalLink className="h-4 w-4 mr-2" />
-                Open in New Tab
-              </Button>
-            </div>
-            {retryCount > 0 && (
-              <p className="text-xs text-gray-500 mt-3">
-                Attempt {Math.min(retryCount, maxRetries)} of {maxRetries}
-              </p>
-            )}
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div className="relative aspect-video bg-black rounded-md overflow-hidden group">
-        {/* Loading overlay */}
+      <div ref={playerContainerRef} className="relative aspect-video bg-black rounded-md overflow-hidden group">
         {loading && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-900/80 z-10">
-            <Loader2 className="h-10 w-10 animate-spin text-earthie-mint mb-3" />
-            <p className="text-gray-300 text-sm">
-              {retryCount > 0 
-                ? `Attempting to connect (${retryCount}/${maxRetries})...` 
-                : 'Loading stream...'}
-            </p>
-            {retryCount > 0 && (
-              <button 
-                onClick={() => setRetryCount(0)}
-                className="mt-2 text-xs text-gray-400 hover:text-white transition-colors"
-              >
-                Cancel
-              </button>
-            )}
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-900/80 z-10">
+            <Loader2 className="h-8 w-8 animate-spin text-earthie-mint" />
+            </div>
+        )}
+        {error && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-900/80 z-10 text-center p-4">
+            <AlertCircle className="h-8 w-8 text-red-500 mb-2" />
+            <p className="text-red-300">{error}</p>
+            <Button variant="outline" size="sm" className="mt-4" onClick={onClose}>
+              Close
+            </Button>
           </div>
         )}
-        
-        {/* Video element */}
         <video
           ref={videoRef}
-          className="w-full h-full"
-          controls
+          className="w-full h-full object-contain"
+          controls={false} // Always hide default controls
           autoPlay
           playsInline
-          disablePictureInPicture
-          disableRemotePlayback
-          preload="auto"
-          onError={(e) => {
-            console.error('Video element error:', e);
-            handlePlaybackError('video_error', 'Video playback failed');
-          }}
-          onWaiting={() => setLoading(true)}
-          onPlaying={() => setLoading(false)}
-          onCanPlay={() => {
-            console.log('Video can play');
-            setLoading(false);
-          }}
-          onStalled={() => {
-            console.warn('Video stalled, attempting to recover...');
-            setLoading(true);
-          }}
-          onEmptied={() => {
-            console.warn('Video emptied, attempting to recover...');
-            setLoading(true);
-          }}
+          muted={isMuted}
+          style={{ display: loading || error ? 'none' : 'block' }}
+          onClick={togglePlay} // Play/pause on video click
         />
         
-        {/* Custom controls overlay */}
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-2">
-              <button 
-                onClick={() => videoRef.current?.paused 
-                  ? videoRef.current?.play().catch(console.error) 
-                  : videoRef.current?.pause()}
-                className="p-1.5 rounded-full bg-black/50 hover:bg-black/70 transition-colors"
-                aria-label={videoRef.current?.paused ? 'Play' : 'Pause'}
-              >
-                {videoRef.current?.paused ? (
-                  <Play className="h-5 w-5 text-white" />
-                ) : (
-                  <Pause className="h-5 w-5 text-white" />
-                )}
-              </button>
-              <span className="text-xs text-gray-300">
-                {videoRef.current?.currentTime 
-                  ? formatTime(videoRef.current.currentTime) 
-                  : '00:00'}
-              </span>
+        {/* Custom Controls Overlay */}
+        {!loading && !error && (
+          <div 
+            className={cn(
+              "absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 to-transparent flex flex-col gap-2 transition-opacity duration-300",
+              (controlsVisible || !isPlaying) ? "opacity-100" : "opacity-0"
+            )}
+          >
+            {/* Scrubber */}
+            <div className="w-full px-2">
+               <input
+                type="range"
+                min="0"
+                max={duration || 0}
+                value={currentTime}
+                onChange={handleProgressChange}
+                className="w-full h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer range-sm"
+                style={{
+                  background: `linear-gradient(to right, #6EE7B7 ${((currentTime) / (duration || 1)) * 100}%, #4B5563 ${((currentTime) / (duration || 1)) * 100}%)`
+                }}
+              />
             </div>
-            
-            <div className="flex items-center space-x-3">
-              <button 
-                onClick={() => {
-                  if (videoRef.current) {
-                    videoRef.current.muted = !videoRef.current.muted;
-                  }
-                }}
-                className="text-gray-300 hover:text-white transition-colors"
-                aria-label={videoRef.current?.muted ? 'Unmute' : 'Mute'}
-              >
-                <Volume2 className="h-5 w-5" />
-              </button>
+            {/* Controls Row */}
+            <div className="flex items-center justify-between text-white">
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" onClick={togglePlay}>
+                  {isPlaying ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6" />}
+                </Button>
+                 <Button variant="ghost" size="icon" onClick={() => seek(-10)}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 17l-5-5 5-5"/><path d="M18 17l-5-5 5-5"/></svg>
+                </Button>
+                <Button variant="ghost" size="icon" onClick={() => seek(10)}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 17l5-5-5-5"/><path d="M6 17l5-5-5-5"/></svg>
+                </Button>
+                <div className="flex items-center gap-2">
+                   <Button variant="ghost" size="icon" onClick={toggleMute}>
+                    {isMuted || volume === 0 ? <VolumeX className="h-5 w-5" /> : volume < 0.5 ? <Volume1 className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+                  </Button>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    value={isMuted ? 0 : volume}
+                    onChange={handleVolumeChangeSlider}
+                    className="w-24 h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer range-sm"
+                     style={{
+                      background: `linear-gradient(to right, #FFFFFF ${isMuted ? 0 : volume * 100}%, #4B5563 ${isMuted ? 0 : volume * 100}%)`
+                    }}
+                  />
+                </div>
+              </div>
               
-              <button 
-                onClick={() => {
-                  if (videoRef.current?.requestFullscreen) {
-                    videoRef.current.requestFullscreen().catch(console.error);
-                  } else if ((videoRef.current as any)?.webkitRequestFullscreen) {
-                    (videoRef.current as any).webkitRequestFullscreen();
-                  } else if ((videoRef.current as any)?.msRequestFullscreen) {
-                    (videoRef.current as any).msRequestFullscreen();
-                  }
-                }}
-                className="text-gray-300 hover:text-white transition-colors"
-                aria-label="Enter fullscreen"
-              >
-                <Maximize2 className="h-5 w-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-mono">{formatTime(currentTime)} / {formatTime(duration)}</span>
+                 {levels.length > 0 && (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <Settings className="h-5 w-5 text-white" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent 
+                      container={playerContainerRef.current}
+                      className="w-48 bg-gray-950/90 border-gray-700 text-white"
+                    >
+                      <div className="space-y-2">
+                        <h4 className="font-medium leading-none">Quality</h4>
+                        <div className="flex flex-col space-y-1">
+                          <Button
+                              variant="ghost"
+                              className={`justify-start text-left ${currentLevel === -1 ? 'bg-earthie-mint/20 text-earthie-mint' : ''}`}
+                              onClick={() => handleLevelChange(-1)}
+                            >
+                              Auto
+                            </Button>
+                          {levels.map((level, index) => (
+                            <Button
+                              key={index}
+                              variant="ghost"
+                              className={`justify-start text-left ${currentLevel === index ? 'bg-earthie-mint/20 text-earthie-mint' : ''}`}
+                              onClick={() => handleLevelChange(index)}
+                            >
+                              {level.height}p
+                            </Button>
+                          ))}
             </div>
           </div>
+                    </PopoverContent>
+                  </Popover>
+                 )}
+                <Button variant="ghost" size="icon" onClick={toggleFullscreen}>
+                  {isFullscreen ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
+                </Button>
         </div>
+            </div>
+          </div>
+        )}
       </div>
     );
-    
-    // Format time for display (mm:ss)
-  }, []);
+  };
 
   // Helper function to get an indigenous group for a location
   const getIndigenousGroup = (coordinates: { latitude: number; longitude: number }) => {
@@ -2884,39 +2848,25 @@ export default function KnowYourLandPage() {
                                 {currentTvStation === station.name && station.embedUrl && (
                                   <div className="mt-2 w-full rounded-md overflow-hidden">
                                     {station.streamType === 'hls' || station.embedUrl.endsWith('.m3u8') ? (
-                                      <HLSPlayer 
-                                        url={station.embedUrl} 
-                                        onError={() => {
-                                          toast.error(`Failed to load stream: ${station.name}`);
-                                          setCurrentTvStation(null);
-                                        }}
-                                      />
+                                      <div className="text-sm text-center p-2 bg-gray-800/50 rounded-md">
+                                        <span>Opening stream player...</span>
+                                      </div>
                                     ) : station.streamType === 'youtube' || station.streamType === 'twitch' ? (
-                                      <div className="aspect-video w-full rounded-md overflow-hidden">
+                                      <div className="aspect-video">
                                         <iframe
                                           src={station.embedUrl}
-                                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                          allowFullScreen
+                                          title={station.name}
                                           className="w-full h-full"
-                                          onError={() => {
-                                            toast.error(`Failed to load ${station.streamType} stream`);
-                                            setCurrentTvStation(null);
-                                          }}
+                                          allow="autoplay; encrypted-media"
+                                          allowFullScreen
                                         ></iframe>
                                       </div>
                                     ) : (
-                                      <div className="aspect-video bg-gray-800 rounded-md flex items-center justify-center">
-                                        <div className="text-center p-4">
-                                          <AlertCircle className="h-12 w-12 text-yellow-500 mx-auto mb-2" />
-                                          <p className="text-gray-300">This stream type requires external player</p>
-                                          <Button 
-                                            variant="outline" 
-                                            className="mt-2 text-earthie-mint border-earthie-mint/30 hover:bg-earthie-mint/10"
-                                            onClick={() => window.open(station.embedUrl, '_blank')}
-                                          >
+                                      <div className="text-sm text-center p-2 bg-gray-800/50 rounded-md">
+                                        <p>Unsupported stream type.</p>
+                                        <Button variant="link" onClick={() => window.open(station.embedUrl, '_blank')}>
                                             Open in New Tab
                                           </Button>
-                                        </div>
                                       </div>
                                     )}
                                   </div>
@@ -2927,7 +2877,7 @@ export default function KnowYourLandPage() {
                                     <Button 
                                       variant="outline" 
                                       size="sm"
-                                      onClick={() => handleShowTV(station.name, station.embedUrl, station.streamType)}
+                                      onClick={() => handleShowTV(station.embedUrl)}
                                       className="text-earthie-mint border-earthie-mint/30 hover:bg-earthie-mint/10"
                                     >
                                       {station.streamType === 'hls' ? 'Open Stream' : 'Watch'}
@@ -3005,6 +2955,25 @@ export default function KnowYourLandPage() {
           </p>
         </CardContent>
       </Card>
+
+      {showTVModal && currentTVEmbedUrl && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowTVModal(false)}>
+          <div className="bg-gray-900 border border-earthie-mint/30 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold text-white">TV Stream</h2>
+                <Button variant="ghost" size="icon" onClick={() => setShowTVModal(false)}>
+                  <X className="h-6 w-6" />
+                </Button>
+              </div>
+              <TVStreamPlayer 
+                url={currentTVEmbedUrl}
+                onClose={() => setShowTVModal(false)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

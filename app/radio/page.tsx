@@ -6,12 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Play, Pause, SkipBack, SkipForward, Volume2, Rewind, FastForward } from "lucide-react"
 import { Slider } from "@/components/ui/slider"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import type { Metadata } from 'next';
-
-export const metadata: Metadata = {
-  title: "Earth2 Radio | Exclusive News, Interviews & Updates",
-  description: "Tune in to Earth2 Radio for the latest news, developer interviews, and community discussions about the Earth 2 metaverse. Stay informed with our exclusive podcast episodes.",
-};
 
 type Podcast = {
   id: string

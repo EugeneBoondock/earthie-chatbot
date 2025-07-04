@@ -18,7 +18,7 @@ const sizes = [
 ];
 
 // Source image
-const sourceImage = path.join(__dirname, '../public/images/earthie_logo.png');
+const sourceImage = path.join(__dirname, '../public/images/optimized/earthie_logo_optimized.png');
 const backgroundColor = '#18181b';
 const logoWidth = 200; // Width of the logo on the splash screen
 

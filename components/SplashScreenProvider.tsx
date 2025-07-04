@@ -46,7 +46,7 @@ export default function SplashScreenProvider({ children }: SplashScreenProviderP
   // Preload the logo image to ensure it's ready before the splash screen
   useEffect(() => {
     const img = new Image();
-    img.src = "/images/earthie_logo.png";
+    img.src = "/images/optimized/earthie_logo_optimized.png";
     img.decoding = "async";
     img.fetchPriority = "high";
   }, []);

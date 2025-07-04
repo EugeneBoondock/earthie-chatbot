@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Image from 'next/image'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
@@ -72,7 +73,15 @@ export default function LogoutPage() {
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-900">
       <div className="text-center">
         <div className="mb-8 flex justify-center">
-          <img src="/images/earthie_logo.png" alt="Earthie Logo" className="w-16 h-16" />
+          <picture>
+            <source srcSet="/images/optimized/earthie_logo.webp" type="image/webp" />
+            <Image 
+              src="/images/optimized/earthie_logo_optimized.png" 
+              alt="Earthie Logo" 
+              width={64} 
+              height={64} 
+            />
+          </picture>
         </div>
         <h1 className="text-2xl font-bold text-white mb-4">Logging Out...</h1>
         <p className="text-gray-400">Please wait while we log you out safely.</p>

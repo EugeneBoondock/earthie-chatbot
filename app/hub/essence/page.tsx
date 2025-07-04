@@ -3,37 +3,39 @@
 import React, { useState, useEffect } from 'react';
 import { Alert } from '@mui/material';
 import { BarChart3, TrendingUp, Wallet, Users, Search, ChevronLeft, ChevronRight, ArrowUpDown, AlertCircle, Coins } from 'lucide-react';
-import { Bar } from 'react-chartjs-2';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-  ChartOptions,
-  Scale,
-  ScriptableContext,
-  CoreScaleOptions
-} from 'chart.js';
 import { createClient } from '@supabase/supabase-js';
 import { usePriceContext } from '@/contexts/PriceContext';
-import type { Metadata } from 'next';
+import dynamic from 'next/dynamic';
+import type { ChartOptions, Scale, CoreScaleOptions, ScriptableContext } from 'chart.js';
 
-export const metadata: Metadata = {
-  title: "Live Earth 2 Essence Tracker | Price, Charts & Analytics",
-  description: "Track the live price of Earth 2's Essence token with real-time charts and analytics. Monitor market cap, trading volume, and wallet transactions with our comprehensive Essence tracker.",
+// Dynamic import for Chart.js components
+const Bar = dynamic(() => import('react-chartjs-2').then(mod => ({ default: mod.Bar })), {
+  ssr: false,
+  loading: () => (
+    <div className="h-64 bg-gray-800/50 rounded-md flex items-center justify-center">
+      <div className="text-center">
+        <BarChart3 className="h-8 w-8 animate-pulse text-earthie-mint mx-auto mb-2" />
+        <p className="text-sm text-gray-300">Loading chart...</p>
+      </div>
+    </div>
+  )
+});
+
+// Dynamic Chart.js registration
+const registerChartJS = async () => {
+  const { Chart: ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } = await import('chart.js');
+  
+  ChartJS.register(
+    CategoryScale,
+    LinearScale,
+    BarElement,
+    Title,
+    Tooltip,
+    Legend
+  );
+  
+  return ChartJS;
 };
-
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend
-);
 
 // Initialize Supabase client
 const supabase = createClient(
@@ -745,6 +747,30 @@ const EssenceTracker: React.FC = () => {
     );
   };
 
+  // Chart wrapper component that ensures Chart.js is registered
+  const ChartWrapper = ({ children }: { children: React.ReactNode }) => {
+    const [chartReady, setChartReady] = useState(false);
+
+    useEffect(() => {
+      registerChartJS().then(() => {
+        setChartReady(true);
+      }).catch(console.error);
+    }, []);
+
+    if (!chartReady) {
+      return (
+        <div className="h-64 bg-gray-800/50 rounded-md flex items-center justify-center">
+          <div className="text-center">
+            <BarChart3 className="h-8 w-8 animate-pulse text-earthie-mint mx-auto mb-2" />
+            <p className="text-sm text-gray-300">Preparing chart...</p>
+          </div>
+        </div>
+      );
+    }
+
+    return <>{children}</>;
+  };
+
   return (
     <div className="min-h-screen space-y-4 sm:space-y-6 p-3 sm:p-6 lg:p-8">
       {/* Header Section */}
@@ -941,7 +967,9 @@ const EssenceTracker: React.FC = () => {
               <div className="mb-6">
                 <h3 className="text-lg font-semibold text-white mb-3">Transaction History</h3>
                 <div className="p-4 rounded-lg bg-earthie-dark-light/50 border border-earthie-mint/20" style={{ height: '400px' }}>
-                  <Bar data={processTransactionsForGraph(transactions)} options={chartOptions} />
+                  <ChartWrapper>
+                    <Bar data={processTransactionsForGraph(transactions)} options={chartOptions} />
+                  </ChartWrapper>
                 </div>
           </div>
         )}

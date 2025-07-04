@@ -1,3 +1,5 @@
+import withBundleAnalyzer from '@next/bundle-analyzer';
+
 let userConfig = undefined
 try {
   // try to import ESM first
@@ -48,4 +50,8 @@ if (userConfig) {
   }
 }
 
-export default nextConfig
+const finalConfig = withBundleAnalyzer({
+  enabled: process.env.ANALYZE === 'true',
+})(nextConfig);
+
+export default finalConfig;

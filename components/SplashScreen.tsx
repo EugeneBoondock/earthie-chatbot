@@ -189,16 +189,19 @@ export default function SplashScreen() {
           <div className="relative w-32 h-32 mb-4 logo-container">
             <div className="absolute inset-0 rounded-full blur-sm bg-earthie-mint/30"></div>
             <div className="relative w-full h-full rounded-full overflow-hidden glow">
-              <Image
-                src="/images/earthie_logo.png"
-                alt="Earthie"
-                fill
-                sizes="(max-width: 768px) 100vw, 33vw"
-                priority
-                className="object-contain scale-90"
-                quality={90}
-                loading="eager"
-              />
+              <picture>
+                <source srcSet="/images/optimized/earthie_logo.webp" type="image/webp" />
+                <Image
+                  src="/images/optimized/earthie_logo_optimized.png"
+                  alt="Earthie"
+                  fill
+                  sizes="(max-width: 768px) 100vw, 33vw"
+                  priority
+                  className="object-contain scale-90"
+                  quality={90}
+                  loading="eager"
+                />
+              </picture>
             </div>
           </div>
           <h1 className="text-3xl font-bold mt-4 tracking-wider text-gradient">
