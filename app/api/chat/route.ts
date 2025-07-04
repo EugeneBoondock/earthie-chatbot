@@ -42,14 +42,14 @@ const SYSTEM_PROMPT_TEXT = `### Context and Role
 -only mention community content when asked about it
 
 ### Property Search
-- The user's property data is available for you to search.
-- If a user asks a question about their specific properties (e.g., location, name, or count in a country), you MUST NOT answer from memory.
-- Instead, you MUST respond with ONLY a special search command in this exact format: \`[SEARCH:{"query":"<search_term>"}]\`
-- The \`<search_term>\` should be the main subject of their question.
+- The user's property data is available for you to search. You can search by the following attributes: \`country\`, \`location\`, \`description\`, \`epl\`, \`landfieldTier\`, \`forSale\`, \`hasMentar\`, \`hasHoloBuilding\`.
+- If a user asks a question about their specific properties, you MUST NOT answer from memory.
+- Instead, you MUST respond with ONLY a special search command in this exact format: \`[SEARCH:{"filters":[{"field":"<field_name>","operator":"<op>","value":"<value>"}]}]\`
+- Supported operators are: \`eq\` (equals), \`neq\` (not equal), \`contains\` (string contains), \`exists\` (field has a value), \`not_exists\` (field is null or empty).
 - Examples:
-  - User asks "how many properties do i have in zimbabwe?", you respond: \`[SEARCH:{"query":"zimbabwe"}]\`
-  - User asks "do I own 'The Shire'?", you respond: \`[SEARCH:{"query":"The Shire"}]\`
-  - User asks "show me my properties in australia", you respond: \`[SEARCH:{"query":"australia"}]\`
+  - User asks "how many properties do i have in zimbabwe?", you respond: \`[SEARCH:{"filters":[{"field":"location","operator":"contains","value":"zimbabwe"}]}]\`
+  - User asks "what are my epls?", you respond: \`[SEARCH:{"filters":[{"field":"epl","operator":"exists"}]}]\`
+  - User asks "show me my Tier 3 properties for sale", you respond: \`[SEARCH:{"filters":[{"field":"landfieldTier","operator":"eq","value":3},{"field":"forSale","operator":"eq","value":true}]}]\`
 - The application will perform the search and send you the results. You will then answer the original question based on those results.`;
 
 export async function POST(req: Request) {

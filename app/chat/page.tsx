@@ -18,7 +18,14 @@ interface E2Property {
   attributes: {
     description: string;
     location?: string;
-    // other attributes can be added if needed for context
+    country?: string;
+    tileCount?: number;
+    epl?: string | null;
+    landfieldTier?: number;
+    forSale?: boolean;
+    hasMentar?: boolean;
+    hasHoloBuilding?: boolean;
+    currentValue?: string;
   };
 }
 
@@ -129,50 +136,56 @@ export default function ChatPage() {
             if (content.startsWith('[SEARCH:') && content.endsWith(']')) {
                 processedMessageIds.current.add(lastMessage.id); // Mark as processed to prevent re-triggering
 
-                let query = '';
+                let parsedSearch: { filters: Filter[] } = { filters: [] };
                 try {
                     const jsonString = content.substring(8, content.length - 1);
-                    query = JSON.parse(jsonString).query;
+                    parsedSearch = JSON.parse(jsonString);
                 } catch (e) {
                     console.error("Failed to parse search JSON:", e);
                     append({ role: 'user', content: "(System: I had a problem understanding the search request. Please try again.)" });
                     return;
                 }
 
+                const queryForDisplay = parsedSearch.filters.map(f => `${f.field} ${f.operator} ${f.value || ''}`).join(', ');
+
                 // Stage 1: Update the UI to show the "searching" indicator
                 const messageId = lastMessage.id;
                 setMessages(prev => prev.map(msg => 
                     msg.id === messageId 
-                    ? { ...msg, content: `SEARCH_UI:${JSON.stringify({ query, status: 'searching' })}` } 
+                    ? { ...msg, content: `SEARCH_UI:${JSON.stringify({ query: queryForDisplay, status: 'searching' })}` } 
                     : msg
                 ));
                 
                 // Stage 2: Perform the search and update UI to "done"
                 setTimeout(() => {
-                    const searchResults = properties.filter(p => 
-                        (p.attributes.description && p.attributes.description.toLowerCase().includes(query.toLowerCase())) ||
-                        (p.attributes.location && p.attributes.location.toLowerCase().includes(query.toLowerCase()))
-                    );
+                    const searchResults = applyFilters(properties, parsedSearch.filters);
 
                     setMessages(prev => prev.map(msg => 
                         msg.id === messageId 
-                        ? { ...msg, content: `SEARCH_UI:${JSON.stringify({ query, status: 'done' })}` } 
+                        ? { ...msg, content: `SEARCH_UI:${JSON.stringify({ query: queryForDisplay, status: 'done' })}` } 
                         : msg
                     ));
 
                     const propertyCount = searchResults.length;
-                    let searchResultSummary;
+                    let searchResultSummary = `I found ${propertyCount} properties matching your search.`;
+
                     if (propertyCount > 0) {
+                        const totalTiles = searchResults.reduce((sum, p) => sum + (p.attributes.tileCount || 0), 0);
+                        searchResultSummary += ` Total tiles: ${totalTiles}.`;
+
+                        const epls = searchResults.map(p => p.attributes.epl).filter(Boolean);
+                        if (epls.length > 0) {
+                            searchResultSummary += ` EPLs found: ${epls.slice(0, 5).join(', ')}.`;
+                        }
+                        
                         const propertyList = searchResults.map(p => p.attributes.description).slice(0, 5).join(', ');
-                        searchResultSummary = `I found ${propertyCount} properties matching "${query}". The first few are: ${propertyList}.`;
-                    } else {
-                        searchResultSummary = `I couldn't find any properties matching "${query}".`;
+                        searchResultSummary += ` The first few are: ${propertyList}.`;
                     }
                     
                     // Stage 3: Send results to AI silently
                     append({
                         role: 'system',
-                        content: `(System: Here are the search results for "${query}". Use them to answer my original question.)\n${searchResultSummary}`
+                        content: `(System: Here are the search results for the user's query. Use them to answer their original question.)\n${searchResultSummary}`
                     });
                 }, 1000); // Increased delay to make the UI transition clear
             }
@@ -288,4 +301,41 @@ export default function ChatPage() {
             </div>
         </div>
     );
+}
+
+// --- Helper function to apply dynamic filters ---
+type Filter = {
+    field: keyof E2Property['attributes'];
+    operator: 'eq' | 'neq' | 'contains' | 'exists' | 'not_exists';
+    value?: any;
+};
+
+function applyFilters(properties: E2Property[], filters: Filter[]): E2Property[] {
+    if (!filters || filters.length === 0) {
+        return properties;
+    }
+
+    return properties.filter(property => {
+        return filters.every(filter => {
+            const propValue = property.attributes[filter.field];
+
+            switch (filter.operator) {
+                case 'eq':
+                    return propValue == filter.value;
+                case 'neq':
+                    return propValue != filter.value;
+                case 'contains':
+                    if (typeof propValue === 'string' && typeof filter.value === 'string') {
+                        return propValue.toLowerCase().includes(filter.value.toLowerCase());
+                    }
+                    return false;
+                case 'exists':
+                    return propValue !== null && propValue !== undefined && propValue !== '';
+                case 'not_exists':
+                    return propValue === null || propValue === undefined || propValue === '';
+                default:
+                    return true;
+            }
+        });
+    });
 }
