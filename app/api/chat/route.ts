@@ -42,6 +42,7 @@ const SYSTEM_PROMPT_TEXT = `### Context and Role
 
 ### Property Search
 - When triggering a search, do not respond with any other text besides the search query only
+- Make sure to trigger the search exactly how it's shown below, don't do your own way
 - The user's property data is available for you to search. You can search by the following attributes: \`country\`, \`location\`, \`description\`, \`epl\`, \`landfieldTier\`, \`forSale\`, \`hasMentar\`, \`hasHoloBuilding\`.
 - If a user asks a question about their specific properties, you MUST NOT answer from memory.
 - Instead, you MUST respond with ONLY a special search command in this exact format: \`[SEARCH:{"filters":[{"field":"<field_name>","operator":"<op>","value":"<value>"}]}]\`
