@@ -1,4 +1,92 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-<sitemap><loc>https://www.earthie.world/sitemap-0.xml</loc></sitemap>
-</sitemapindex>
+<urlset
+      xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
+            http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
+<!-- created with Free Online Sitemap Generator www.xml-sitemaps.com -->
+
+
+<url>
+  <loc>https://www.earthie.world/</loc>
+  <lastmod>2025-07-04T16:55:20+00:00</lastmod>
+  <priority>1.00</priority>
+</url>
+<url>
+  <loc>https://www.earthie.world/radio</loc>
+  <lastmod>2025-07-04T16:55:20+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.earthie.world/chat</loc>
+  <lastmod>2025-07-04T16:55:20+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.earthie.world/script-tools</loc>
+  <lastmod>2025-07-04T16:55:20+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.earthie.world/raid-helper</loc>
+  <lastmod>2025-07-04T16:55:20+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.earthie.world/auth/login?redirectTo=%2Fhub%2Fprofile</loc>
+  <lastmod>2025-07-04T16:55:20+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.earthie.world/auth/login?redirectTo=%2Fhub%2Fe2pedia</loc>
+  <lastmod>2025-07-04T16:55:20+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.earthie.world/auth/login?redirectTo=%2Fhub%2Flobbyist</loc>
+  <lastmod>2025-07-04T16:55:20+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.earthie.world/auth/login?redirectTo=%2Fhub%2Fessence</loc>
+  <lastmod>2025-07-04T16:55:20+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.earthie.world/auth/login?redirectTo=%2Fhub%2Fessence-report</loc>
+  <lastmod>2025-07-04T16:55:20+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.earthie.world/auth/login?redirectTo=%2Fhub%2Flogistics</loc>
+  <lastmod>2025-07-04T16:55:20+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.earthie.world/about</loc>
+  <lastmod>2025-07-04T16:55:20+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.earthie.world/privacy</loc>
+  <lastmod>2025-07-04T16:55:20+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.earthie.world/terms</loc>
+  <lastmod>2025-07-04T16:55:20+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.earthie.world/auth/signup</loc>
+  <lastmod>2025-07-04T16:55:20+00:00</lastmod>
+  <priority>0.64</priority>
+</url>
+<url>
+  <loc>https://www.earthie.world/auth/login</loc>
+  <lastmod>2025-07-04T16:55:20+00:00</lastmod>
+  <priority>0.51</priority>
+</url>
+
+
+</urlset>
