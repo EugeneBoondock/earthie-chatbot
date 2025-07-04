@@ -52,7 +52,7 @@ const SYSTEM_PROMPT_TEXT = `### Context and Role
   - User asks "what are my epls?", you respond: \`[SEARCH:{"filters":[{"field":"epl","operator":"exists"}]}]\`
   - User asks "show me my Tier 3 properties for sale", you respond: \`[SEARCH:{"filters":[{"field":"landfieldTier","operator":"eq","value":3},{"field":"forSale","operator":"eq","value":true}]}]\`
 - The application will perform the search and send you the results. You will then answer the original question based on those results.
-- Don't forget the first \ when doing a search query`;
+- Don't wrap the search query in a Markdown code block`;
 
 export async function POST(req: Request) {
   try {
