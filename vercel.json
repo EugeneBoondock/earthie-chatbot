@@ -5,5 +5,7 @@
       "path": "/api/cron/community-sentiment",
       "schedule": "0 2 * * *"
     }
-  ]
+  ],
+  "installCommand": "npm install",
+  "buildCommand": "npm run build"
 } 
