@@ -139,7 +139,7 @@ export async function POST(req: Request) {
     const finalRole = lastMessage.role === 'system' ? 'user' : lastMessage.role;
 
     const result = await streamText({
-      model: google('gemini-1.5-flash-latest'),
+      model: google('gemini-2.0-flash-lite'),
       system: SYSTEM_PROMPT_TEXT,
       messages: [
           ...sanitizedHistory,
