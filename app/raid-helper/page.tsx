@@ -17,6 +17,7 @@ import { Loader2, AlertCircle, Upload, CheckCircle, Copy, Download, ArrowLeft, A
 import RaidHelperPreview from '@/components/RaidHelperPreview';
 import { TargetRankingTable } from '@/components/TargetRankingTable'; // Ensure this component is updated for pagination
 import { OwnerPerformanceTable } from '@/components/OwnerPerformanceTable'; // Ensure this component is updated for pagination
+import Link from "next/link"
 
 // --- Constants ---
 const ITEMS_PER_PAGE = 5; // Changed to 5
@@ -577,356 +578,373 @@ export default function RaidHelperPage() {
         return null;
     }
     return (
-        <>
-            <div className="container mx-auto p-4 md:p-8 space-y-6">
-                {/* --- Raid Helper Info & Upload Section (ALWAYS SHOW) --- */}
-                {/* --- Get Script Card --- */}
-                <Card className="bg-card/80 backdrop-blur-sm">
-                    <CardHeader>
-                        <CardTitle>Get Console Script</CardTitle>
-                        <CardDescription>Run this script in your browser console while logged into Earth2 to generate the necessary CSV file.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="flex flex-col sm:flex-row gap-4 items-start">
-                        <div className="flex-grow">
-                            <p className="text-sm text-muted-foreground mb-2">
-                                1. Log in to Earth2 (app.earth2.io).<br />
-                                2. Open browser developer console (usually F12).<br />
-                                3. Go to the 'Console' tab.<br />
-                                4. Copy the script using the button below.<br />
-                                5. Paste the script into the console and press Enter.<br />
-                                6. Wait for the script to finish and download the CSV.
-                            </p>
-                        </div>
-                        <div className="flex flex-col space-y-2 w-full sm:w-auto">
-                            <Button onClick={handleCopyScript} variant="outline">
-                                <Copy className="mr-2 h-4 w-4" /> Copy Script
-                            </Button>
-                            <Button asChild variant="outline">
-                                <a href={SCRIPT_PATH} download="raid-exporter.js">
-                                    <Download className="mr-2 h-4 w-4" /> Download Script
-                                </a>
-                            </Button>
-                        </div>
-                    </CardContent>
-                    {(copySuccess || copyError) && (
-                        <CardContent>
-                            {copySuccess && <p className="text-sm text-green-500">{copySuccess}</p>}
-                            {copyError && <p className="text-sm text-red-500">{copyError}</p>}
-                        </CardContent>
-                    )}
-                </Card>
-                {/* --- Upload Card --- */}
-                <Card className="bg-card/80 backdrop-blur-sm">
-                    <CardHeader>
-                        <CardTitle>Upload Raid Data</CardTitle>
-                        <CardDescription>Select the CSV file exported from the Earth2 console script.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="flex flex-col gap-4">
-                            <div className="flex items-center gap-4">
-                                <Input
-                                    type="file"
-                                    accept=".csv"
-                                    onChange={handleFileChange}
-                                    className="max-w-sm"
-                                />
-                                <Button
-                                    onClick={processFile}
-                                    disabled={!file || isLoading}
-                                >
-                                    {isLoading ? (
-                                        <>
-                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                            Processing...
-                                        </>
-                                    ) : (
-                                        'Process File'
-                                    )}
-                                </Button>
-                                {hasStoredData && (
-                                    <Button
-                                        variant="destructive"
-                                        onClick={clearStoredData}
-                                    >
-                                        Clear Stored Data
-                                    </Button>
-                                )}
-                            </div>
-                            {error && (
-                                <Alert variant="destructive">
-                                    <AlertCircle className="h-4 w-4" />
-                                    <AlertTitle>Error</AlertTitle>
-                                    <AlertDescription>{error}</AlertDescription>
-                                </Alert>
-                            )}
-                        </div>
-                    </CardContent>
-                </Card>
-                {/* --- Loading Indicator --- */}
-                {isLoading && (
-                    <div className="flex justify-center items-center py-10">
-                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                        <p className="ml-2">Loading and processing data...</p>
+        <div className="container mx-auto p-4 sm:p-6 md:p-8 bg-earthie-dark text-white min-h-screen">
+          <Card className="mb-8 bg-earthie-dark-light border-earthie-dark-light">
+            <CardHeader>
+              <CardTitle className="text-3xl font-bold text-center text-earthie-mint">Raid Performance Analyzer</CardTitle>
+              <CardDescription className="text-center text-gray-400 mt-2">
+                Analyze your raid history to optimize your strategy. Upload your exported data to get started.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="text-center">
+              <Link href="https://e2.university/guides/how-to-use-raid-helper-script-from-earthieworld/" passHref legacyBehavior>
+                <a target="_blank" rel="noopener noreferrer">
+                  <Button variant="outline" size="lg" className="text-earthie-mint border-earthie-mint hover:bg-earthie-mint/10 active:bg-earthie-mint/20">
+                    How to Use This Tool
+                  </Button>
+                </a>
+              </Link>
+            </CardContent>
+          </Card>
+    
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+            {/* Script Usage Section */}
+            <Card className="bg-earthie-dark-light border-earthie-dark-light">
+                <CardHeader>
+                    <CardTitle>Get Console Script</CardTitle>
+                    <CardDescription>Run this script in your browser console while logged into Earth2 to generate the necessary CSV file.</CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-col sm:flex-row gap-4 items-start">
+                    <div className="flex-grow">
+                        <p className="text-sm text-muted-foreground mb-2">
+                            1. Log in to Earth2 (app.earth2.io).<br />
+                            2. Open browser developer console (usually F12).<br />
+                            3. Go to the 'Console' tab.<br />
+                            4. Copy the script using the button below.<br />
+                            5. Paste the script into the console and press Enter.<br />
+                            6. Wait for the script to finish and download the CSV.
+                        </p>
                     </div>
+                    <div className="flex flex-col space-y-2 w-full sm:w-auto">
+                        <Button onClick={handleCopyScript} variant="outline">
+                            <Copy className="mr-2 h-4 w-4" /> Copy Script
+                        </Button>
+                        <Button asChild variant="outline">
+                            <a href={SCRIPT_PATH} download="raid-exporter.js">
+                                <Download className="mr-2 h-4 w-4" /> Download Script
+                            </a>
+                        </Button>
+                    </div>
+                </CardContent>
+                {(copySuccess || copyError) && (
+                    <CardContent>
+                        {copySuccess && <p className="text-sm text-green-500">{copySuccess}</p>}
+                        {copyError && <p className="text-sm text-red-500">{copyError}</p>}
+                    </CardContent>
                 )}
-
-                {/* --- Data Display Tabs --- */}
-                {/* Render only when all necessary data is calculated */}
-                {raidData && overallSummary && propertySummaries && rankedTargets && ownerSummaries && (
-                    <Tabs defaultValue="overview" className="w-full">
-                        <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 bg-muted/70 backdrop-blur-sm">
-                            <TabsTrigger value="overview">Overall</TabsTrigger>
-                            <TabsTrigger value="properties">By Source</TabsTrigger>
-                            <TabsTrigger value="targets">By Target</TabsTrigger>
-                            <TabsTrigger value="owners">By Owner</TabsTrigger>
-                            <TabsTrigger value="insights">Insights</TabsTrigger>
-                        </TabsList>
-
-                        {/* --- Overall Summary Tab --- */}
-                        <TabsContent value="overview" className="mt-4">
-                            <Card className="bg-card/80 backdrop-blur-sm">
-                                <CardHeader>
-                                    <CardTitle>Overall Raid Performance</CardTitle>
-                                    {overallSummary.dateRange.start && overallSummary.dateRange.end && (<CardDescription>Data from {overallSummary.dateRange.start} to {overallSummary.dateRange.end}</CardDescription>)}
-                                </CardHeader>
-                                <CardContent className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 text-sm">
-                                    <div><span className="font-semibold">Total Raids:</span> {overallSummary.totalRaids}</div>
-                                    <div className="text-green-600"><span className="font-semibold">Wins:</span> {overallSummary.totalWins}</div>
-                                    <div className="text-red-600"><span className="font-semibold">Losses:</span> {overallSummary.totalLosses}</div>
-                                    <div><span className="font-semibold">Win Rate:</span> {overallSummary.overallWinRate.toFixed(1)}%</div>
-                                    <div className="text-yellow-500"><span className="font-semibold">Total E-ther:</span> {overallSummary.totalEtherEarned.toFixed(4)}</div>
-                                    <div><span className="font-semibold">Avg E/Raid:</span> {overallSummary.avgEtherPerRaid.toFixed(4)}</div>
-                                    <div><span className="font-semibold">Avg E/Win:</span> {overallSummary.avgEtherPerWin.toFixed(4)}</div>
-                                    <div><span className="font-semibold">Unique Sources:</span> {overallSummary.uniqueSourceProperties}</div>
-                                    <div><span className="font-semibold">Unique Targets:</span> {overallSummary.uniqueTargetProperties}</div>
-                                    <div><span className="font-semibold">Unique Owners:</span> {overallSummary.uniqueOwnersRaided}</div>
-                                </CardContent>
-                            </Card>
-                        </TabsContent>
-
-                        {/* --- By Source Property Tab --- */}
-                        <TabsContent value="properties" className="mt-4 space-y-4">
-                            <div className="flex justify-end">
-                                <Input type="search" placeholder="Search sources (name, loc, id)..." value={sourceSearchTerm} onChange={(e) => {setSourceSearchTerm(e.target.value); setSourceCurrentPage(1);}} className="max-w-sm bg-background/80" />
-                            </div>
-                            <Card className="bg-card/80 backdrop-blur-sm">
-                                <CardHeader>
-                                    <CardTitle>Performance by Source Property</CardTitle>
-                                    <CardDescription>Click a row for details. Showing {paginatedSourceProperties.length} of {filteredSourceProperties.length} properties.</CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead className="w-[20%]">Property</TableHead>
-                                                <TableHead className="text-right">Raids (W/L)</TableHead>
-                                                <TableHead className="text-right">Win Rate</TableHead>
-                                                <TableHead className="text-right">Total E-ther</TableHead>
-                                                <TableHead className="text-right">Avg E-ther/Win</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {paginatedSourceProperties.length === 0 && (
-                                                <TableRow><TableCell colSpan={5} className="text-center">No source properties found.</TableCell></TableRow>
-                                            )}
-                                            {paginatedSourceProperties.map((prop) => (
-                                                <TableRow key={prop.id} onClick={() => setSelectedSourcePropertyId(prop.id)} className="cursor-pointer hover:bg-muted/50">
-                                                    <TableCell className="font-medium">
-                                                        <div>{prop.description}</div>
-                                                        <div className="text-xs text-muted-foreground">{prop.location}</div>
-                                                    </TableCell>
-                                                    <TableCell className="text-right">{prop.wins}W/{prop.losses}L</TableCell>
-                                                    <TableCell className="text-right">{prop.winRate.toFixed(1)}%</TableCell>
-                                                    <TableCell className="text-right text-yellow-500">{prop.totalEtherGenerated.toFixed(4)}</TableCell>
-                                                    <TableCell className="text-right">{prop.avgEtherPerWin.toFixed(4)}</TableCell>
-                                                </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                    <div className="flex items-center justify-end space-x-2 py-4">
-                                        <Button variant="outline" size="sm" onClick={() => setSourceCurrentPage(p => Math.max(1, p - 1))} disabled={sourceCurrentPage === 1}>Previous <ArrowLeft className="h-4 w-4 ml-1" /></Button>
-                                        <span className="text-sm text-muted-foreground">Page {sourceCurrentPage} of {sourceTotalPages}</span>
-                                        <Button variant="outline" size="sm" onClick={() => setSourceCurrentPage(p => Math.min(sourceTotalPages, p + 1))} disabled={sourceCurrentPage === sourceTotalPages}>Next <ArrowRight className="h-4 w-4 ml-1" /></Button>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                            {/* Selected Property Detail View (restored structure) */}
-                            {selectedPropertyData && (
-                                <Card className="mt-6 border-primary/50 border-2 bg-card/80 backdrop-blur-sm">
-                                    <CardHeader><CardTitle>Details for: {selectedPropertyData.description}</CardTitle><CardDescription>{selectedPropertyData.location}</CardDescription></CardHeader>
-                                    <CardContent>
-                                        <Tabs defaultValue="targets" className="w-full">
-                                            <TabsList className="grid w-full grid-cols-2"><TabsTrigger value="targets">Targets Raided</TabsTrigger><TabsTrigger value="charts">Property Charts</TabsTrigger></TabsList>
-                                            <TabsContent value="targets" className="mt-4">
-                                                <h3 className="text-lg font-semibold mb-2">Targets Raided from this Property</h3>
-                                                <Table>
-                                                    <TableHeader>
-                                                        <TableRow>
-                                                            <TableHead>Target Property</TableHead>
-                                                            <TableHead>Owner</TableHead>
-                                                            <TableHead className="text-right">Raids (W/L)</TableHead>
-                                                            <TableHead className="text-right">Win Rate</TableHead>
-                                                            <TableHead className="text-right">Total E-ther</TableHead>
-                                                            <TableHead className="text-right">Avg E-ther/Win</TableHead>
-                                                            <TableHead>Last Raid</TableHead>
-                                                        </TableRow>
-                                                    </TableHeader>
-                                                    <TableBody>
-                                                        {selectedPropertyTargetsSorted.length === 0 && (
-                                                            <TableRow>
-                                                                <TableCell colSpan={7} className="text-center">
-                                                                    No targets raided from this property.
-                                                                </TableCell>
-                                                            </TableRow>
-                                                        )}
-                                                        {selectedPropertyTargetsSorted.map((target, idx) => (
-                                                            <React.Fragment key={`${target.id}-${idx}`}>
-                                                                <TableRow
-                                                                    className={`cursor-pointer hover:bg-muted/50 ${expandedTargetIdx === idx ? 'bg-muted' : ''}`}
-                                                                    onClick={() => setExpandedTargetIdx(expandedTargetIdx === idx ? null : idx)}
-                                                                >
-                                                                    <TableCell className="font-medium w-[25%]">
-                                                                        <div>{target.description}</div>
-                                                                        <div className="text-xs text-muted-foreground">
-                                                                            {target.location}
-                                                                        </div>
-                                                                    </TableCell>
-                                                                    <TableCell className="w-[15%]">{target.ownerUsername}</TableCell>
-                                                                    <TableCell className="text-right w-[10%]">{target.wins}W/{target.losses}L</TableCell>
-                                                                    <TableCell className="text-right w-[10%]">{target.winRate.toFixed(1)}%</TableCell>
-                                                                    <TableCell className="text-right text-yellow-500 w-[15%]">{target.totalEtherYield.toFixed(4)}</TableCell>
-                                                                    <TableCell className="text-right w-[15%]">{target.avgEtherPerWin.toFixed(4)}</TableCell>
-                                                                    <TableCell className="w-[10%] text-xs">{target.lastRaidTimestamp ? format(parseISO(target.lastRaidTimestamp), 'MM/dd HH:mm') : 'N/A'}</TableCell>
-                                                                </TableRow>
-                                                                {expandedTargetIdx === idx && (
-                                                                    <TableRow>
-                                                                        <TableCell colSpan={7} className="p-0">
-                                                                            <div className="p-4 bg-muted/30 rounded-md">
-                                                                                <h4 className="font-semibold mb-2 text-sm">Raid History for {target.description}:</h4>
-                                                                                <Table>
-                                                                                    <TableHeader>
-                                                                                        <TableRow>
-                                                                                            <TableHead>Timestamp</TableHead>
-                                                                                            <TableHead>Result</TableHead>
-                                                                                            <TableHead className="text-right">E-ther</TableHead>
-                                                                                            <TableHead className="text-right">Cydroids</TableHead>
-                                                                                        </TableRow>
-                                                                                    </TableHeader>
-                                                                                    <TableBody>
-                                                                                        {target.raids.map((raid, raidIdx) => (
-                                                                                            <TableRow key={raid.notification_id + '-' + raidIdx}>
-                                                                                                <TableCell className="text-xs">{format(parseISO(raid.timestamp), 'yyyy-MM-dd HH:mm:ss')}</TableCell>
-                                                                                                <TableCell>{raid.event_type === 'DROID_RAID_SUCCESSFUL' ? <span className="text-green-600 font-semibold flex items-center"><CheckCircle className="h-3 w-3 mr-1"/>Win</span> : <span className="text-red-600 font-semibold flex items-center"><AlertCircle className="h-3 w-3 mr-1"/>Fail</span>}</TableCell>
-                                                                                                <TableCell className="text-right text-yellow-500">{raid.ether_amount.toFixed(4)}</TableCell>
-                                                                                                <TableCell className="text-right">{raid.cydroids_sent || '-'}</TableCell>
-                                                                                            </TableRow>
-                                                                                        ))}
-                                                                                    </TableBody>
-                                                                                </Table>
-                                                                            </div>
-                                                                        </TableCell>
-                                                                    </TableRow>
-                                                                )}
-                                                            </React.Fragment>
-                                                        ))}
-                                                    </TableBody>
-                                                </Table>
-                                            </TabsContent>
-                                            <TabsContent value="charts" className="mt-4 space-y-4">
-                                                <Card className="bg-card/80 backdrop-blur-sm">
-                                                    <CardHeader>
-                                                        <CardTitle className="text-base">Win/Loss Ratio</CardTitle>
-                                                    </CardHeader>
-                                                    <CardContent className="h-[250px]">
-                                                        <ResponsiveContainer width="100%" height="100%">
-                                                            <PieChart>
-                                                                <Pie data={propertyWinLossData} cx="50%" cy="50%" labelLine={false} outerRadius={80} fill="#8884d8" dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
-                                                                    {propertyWinLossData.map((entry, index) => (
-                                                                        <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                                                                    ))}
-                                                                </Pie>
-                                                                <Tooltip formatter={(value) => typeof value === 'number' ? value.toFixed(5) : value}/>
-                                                            </PieChart>
-                                                        </ResponsiveContainer>
-                                                    </CardContent>
-                                                </Card>
-                                                <Card className="bg-card/80 backdrop-blur-sm">
-                                                    <CardHeader>
-                                                        <CardTitle className="text-base">Top 10 Targets by E-ther Yield</CardTitle>
-                                                    </CardHeader>
-                                                    <CardContent className="h-[250px]">
-                                                        <ResponsiveContainer width="100%" height="100%">
-                                                            <BarChart data={topTargetsByEtherData} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                                                                <CartesianGrid strokeDasharray="3 3" />
-                                                                <XAxis type="number" />
-                                                                <YAxis dataKey="name" type="category" width={80} fontSize="10px" interval={0}/>
-                                                                <Tooltip formatter={(value) => typeof value === 'number' ? value.toFixed(5) : value}/>
-                                                                <Legend />
-                                                                <Bar dataKey="ether" fill="#FFBB28" name="E-ther Yield"/>
-                                                            </BarChart>
-                                                        </ResponsiveContainer>
-                                                    </CardContent>
-                                                </Card>
-                                                <Card className="bg-card/80 backdrop-blur-sm">
-                                                    <CardHeader>
-                                                        <CardTitle className="text-base">Raids & E-ther Over Time (Daily)</CardTitle>
-                                                    </CardHeader>
-                                                    <CardContent className="h-[300px]">
-                                                        <ResponsiveContainer width="100%" height="100%">
-                                                            <LineChart data={propertyRaidsOverTimeData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                                                                <CartesianGrid strokeDasharray="3 3" />
-                                                                <XAxis dataKey="date" />
-                                                                <YAxis yAxisId="left" label={{ value: 'Raids / Wins', angle: -90, position: 'insideLeft' }}/>
-                                                                <YAxis yAxisId="right" orientation="right" label={{ value: 'E-ther', angle: 90, position: 'insideRight' }}/>
-                                                                <Tooltip formatter={(value, name) => (typeof value === 'number' ? value.toFixed(5) : value)}/>
-                                                                <Legend />
-                                                                <Line yAxisId="left" type="monotone" dataKey="raids" stroke="#8884d8" name="Total Raids" dot={false}/>
-                                                                <Line yAxisId="left" type="monotone" dataKey="wins" stroke="#00C49F" name="Wins" dot={false}/>
-                                                                <Line yAxisId="right" type="monotone" dataKey="ether" stroke="#FFBB28" name="E-ther Earned" dot={false}/>
-                                                            </LineChart>
-                                                        </ResponsiveContainer>
-                                                    </CardContent>
-                                                </Card>
-                                            </TabsContent>
-                                        </Tabs>
-                                    </CardContent>
-                                </Card>
+            </Card>
+            {/* Upload Card */}
+            <Card className="bg-earthie-dark-light border-earthie-dark-light">
+                <CardHeader>
+                    <CardTitle>Upload Raid Data</CardTitle>
+                    <CardDescription>Select the CSV file exported from the Earth2 console script.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="flex flex-col gap-4">
+                        <div className="flex items-center gap-4">
+                            <Input
+                                type="file"
+                                accept=".csv"
+                                onChange={handleFileChange}
+                                className="max-w-sm"
+                            />
+                            <Button
+                                onClick={processFile}
+                                disabled={!file || isLoading}
+                            >
+                                {isLoading ? (
+                                    <>
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        Processing...
+                                    </>
+                                ) : (
+                                    'Process File'
+                                )}
+                            </Button>
+                            {hasStoredData && (
+                                <Button
+                                    variant="destructive"
+                                    onClick={clearStoredData}
+                                >
+                                    Clear Stored Data
+                                </Button>
                             )}
-                        </TabsContent>
-
-                        {/* --- By Target Tab --- */}
-                        <TabsContent value="targets" className="mt-4 space-y-4">
-                            <div className="flex justify-end">
-                                <Input type="search" placeholder="Search targets (name, owner, loc, id)..." value={targetSearchTerm} onChange={(e) => {setTargetSearchTerm(e.target.value); setTargetCurrentPage(1);}} className="max-w-sm bg-background/80"/>
-                            </div>
-                            <TargetRankingTable data={paginatedRankedTargets} currentPage={targetCurrentPage} totalPages={targetTotalPages} setCurrentPage={setTargetCurrentPage} totalItems={filteredRankedTargets.length}/>
-                        </TabsContent>
-
-                        {/* --- By Owner Tab --- */}
-                        <TabsContent value="owners" className="mt-4 space-y-4">
-                            <div className="flex justify-end">
-                                <Input type="search" placeholder="Search owners (name, id)..." value={ownerSearchTerm} onChange={(e) => {setOwnerSearchTerm(e.target.value); setOwnerCurrentPage(1);}} className="max-w-sm bg-background/80"/>
-                            </div>
-                            <OwnerPerformanceTable data={paginatedOwnerSummaries} currentPage={ownerCurrentPage} totalPages={ownerTotalPages} setCurrentPage={setOwnerCurrentPage} totalItems={filteredOwnerSummaries.length}/>
-                        </TabsContent>
-
-                        {/* --- Insights Tab --- */}
-                        <TabsContent value="insights" className="mt-4 space-y-6">
-                            <h2 className="text-xl font-semibold">Raid Insights & Performance Analysis</h2>
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                <Card className="bg-card/80 backdrop-blur-sm"><CardHeader><CardTitle className="text-base">Overall Win/Loss Ratio</CardTitle></CardHeader><CardContent className="h-[300px]"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={overallWinLossData} cx="50%" cy="50%" labelLine={false} outerRadius={100} fill="#8884d8" dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>{overallWinLossData.map((entry, index) => (<Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />))}</Pie><Tooltip formatter={(value) => typeof value === 'number' ? value.toFixed(5) : value}/><Legend /></PieChart></ResponsiveContainer></CardContent></Card>
-                                <Card className="bg-card/80 backdrop-blur-sm"><CardHeader><CardTitle className="text-base">Avg E-ther/Win by Source Tier</CardTitle></CardHeader><CardContent className="h-[300px]"><p className="text-center text-muted-foreground h-full flex items-center justify-center">(Chart Placeholder)</p></CardContent></Card>
-                            </div>
-                            <Card className="bg-card/80 backdrop-blur-sm"><CardHeader><CardTitle className="text-base">Overall Raids & E-ther Over Time (Daily)</CardTitle></CardHeader><CardContent className="h-[350px]"><ResponsiveContainer width="100%" height="100%"><LineChart data={raidsOverTimeData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="date" /><YAxis yAxisId="left" label={{ value: 'Raids / Wins', angle: -90, position: 'insideLeft' }} /><YAxis yAxisId="right" orientation="right" label={{ value: 'E-ther', angle: 90, position: 'insideRight' }}/><Tooltip formatter={(value, name) => (typeof value === 'number' ? value.toFixed(5) : value)}/><Legend /><Line yAxisId="left" type="monotone" dataKey="raids" stroke="#8884d8" name="Total Raids" dot={false}/><Line yAxisId="left" type="monotone" dataKey="wins" stroke="#00C49F" name="Wins" dot={false}/><Line yAxisId="right" type="monotone" dataKey="ether" stroke="#FFBB28" name="E-ther Earned" dot={false}/></LineChart></ResponsiveContainer></CardContent></Card>
-                            <h3 className="text-lg font-semibold pt-4 border-t border-border/30">Target Characteristic Analysis</h3>
-                            <Card className="bg-card/80 backdrop-blur-sm"><CardHeader><CardTitle className="text-base">Efficiency Analysis</CardTitle><CardDescription>Shows how many successful raids fall into each efficiency bucket (E-ther / Cydroids Sent).</CardDescription></CardHeader><CardContent className="h-[300px]"><ResponsiveContainer width="100%" height="100%"><BarChart data={etherPerCydroidData} margin={{ top: 5, right: 20, left: 5, bottom: 5 }}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="name" name="E-ther/Cydroid Range" fontSize={10}/><YAxis label={{ value: 'Number of Raids', angle: -90, position: 'insideLeft' }} /><Tooltip formatter={(value: number) => typeof value === 'number' ? value.toFixed(5) : value}/><Legend verticalAlign="top" /><Bar dataKey="count" fill="#00C49F" name="Raid Count"/></BarChart></ResponsiveContainer></CardContent></Card>
-                        </TabsContent>
-                    </Tabs>
-                )}
-
-                {/* --- Preview Component (Single instance with updated condition) --- */}
-                {!file && (!raidData || raidData.length === 0) && !isLoading && !error && <RaidHelperPreview />}
-            </div>
-        </>
+                        </div>
+                        {error && (
+                            <Alert variant="destructive">
+                                <AlertCircle className="h-4 w-4" />
+                                <AlertTitle>Error</AlertTitle>
+                                <AlertDescription>{error}</AlertDescription>
+                            </Alert>
+                        )}
+                    </div>
+                </CardContent>
+            </Card>
+          </div>
+    
+          {/* Loading Indicator */}
+          {isLoading && (
+              <div className="flex justify-center items-center py-10">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <p className="ml-2">Loading and processing data...</p>
+              </div>
+          )}
+    
+          {/* Data Display Tabs */}
+          {raidData && overallSummary && propertySummaries && rankedTargets && ownerSummaries && (
+              <Tabs defaultValue="overview" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 bg-muted/70 backdrop-blur-sm">
+                      <TabsTrigger value="overview">Overall</TabsTrigger>
+                      <TabsTrigger value="properties">By Source</TabsTrigger>
+                      <TabsTrigger value="targets">By Target</TabsTrigger>
+                      <TabsTrigger value="owners">By Owner</TabsTrigger>
+                      <TabsTrigger value="insights">Insights</TabsTrigger>
+                  </TabsList>
+    
+                  {/* Overall Summary Tab */}
+                  <TabsContent value="overview" className="mt-4">
+                      <Card className="bg-card/80 backdrop-blur-sm">
+                          <CardHeader>
+                              <CardTitle>Overall Raid Performance</CardTitle>
+                              {overallSummary.dateRange.start && overallSummary.dateRange.end && (<CardDescription>Data from {overallSummary.dateRange.start} to {overallSummary.dateRange.end}</CardDescription>)}
+                          </CardHeader>
+                          <CardContent className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 text-sm">
+                              <div><span className="font-semibold">Total Raids:</span> {overallSummary.totalRaids}</div>
+                              <div className="text-green-600"><span className="font-semibold">Wins:</span> {overallSummary.totalWins}</div>
+                              <div className="text-red-600"><span className="font-semibold">Losses:</span> {overallSummary.totalLosses}</div>
+                              <div><span className="font-semibold">Win Rate:</span> {overallSummary.overallWinRate.toFixed(1)}%</div>
+                              <div className="text-yellow-500"><span className="font-semibold">Total E-ther:</span> {overallSummary.totalEtherEarned.toFixed(4)}</div>
+                              <div><span className="font-semibold">Avg E/Raid:</span> {overallSummary.avgEtherPerRaid.toFixed(4)}</div>
+                              <div><span className="font-semibold">Avg E/Win:</span> {overallSummary.avgEtherPerWin.toFixed(4)}</div>
+                              <div><span className="font-semibold">Unique Sources:</span> {overallSummary.uniqueSourceProperties}</div>
+                              <div><span className="font-semibold">Unique Targets:</span> {overallSummary.uniqueTargetProperties}</div>
+                              <div><span className="font-semibold">Unique Owners:</span> {overallSummary.uniqueOwnersRaided}</div>
+                          </CardContent>
+                      </Card>
+                  </TabsContent>
+    
+                  {/* By Source Property Tab */}
+                  <TabsContent value="properties" className="mt-4 space-y-4">
+                      <div className="flex justify-end">
+                          <Input type="search" placeholder="Search sources (name, loc, id)..." value={sourceSearchTerm} onChange={(e) => {setSourceSearchTerm(e.target.value); setSourceCurrentPage(1);}} className="max-w-sm bg-background/80" />
+                      </div>
+                      <Card className="bg-card/80 backdrop-blur-sm">
+                          <CardHeader>
+                              <CardTitle>Performance by Source Property</CardTitle>
+                              <CardDescription>Click a row for details. Showing {paginatedSourceProperties.length} of {filteredSourceProperties.length} properties.</CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                              <Table>
+                                  <TableHeader>
+                                      <TableRow>
+                                          <TableHead className="w-[20%]">Property</TableHead>
+                                          <TableHead className="text-right">Raids (W/L)</TableHead>
+                                          <TableHead className="text-right">Win Rate</TableHead>
+                                          <TableHead className="text-right">Total E-ther</TableHead>
+                                          <TableHead className="text-right">Avg E-ther/Win</TableHead>
+                                      </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                      {paginatedSourceProperties.length === 0 && (
+                                          <TableRow><TableCell colSpan={5} className="text-center">No source properties found.</TableCell></TableRow>
+                                      )}
+                                      {paginatedSourceProperties.map((prop) => (
+                                          <TableRow key={prop.id} onClick={() => setSelectedSourcePropertyId(prop.id)} className="cursor-pointer hover:bg-muted/50">
+                                              <TableCell className="font-medium">
+                                                  <div>{prop.description}</div>
+                                                  <div className="text-xs text-muted-foreground">{prop.location}</div>
+                                              </TableCell>
+                                              <TableCell className="text-right">{prop.wins}W/{prop.losses}L</TableCell>
+                                              <TableCell className="text-right">{prop.winRate.toFixed(1)}%</TableCell>
+                                              <TableCell className="text-right text-yellow-500">{prop.totalEtherGenerated.toFixed(4)}</TableCell>
+                                              <TableCell className="text-right">{prop.avgEtherPerWin.toFixed(4)}</TableCell>
+                                          </TableRow>
+                                      ))}
+                                  </TableBody>
+                              </Table>
+                              <div className="flex items-center justify-end space-x-2 py-4">
+                                  <Button variant="outline" size="sm" onClick={() => setSourceCurrentPage(p => Math.max(1, p - 1))} disabled={sourceCurrentPage === 1}>Previous <ArrowLeft className="h-4 w-4 ml-1" /></Button>
+                                  <span className="text-sm text-muted-foreground">Page {sourceCurrentPage} of {sourceTotalPages}</span>
+                                  <Button variant="outline" size="sm" onClick={() => setSourceCurrentPage(p => Math.min(sourceTotalPages, p + 1))} disabled={sourceCurrentPage === sourceTotalPages}>Next <ArrowRight className="h-4 w-4 ml-1" /></Button>
+                              </div>
+                          </CardContent>
+                      </Card>
+                      {/* Selected Property Detail View (restored structure) */}
+                      {selectedPropertyData && (
+                          <Card className="mt-6 border-primary/50 border-2 bg-card/80 backdrop-blur-sm">
+                              <CardHeader><CardTitle>Details for: {selectedPropertyData.description}</CardTitle><CardDescription>{selectedPropertyData.location}</CardDescription></CardHeader>
+                              <CardContent>
+                                  <Tabs defaultValue="targets" className="w-full">
+                                      <TabsList className="grid w-full grid-cols-2"><TabsTrigger value="targets">Targets Raided</TabsTrigger><TabsTrigger value="charts">Property Charts</TabsTrigger></TabsList>
+                                      <TabsContent value="targets" className="mt-4">
+                                          <h3 className="text-lg font-semibold mb-2">Targets Raided from this Property</h3>
+                                          <Table>
+                                              <TableHeader>
+                                                  <TableRow>
+                                                      <TableHead>Target Property</TableHead>
+                                                      <TableHead>Owner</TableHead>
+                                                      <TableHead className="text-right">Raids (W/L)</TableHead>
+                                                      <TableHead className="text-right">Win Rate</TableHead>
+                                                      <TableHead className="text-right">Total E-ther</TableHead>
+                                                      <TableHead className="text-right">Avg E-ther/Win</TableHead>
+                                                      <TableHead>Last Raid</TableHead>
+                                                  </TableRow>
+                                              </TableHeader>
+                                              <TableBody>
+                                                  {selectedPropertyTargetsSorted.length === 0 && (
+                                                      <TableRow>
+                                                          <TableCell colSpan={7} className="text-center">
+                                                              No targets raided from this property.
+                                                          </TableCell>
+                                                      </TableRow>
+                                                  )}
+                                                  {selectedPropertyTargetsSorted.map((target, idx) => (
+                                                      <React.Fragment key={`${target.id}-${idx}`}>
+                                                          <TableRow
+                                                              className={`cursor-pointer hover:bg-muted/50 ${expandedTargetIdx === idx ? 'bg-muted' : ''}`}
+                                                              onClick={() => setExpandedTargetIdx(expandedTargetIdx === idx ? null : idx)}
+                                                          >
+                                                              <TableCell className="font-medium w-[25%]">
+                                                                  <div>{target.description}</div>
+                                                                  <div className="text-xs text-muted-foreground">
+                                                                      {target.location}
+                                                                  </div>
+                                                              </TableCell>
+                                                              <TableCell className="w-[15%]">{target.ownerUsername}</TableCell>
+                                                              <TableCell className="text-right w-[10%]">{target.wins}W/{target.losses}L</TableCell>
+                                                              <TableCell className="text-right w-[10%]">{target.winRate.toFixed(1)}%</TableCell>
+                                                              <TableCell className="text-right text-yellow-500 w-[15%]">{target.totalEtherYield.toFixed(4)}</TableCell>
+                                                              <TableCell className="text-right w-[15%]">{target.avgEtherPerWin.toFixed(4)}</TableCell>
+                                                              <TableCell className="w-[10%] text-xs">{target.lastRaidTimestamp ? format(parseISO(target.lastRaidTimestamp), 'MM/dd HH:mm') : 'N/A'}</TableCell>
+                                                          </TableRow>
+                                                          {expandedTargetIdx === idx && (
+                                                              <TableRow>
+                                                                  <TableCell colSpan={7} className="p-0">
+                                                                      <div className="p-4 bg-muted/30 rounded-md">
+                                                                          <h4 className="font-semibold mb-2 text-sm">Raid History for {target.description}:</h4>
+                                                                          <Table>
+                                                                              <TableHeader>
+                                                                                  <TableRow>
+                                                                                      <TableHead>Timestamp</TableHead>
+                                                                                      <TableHead>Result</TableHead>
+                                                                                      <TableHead className="text-right">E-ther</TableHead>
+                                                                                      <TableHead className="text-right">Cydroids</TableHead>
+                                                                                  </TableRow>
+                                                                              </TableHeader>
+                                                                              <TableBody>
+                                                                                  {target.raids.map((raid, raidIdx) => (
+                                                                                      <TableRow key={raid.notification_id + '-' + raidIdx}>
+                                                                                          <TableCell className="text-xs">{format(parseISO(raid.timestamp), 'yyyy-MM-dd HH:mm:ss')}</TableCell>
+                                                                                          <TableCell>{raid.event_type === 'DROID_RAID_SUCCESSFUL' ? <span className="text-green-600 font-semibold flex items-center"><CheckCircle className="h-3 w-3 mr-1"/>Win</span> : <span className="text-red-600 font-semibold flex items-center"><AlertCircle className="h-3 w-3 mr-1"/>Fail</span>}</TableCell>
+                                                                                          <TableCell className="text-right text-yellow-500">{raid.ether_amount.toFixed(4)}</TableCell>
+                                                                                          <TableCell className="text-right">{raid.cydroids_sent || '-'}</TableCell>
+                                                                                      </TableRow>
+                                                                                  ))}
+                                                                              </TableBody>
+                                                                          </Table>
+                                                                      </div>
+                                                                  </TableCell>
+                                                              </TableRow>
+                                                          )}
+                                                      </React.Fragment>
+                                                  ))}
+                                              </TableBody>
+                                          </Table>
+                                      </TabsContent>
+                                      <TabsContent value="charts" className="mt-4 space-y-4">
+                                          <Card className="bg-card/80 backdrop-blur-sm">
+                                              <CardHeader>
+                                                  <CardTitle className="text-base">Win/Loss Ratio</CardTitle>
+                                              </CardHeader>
+                                              <CardContent className="h-[250px]">
+                                                  <ResponsiveContainer width="100%" height="100%">
+                                                      <PieChart>
+                                                          <Pie data={propertyWinLossData} cx="50%" cy="50%" labelLine={false} outerRadius={80} fill="#8884d8" dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                                                              {propertyWinLossData.map((entry, index) => (
+                                                                  <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                                                              ))}
+                                                          </Pie>
+                                                          <Tooltip formatter={(value) => typeof value === 'number' ? value.toFixed(5) : value}/>
+                                                      </PieChart>
+                                                  </ResponsiveContainer>
+                                              </CardContent>
+                                          </Card>
+                                          <Card className="bg-card/80 backdrop-blur-sm">
+                                              <CardHeader>
+                                                  <CardTitle className="text-base">Top 10 Targets by E-ther Yield</CardTitle>
+                                              </CardHeader>
+                                              <CardContent className="h-[250px]">
+                                                  <ResponsiveContainer width="100%" height="100%">
+                                                      <BarChart data={topTargetsByEtherData} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                                                          <CartesianGrid strokeDasharray="3 3" />
+                                                          <XAxis type="number" />
+                                                          <YAxis dataKey="name" type="category" width={80} fontSize="10px" interval={0}/>
+                                                          <Tooltip formatter={(value) => typeof value === 'number' ? value.toFixed(5) : value}/>
+                                                          <Legend />
+                                                          <Bar dataKey="ether" fill="#FFBB28" name="E-ther Yield"/>
+                                                      </BarChart>
+                                                  </ResponsiveContainer>
+                                              </CardContent>
+                                          </Card>
+                                          <Card className="bg-card/80 backdrop-blur-sm">
+                                              <CardHeader>
+                                                  <CardTitle className="text-base">Raids & E-ther Over Time (Daily)</CardTitle>
+                                              </CardHeader>
+                                              <CardContent className="h-[300px]">
+                                                  <ResponsiveContainer width="100%" height="100%">
+                                                      <LineChart data={propertyRaidsOverTimeData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                                                          <CartesianGrid strokeDasharray="3 3" />
+                                                          <XAxis dataKey="date" />
+                                                          <YAxis yAxisId="left" label={{ value: 'Raids / Wins', angle: -90, position: 'insideLeft' }}/>
+                                                          <YAxis yAxisId="right" orientation="right" label={{ value: 'E-ther', angle: 90, position: 'insideRight' }}/>
+                                                          <Tooltip formatter={(value, name) => (typeof value === 'number' ? value.toFixed(5) : value)}/>
+                                                          <Legend />
+                                                          <Line yAxisId="left" type="monotone" dataKey="raids" stroke="#8884d8" name="Total Raids" dot={false}/>
+                                                          <Line yAxisId="left" type="monotone" dataKey="wins" stroke="#00C49F" name="Wins" dot={false}/>
+                                                          <Line yAxisId="right" type="monotone" dataKey="ether" stroke="#FFBB28" name="E-ther Earned" dot={false}/>
+                                                      </LineChart>
+                                                  </ResponsiveContainer>
+                                              </CardContent>
+                                          </Card>
+                                      </TabsContent>
+                                  </Tabs>
+                              </CardContent>
+                          </Card>
+                      )}
+                  </TabsContent>
+    
+                  {/* By Target Tab */}
+                  <TabsContent value="targets" className="mt-4 space-y-4">
+                      <div className="flex justify-end">
+                          <Input type="search" placeholder="Search targets (name, owner, loc, id)..." value={targetSearchTerm} onChange={(e) => {setTargetSearchTerm(e.target.value); setTargetCurrentPage(1);}} className="max-w-sm bg-background/80"/>
+                      </div>
+                      <TargetRankingTable data={paginatedRankedTargets} currentPage={targetCurrentPage} totalPages={targetTotalPages} setCurrentPage={setTargetCurrentPage} totalItems={filteredRankedTargets.length}/>
+                  </TabsContent>
+    
+                  {/* By Owner Tab */}
+                  <TabsContent value="owners" className="mt-4 space-y-4">
+                      <div className="flex justify-end">
+                          <Input type="search" placeholder="Search owners (name, id)..." value={ownerSearchTerm} onChange={(e) => {setOwnerSearchTerm(e.target.value); setOwnerCurrentPage(1);}} className="max-w-sm bg-background/80"/>
+                      </div>
+                      <OwnerPerformanceTable data={paginatedOwnerSummaries} currentPage={ownerCurrentPage} totalPages={ownerTotalPages} setCurrentPage={setOwnerCurrentPage} totalItems={filteredOwnerSummaries.length}/>
+                  </TabsContent>
+    
+                  {/* Insights Tab */}
+                  <TabsContent value="insights" className="mt-4 space-y-6">
+                      <h2 className="text-xl font-semibold">Raid Insights & Performance Analysis</h2>
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                          <Card className="bg-card/80 backdrop-blur-sm"><CardHeader><CardTitle className="text-base">Overall Win/Loss Ratio</CardTitle></CardHeader><CardContent className="h-[300px]"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={overallWinLossData} cx="50%" cy="50%" labelLine={false} outerRadius={100} fill="#8884d8" dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>{overallWinLossData.map((entry, index) => (<Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />))}</Pie><Tooltip formatter={(value) => typeof value === 'number' ? value.toFixed(5) : value}/><Legend /></PieChart></ResponsiveContainer></CardContent></Card>
+                          <Card className="bg-card/80 backdrop-blur-sm"><CardHeader><CardTitle className="text-base">Avg E-ther/Win by Source Tier</CardTitle></CardHeader><CardContent className="h-[300px]"><p className="text-center text-muted-foreground h-full flex items-center justify-center">(Chart Placeholder)</p></CardContent></Card>
+                      </div>
+                      <Card className="bg-card/80 backdrop-blur-sm"><CardHeader><CardTitle className="text-base">Overall Raids & E-ther Over Time (Daily)</CardTitle></CardHeader><CardContent className="h-[350px]"><ResponsiveContainer width="100%" height="100%"><LineChart data={raidsOverTimeData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="date" /><YAxis yAxisId="left" label={{ value: 'Raids / Wins', angle: -90, position: 'insideLeft' }} /><YAxis yAxisId="right" orientation="right" label={{ value: 'E-ther', angle: 90, position: 'insideRight' }}/><Tooltip formatter={(value, name) => (typeof value === 'number' ? value.toFixed(5) : value)}/><Legend /><Line yAxisId="left" type="monotone" dataKey="raids" stroke="#8884d8" name="Total Raids" dot={false}/><Line yAxisId="left" type="monotone" dataKey="wins" stroke="#00C49F" name="Wins" dot={false}/><Line yAxisId="right" type="monotone" dataKey="ether" stroke="#FFBB28" name="E-ther Earned" dot={false}/></LineChart></ResponsiveContainer></CardContent></Card>
+                      <h3 className="text-lg font-semibold pt-4 border-t border-border/30">Target Characteristic Analysis</h3>
+                      <Card className="bg-card/80 backdrop-blur-sm"><CardHeader><CardTitle className="text-base">Efficiency Analysis</CardTitle><CardDescription>Shows how many successful raids fall into each efficiency bucket (E-ther / Cydroids Sent).</CardDescription></CardHeader><CardContent className="h-[300px]"><ResponsiveContainer width="100%" height="100%"><BarChart data={etherPerCydroidData} margin={{ top: 5, right: 20, left: 5, bottom: 5 }}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="name" name="E-ther/Cydroid Range" fontSize={10}/><YAxis label={{ value: 'Number of Raids', angle: -90, position: 'insideLeft' }} /><Tooltip formatter={(value: number) => typeof value === 'number' ? value.toFixed(5) : value}/><Legend verticalAlign="top" /><Bar dataKey="count" fill="#00C49F" name="Raid Count"/></BarChart></ResponsiveContainer></CardContent></Card>
+                  </TabsContent>
+              </Tabs>
+          )}
+    
+          {/* Preview Component (Single instance with updated condition) */}
+          {!file && (!raidData || raidData.length === 0) && !isLoading && !error && <RaidHelperPreview />}
+        </div>
     );
 }

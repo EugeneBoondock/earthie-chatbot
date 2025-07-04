@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert" 
 import { AlertTriangle } from "lucide-react"
+import Link from "next/link"
 // Ensure all necessary icons are imported
 import { Upload, Check, X, Loader2, Download, Heart, Link as LinkIcon } from "lucide-react"
 
@@ -720,11 +721,27 @@ export default function DevToolsPage() {
                                 <span className="text-sm whitespace-nowrap" title={`${script.downloads ?? 0} downloads`}>{script.downloads ?? 0} downloads</span>
                                 <span className="text-sm whitespace-nowrap" title={`${script.copies ?? 0} copies`}>{script.copies ?? 0} copies</span>
                             </div>
-                            {script.code && (
-                                <Button variant="outline" size="sm" className={`text-earthie-mint border-earthie-mint hover:bg-earthie-mint/10 active:bg-earthie-mint/20 w-full sm:w-auto ${downloadingStatus[script.id] ? 'opacity-50 cursor-wait' : ''}`} onClick={(e) => { if (downloadingStatus[script.id]) return; handleDownload(script.id, () => { const blob = new Blob([script.code ?? ''], { type: 'text/plain;charset=utf-8' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = generateFilename(script.title, 'txt'); document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); }); }} disabled={downloadingStatus[script.id]} >
-                                    <Download className="mr-2 h-4 w-4" /> Download Code Snippet
-                                </Button>
-                            )}
+                            <div className="flex items-center gap-4">
+                                {script.title.includes('Property list visualiser') && (
+                                  <Link href="https://e2.university/guides/how-to-use-property-list-visualizer-script-from-mihaj/" passHref legacyBehavior>
+                                    <a target="_blank" rel="noopener noreferrer">
+                                      <Button variant="outline" size="sm">How to use</Button>
+                                    </a>
+                                  </Link>
+                                )}
+                                {script.title === 'EPL list' && (
+                                  <Link href="https://e2.university/guides/how-to-use-epl-list-script-from-mihaj/" passHref legacyBehavior>
+                                    <a target="_blank" rel="noopener noreferrer">
+                                      <Button variant="outline" size="sm">How to use</Button>
+                                    </a>
+                                  </Link>
+                                )}
+                                {script.code && (
+                                    <Button variant="outline" size="sm" className={`text-earthie-mint border-earthie-mint hover:bg-earthie-mint/10 active:bg-earthie-mint/20 w-full sm:w-auto ${downloadingStatus[script.id] ? 'opacity-50 cursor-wait' : ''}`} onClick={(e) => { if (downloadingStatus[script.id]) return; handleDownload(script.id, () => { const blob = new Blob([script.code ?? ''], { type: 'text/plain;charset=utf-8' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = generateFilename(script.title, 'txt'); document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); }); }} disabled={downloadingStatus[script.id]} >
+                                        <Download className="mr-2 h-4 w-4" /> Download Code Snippet
+                                    </Button>
+                                )}
+                            </div>
                             {!script.code && script.file_url && (
                                 <div className="text-sm text-gray-500 italic text-right w-full sm:w-auto">(File attached)</div>
                             )}

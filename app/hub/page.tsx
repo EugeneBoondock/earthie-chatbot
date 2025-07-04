@@ -1,5 +1,6 @@
 import { ArrowRight, Book, Building, BarChart3, User, Route } from 'lucide-react';
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 
 export default function HubPage() {
   const hubFeatures = [
@@ -62,9 +63,16 @@ export default function HubPage() {
           <h1 className="text-5xl font-bold bg-gradient-to-r from-earthie-mint to-sky-300 inline-block text-transparent bg-clip-text mb-4">
             Welcome to The Hub
           </h1>
-          <p className="text-xl text-cyan-200/90 max-w-2xl mx-auto">
+          <p className="text-xl text-cyan-200/90 max-w-2xl mx-auto mb-6">
             Your central arena for Earth2 tools and information, designed to enhance your Earth2 experience.
           </p>
+          <Link href="https://e2.university/guides/how-to-use-the-hub-profile-tool-from-earthieworld/" passHref legacyBehavior>
+            <a target="_blank" rel="noopener noreferrer">
+              <Button variant="outline" size="sm" className="text-earthie-mint border-earthie-mint hover:bg-earthie-mint/10 active:bg-earthie-mint/20">
+                Learn How to Use The Hub
+              </Button>
+            </a>
+          </Link>
         </div>
         
         {/* Decorative Elements */}
@@ -110,6 +118,7 @@ export default function HubPage() {
           <Building className="h-5 w-5 text-earthie-mint" />
         </div>
       </div>
+
     </div>
   );
 }
