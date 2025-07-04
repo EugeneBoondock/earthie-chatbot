@@ -4,6 +4,22 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Voice Mode Wave Animations */
+@keyframes ping {
+  75%, 100% {
+    transform: scale(1.2);
+    opacity: 0;
+  }
+}
+
+.animation-delay-75 {
+  animation-delay: 0.075s;
+}
+
+.animation-delay-150 {
+  animation-delay: 0.15s;
+}
+
 @layer base {
   /* Add the essential height rules here */
   html,

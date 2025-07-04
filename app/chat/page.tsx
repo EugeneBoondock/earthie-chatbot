@@ -1,7 +1,7 @@
 "use client"
 
 import { useRef, useEffect, useState } from "react"
-import { useChat } from 'ai/react';
+import { useChat, Message } from 'ai/react';
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -9,7 +9,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { get as idbGet } from 'idb-keyval'
-import { Loader2, CheckCircle } from "lucide-react";
+import { Loader2, CheckCircle, Mic } from "lucide-react";
+import VoiceMode from '@/components/VoiceMode';
 
 
 interface E2Property {
@@ -62,7 +63,10 @@ const PropertySearchIndicator = ({ query, status }: { query: string; status: 'se
 export default function ChatPage() {
     const [userContext, setUserContext] = useState<string | null>(null);
     const [properties, setProperties] = useState<E2Property[]>([]);
-    const { messages, input, handleInputChange, handleSubmit, isLoading, setMessages, append } = useChat({
+    const [isVoiceModeActive, setIsVoiceModeActive] = useState(false);
+    const [textToSpeak, setTextToSpeak] = useState('');
+    
+    const { messages, input, setInput, handleSubmit, isLoading, setMessages, append } = useChat({
         api: '/api/chat',
         body: {
             data: {
@@ -70,8 +74,13 @@ export default function ChatPage() {
             }
         },
         initialMessages: [{ id: '1', role: 'assistant', content: "Hi there! I'm **Earthie**, your guide to *Earth 2*. Ask me anything!" }],
-        onFinish() {
-            // you can add logic here if needed
+        onFinish(message: Message) {
+            if (isVoiceModeActive) {
+                const cleanContent = message.content.replace(/\[SEARCH:.*?\]/g, '').trim();
+                if (cleanContent) {
+                    setTextToSpeak(cleanContent);
+                }
+            }
         },
     });
     const processedMessageIds = useRef(new Set());
@@ -215,6 +224,16 @@ export default function ChatPage() {
         setMessages([{ id: '1', role: 'assistant', content: "Hi there! I'm **Earthie**, your guide to *Earth 2*. Ask me anything!" }]);
     };
 
+    // Voice mode handlers
+    const handleVoiceInput = (text: string) => {
+        const message: Message = {
+            id: Date.now().toString(),
+            role: 'user',
+            content: text,
+        };
+        append(message);
+    };
+
     // --- Render JSX ---
     return (
         <div className="grid grid-rows-[1fr_auto] h-full bg-transparent overflow-hidden">
@@ -299,9 +318,20 @@ export default function ChatPage() {
                  )}
 
                 <form onSubmit={handleSubmit} className="flex items-center space-x-3 max-w-4xl mx-auto w-full">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setIsVoiceModeActive(true)}
+                        className="bg-gray-700 border-gray-600 text-white hover:bg-gray-600 rounded-md"
+                        disabled={isLoading}
+                        title="Voice Mode"
+                    >
+                        <Mic size={18} />
+                    </Button>
                     <Input
                         value={input}
-                        onChange={handleInputChange}
+                        onChange={(e) => setInput(e.target.value)}
                         placeholder="Ask Earthie anything..."
                         className="flex-grow bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-[#50E3C1] focus:border-[#50E3C1] rounded-md"
                         disabled={isLoading}
@@ -317,6 +347,18 @@ export default function ChatPage() {
                     </Button>
                 </form>
             </div>
+
+            {/* Voice Mode Component */}
+            <VoiceMode
+                isActive={isVoiceModeActive}
+                onToggle={() => {
+                  setIsVoiceModeActive(false);
+                  setTextToSpeak('');
+                }}
+                onVoiceInput={handleVoiceInput}
+                textToSpeak={textToSpeak}
+                onSpeechEnd={() => setTextToSpeak('')}
+            />
         </div>
     );
 }
