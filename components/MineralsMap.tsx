@@ -105,6 +105,7 @@ export default function MineralsMap({ center, minerals, loading, onSearchArea }:
   const mapBoundsRef = useRef<L.LatLngBounds | null>(null);
   const mapRef = useRef<L.Map>(null);
   const [selectedReference, setSelectedReference] = useState<string | null>(null);
+  const [openReferences, setOpenReferences] = useState<string | null>(null);
 
   const handleBoundsChange = (bounds: L.LatLngBounds) => {
     mapBoundsRef.current = bounds;
@@ -185,30 +186,37 @@ export default function MineralsMap({ center, minerals, loading, onSearchArea }:
                         }
                       </div>
                       
-                      {m.references && m.references.length > 0 && (
+                      {m.references && m.references.length > 0 ? (
                         <div className="pt-3 mt-3 border-t border-cyan-400/20">
-                          <div className="space-y-2">
-                            {m.references.slice(0, 2).map((ref, idx) => (
-                               <div key={idx}>
-                                {ref.link ? (
+                          <Button size="sm" variant="secondary" className="w-full mb-2" onClick={() => setOpenReferences(openReferences === m.id ? null : m.id)}>
+                            {openReferences === m.id ? 'Hide References' : 'Show References'}
+                          </Button>
+                          {openReferences === m.id && (
+                            <div className="space-y-2">
+                              {m.references.map((ref, idx) => (
+                                <div key={idx}>
+                                  {ref.link ? (
                                     <Button asChild size="sm" variant="outline" className="w-full bg-transparent text-gray-300 hover:bg-cyan-400/10 hover:text-white h-8 text-xs">
-                                        <a href={ref.link} target="_blank" rel="noopener noreferrer" className="flex items-center">
-                                            <ExternalLink className="h-3 w-3 mr-2"/>
-                                            View Online Source
-                                        </a>
+                                      <a href={ref.link} target="_blank" rel="noopener noreferrer" className="flex items-center">
+                                        <ExternalLink className="h-3 w-3 mr-2"/>
+                                        View Online Source
+                                      </a>
                                     </Button>
-                                ) : (
+                                  ) : (
                                     <DialogTrigger asChild>
-                                        <Button onClick={() => setSelectedReference(ref.text)} size="sm" variant="secondary" className="w-full bg-gray-700/50 hover:bg-gray-700/80 h-8 text-xs">
-                                            <BookText className="h-3 w-3 mr-2"/>
-                                            View Reference
-                                        </Button>
+                                      <Button onClick={() => setSelectedReference(ref.text)} size="sm" variant="secondary" className="w-full bg-gray-700/50 hover:bg-gray-700/80 h-8 text-xs">
+                                        <BookText className="h-3 w-3 mr-2"/>
+                                        View Reference
+                                      </Button>
                                     </DialogTrigger>
-                                )}
-                               </div>
-                            ))}
-                          </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
+                      ) : (
+                        <div className="pt-3 mt-3 border-t border-cyan-400/20 text-xs text-gray-400">No references available for this resource.</div>
                       )}
                       <p className="text-[10px] text-right pt-2 text-gray-500/80">Source: {m.source}</p>
                     </div>
@@ -242,26 +250,22 @@ export default function MineralsMap({ center, minerals, loading, onSearchArea }:
           .mineral-dot { width:16px; height:16px; display:block; border:2px solid #0f172a; }
           .leaflet-marker-icon.mineral-icon { background:transparent; border:none; }
           .property-icon { background:transparent; border:none; }
-          .mineral-popup .leaflet-popup-content-wrapper {
-              background: rgba(10, 20, 35, 0.88);
-              backdrop-filter: blur(12px);
-              -webkit-backdrop-filter: blur(12px);
-              border-radius: 12px;
-              border: 1px solid rgba(56, 189, 248, 0.4);
-              color: #fff;
-              padding: 6px;
-              box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2), 
-                          0 0 25px rgba(56, 189, 248, 0.2) inset;
+          /* Force ALL leaflet popups to have a black background */
+          .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+            background: #000 !important;
+            color: #fff !important;
+            border-radius: 12px;
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2), 0 0 25px rgba(56, 189, 248, 0.2) inset;
           }
-          .mineral-popup .leaflet-popup-tip {
-              background: rgba(10, 20, 35, 0.88);
+          .mineral-popup .leaflet-popup-close-button,
+          .leaflet-popup-close-button {
+            color: #e5e7eb !important;
+            transition: color 0.2s ease-in-out;
           }
-          .mineral-popup .leaflet-popup-close-button {
-              color: #e5e7eb !important;
-              transition: color 0.2s ease-in-out;
-          }
-          .mineral-popup .leaflet-popup-close-button:hover {
-              color: #fff !important;
+          .mineral-popup .leaflet-popup-close-button:hover,
+          .leaflet-popup-close-button:hover {
+            color: #fff !important;
           }
         `}</style>
       </div>
