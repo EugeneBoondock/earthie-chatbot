@@ -73,6 +73,19 @@ export default function DonatePage() {
           • Donations are optional but deeply appreciated 💚
         </p>
 
+        {/* Fiat donations */}
+        <div className="pt-2">
+          <p className="text-gray-300 text-sm mb-2">Prefer to donate with card or PayPal?</p>
+          <a
+            href="https://coff.ee/eugeneboondock"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block bg-amber-400 hover:bg-amber-300 text-gray-900 font-semibold px-5 py-2 rounded-lg shadow transition-colors duration-150"
+          >
+            Donate via Coffee (Fiat)
+          </a>
+        </div>
+
         <style jsx>{`
           .earthie-text-gradient {
             background: linear-gradient(to right, #50E3C1, #38bdf8);

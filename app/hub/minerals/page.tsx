@@ -19,6 +19,7 @@ type Property = {
   attributes: {
     center: string;
     description: string;
+    location: string;
     country: string;
     landfieldTier: number;
     tileCount: number;
@@ -227,7 +228,7 @@ export default function MineralsHubPage() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [loadingProps, setLoadingProps] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortKey, setSortKey] = useState<'description'|'country'|'tier'|'tileCount'>('description');
+  const [sortKey, setSortKey] = useState<'description' | 'country' | 'tier' | 'tileCount'>('tileCount');
   const [page, setPage] = useState(1);
   const [bbox, setBbox] = useState<string | null>(null);
   const pageSize = 10;
@@ -279,16 +280,27 @@ export default function MineralsHubPage() {
         const data:any = await idbGet(getCacheKey(linkedE2UserId!));
         if(cancelled) return;
         if(Array.isArray(data)){
-          const transformed:Property[] = data.map((p:any)=>({
-            id:p.id,
-            attributes:{
-              center:p.attributes.center||'',
-              description:p.attributes.description||'Unknown',
-              country:p.attributes.country||'',
-              landfieldTier:p.attributes.landfieldTier||1,
-              tileCount:p.attributes.tileCount||0
+          const transformed:Property[] = data.map((p:any)=>{
+            // Extract country from location field
+            const location = p.attributes.location || '';
+            let country = '';
+            if (location.includes(',')) {
+              country = location.split(',').pop()?.trim() || '';
+            } else {
+              country = location.trim();
             }
-          }));
+            return {
+              id:p.id,
+              attributes:{
+                center:p.attributes.center||'',
+                description:p.attributes.description||'Unknown',
+                location: location,
+                country: country,
+                landfieldTier:p.attributes.landfieldTier||1,
+                tileCount:p.attributes.tileCount||0
+              }
+            };
+          });
           setProperties(transformed);
         }
       }finally{if(!cancelled) setLoadingProps(false);}
@@ -320,6 +332,12 @@ export default function MineralsHubPage() {
       setPropertyLocation({ ...coords, _fromProperty: true });
       setBbox(null);
     }
+  };
+
+  const handleClearProperty = () => {
+    setPropertyLocation(null);
+    // Keep the map open by maintaining submittedCoords or bbox
+    // Only clear the property-specific location
   };
 
   const filteredProps = properties.filter(p=>
@@ -369,7 +387,21 @@ export default function MineralsHubPage() {
 
       {/* Map */}
       {submittedCoords || bbox ? (
-        <MineralsMap center={propertyLocation} minerals={mineralsToShow} loading={loading} onSearchArea={handleSearchArea} />
+        <div className="relative">
+          <MineralsMap center={propertyLocation} minerals={mineralsToShow} loading={loading} onSearchArea={handleSearchArea} />
+          {propertyLocation?._fromProperty && (
+            <div className="absolute bottom-4 left-4 z-[1200]">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleClearProperty}
+                className="bg-red-600/80 hover:bg-red-700/80 text-white border-red-500/50 hover:border-red-400/50"
+              >
+                Clear Property
+              </Button>
+            </div>
+          )}
+        </div>
       ) : (
         <p className="text-gray-400">Enter coordinates and search to view mineral occurrences.</p>
       )}

@@ -114,7 +114,7 @@ const getCommodityIcon = (commodities: string[], status?: string) => {
     
     // Get base style for commodity
     let style = commodityStyles[primary] || { shape: 'circle', color: '#50E3C1' };
-    
+
     // Apply status-based modifications (border and opacity)
     let borderColor = '#0f172a'; // default border
     let opacity = '1';
@@ -541,8 +541,8 @@ export default function MineralsMap({ center, minerals, loading, onSearchArea }:
                     <div className="p-4 space-y-3 font-sans">
                       <div className="flex items-center justify-between mb-2">
                         <h4 className="font-extrabold text-xl text-cyan-200 tracking-tight">
-                          {m.name}
-                        </h4>
+                        {m.name}
+                      </h4>
                         {m.status && (
                           <span className={`inline-block px-2 py-1 text-xs font-bold rounded-full ${
                             m.status === 'prospect' 
@@ -598,7 +598,7 @@ export default function MineralsMap({ center, minerals, loading, onSearchArea }:
                           >
                             Open in Earth2
                           </a>
-                        </div>
+                               </div>
                         <div className="flex justify-end items-end">
                           <span className="text-[11px] text-gray-400 mr-1">Source:</span>
                           <a
@@ -698,18 +698,18 @@ export default function MineralsMap({ center, minerals, loading, onSearchArea }:
           .leaflet-popup-content-wrapper, .leaflet-popup-tip {
             background: #000 !important;
             color: #fff !important;
-            border-radius: 12px;
-            border: 1px solid rgba(56, 189, 248, 0.4);
+              border-radius: 12px;
+              border: 1px solid rgba(56, 189, 248, 0.4);
             box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2), 0 0 25px rgba(56, 189, 248, 0.2) inset;
           }
           .mineral-popup .leaflet-popup-close-button,
           .leaflet-popup-close-button {
-            color: #e5e7eb !important;
-            transition: color 0.2s ease-in-out;
+              color: #e5e7eb !important;
+              transition: color 0.2s ease-in-out;
           }
           .mineral-popup .leaflet-popup-close-button:hover,
           .leaflet-popup-close-button:hover {
-            color: #fff !important;
+              color: #fff !important;
           }
         `}</style>
       </div>

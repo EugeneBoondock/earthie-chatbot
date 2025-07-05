@@ -88,8 +88,8 @@ export async function GET(req: Request) {
     id: string;
     name: string;
     coordinates: {
-      latitude: number;
-      longitude: number;
+    latitude: number;
+    longitude: number;
     };
     commodities: string[];
     description: string | null;
@@ -137,7 +137,7 @@ export async function GET(req: Request) {
             const refText = r.onlink.trim();
             const refLink = refText.startsWith('http') ? refText : null;
             refMap!.set(refId, { text: refText, link: refLink });
-          }
+           }
         });
       } catch (e) { console.error('Failed to load ref.csv', e); }
 
@@ -157,7 +157,7 @@ export async function GET(req: Request) {
           id,
           name: r.dep_name,
           coordinates: {
-            latitude: Number(r.latitude),
+          latitude: Number(r.latitude),
             longitude: Number(r.longitude)
           },
           commodities: expandedCommodities,
