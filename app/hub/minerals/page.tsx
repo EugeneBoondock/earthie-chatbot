@@ -290,15 +290,15 @@ export default function MineralsHubPage() {
               country = location.trim();
             }
             return {
-              id:p.id,
-              attributes:{
-                center:p.attributes.center||'',
-                description:p.attributes.description||'Unknown',
+            id:p.id,
+            attributes:{
+              center:p.attributes.center||'',
+              description:p.attributes.description||'Unknown',
                 location: location,
                 country: country,
                 landfieldTier:p.attributes.landfieldTier||1,
                 tileCount:p.attributes.tileCount||0
-              }
+            }
             };
           });
           setProperties(transformed);
@@ -388,7 +388,7 @@ export default function MineralsHubPage() {
       {/* Map */}
       {submittedCoords || bbox ? (
         <div className="relative">
-          <MineralsMap center={propertyLocation} minerals={mineralsToShow} loading={loading} onSearchArea={handleSearchArea} />
+        <MineralsMap center={propertyLocation} minerals={mineralsToShow} loading={loading} onSearchArea={handleSearchArea} />
           {propertyLocation?._fromProperty && (
             <div className="absolute bottom-4 left-4 z-[1200]">
               <Button 
