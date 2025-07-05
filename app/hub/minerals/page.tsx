@@ -13,7 +13,7 @@ import type { MineralOccurrence } from '@/hooks/useMinerals';
 import { MapControls } from '@/components/MapControls';
 import { Skeleton } from '@/components/ui/skeleton';
 
-// Minimal Property type used from logistics
+// Property type with tile count for minerals page
 type Property = {
   id: string;
   attributes: {
@@ -21,10 +21,182 @@ type Property = {
     description: string;
     country: string;
     landfieldTier: number;
+    tileCount: number;
   };
 };
 
 const getCacheKey = (userId: string) => `e2_properties_${userId}`;
+
+// Country code to full name mapping
+const countryCodeToName: Record<string, string> = {
+  US: "United States of America",
+  GB: "United Kingdom",
+  CA: "Canada",
+  AU: "Australia",
+  DE: "Germany",
+  FR: "France",
+  IT: "Italy",
+  ES: "Spain",
+  JP: "Japan",
+  CN: "China",
+  IN: "India",
+  BR: "Brazil",
+  RU: "Russia",
+  ZA: "South Africa",
+  MX: "Mexico",
+  AR: "Argentina",
+  PE: "Peru",
+  CL: "Chile",
+  CO: "Colombia",
+  VE: "Venezuela",
+  EC: "Ecuador",
+  BO: "Bolivia",
+  PY: "Paraguay",
+  UY: "Uruguay",
+  GY: "Guyana",
+  SR: "Suriname",
+  GF: "French Guiana",
+  FK: "Falkland Islands",
+  AF: "Afghanistan",
+  AL: "Albania",
+  DZ: "Algeria",
+  AD: "Andorra",
+  AO: "Angola",
+  AG: "Antigua and Barbuda",
+  SA: "Saudi Arabia",
+  AM: "Armenia",
+  AT: "Austria",
+  AZ: "Azerbaijan",
+  BS: "Bahamas",
+  BH: "Bahrain",
+  BD: "Bangladesh",
+  BB: "Barbados",
+  BE: "Belgium",
+  BZ: "Belize",
+  BJ: "Benin",
+  BT: "Bhutan",
+  BY: "Belarus",
+  MM: "Myanmar",
+  BA: "Bosnia and Herzegovina",
+  BW: "Botswana",
+  BN: "Brunei",
+  BG: "Bulgaria",
+  BF: "Burkina Faso",
+  BI: "Burundi",
+  KH: "Cambodia",
+  CM: "Cameroon",
+  CV: "Cape Verde",
+  TD: "Chad",
+  LK: "Sri Lanka",
+  CD: "Democratic Republic of the Congo",
+  CG: "Republic of the Congo",
+  CR: "Costa Rica",
+  HR: "Croatia",
+  CU: "Cuba",
+  CY: "Cyprus",
+  CZ: "Czech Republic",
+  DK: "Denmark",
+  DJ: "Djibouti",
+  DO: "Dominican Republic",
+  EG: "Egypt",
+  SV: "El Salvador",
+  GQ: "Equatorial Guinea",
+  ER: "Eritrea",
+  EE: "Estonia",
+  ET: "Ethiopia",
+  FJ: "Fiji",
+  FI: "Finland",
+  GA: "Gabon",
+  GM: "Gambia",
+  GE: "Georgia",
+  GH: "Ghana",
+  GR: "Greece",
+  GT: "Guatemala",
+  GN: "Guinea",
+  GW: "Guinea-Bissau",
+  HT: "Haiti",
+  HN: "Honduras",
+  HK: "Hong Kong",
+  HU: "Hungary",
+  IS: "Iceland",
+  ID: "Indonesia",
+  IR: "Iran",
+  IQ: "Iraq",
+  IE: "Ireland",
+  IL: "Israel",
+  JM: "Jamaica",
+  JO: "Jordan",
+  KZ: "Kazakhstan",
+  KE: "Kenya",
+  KP: "North Korea",
+  KR: "South Korea",
+  KW: "Kuwait",
+  KG: "Kyrgyzstan",
+  LA: "Laos",
+  LV: "Latvia",
+  LB: "Lebanon",
+  LS: "Lesotho",
+  LR: "Liberia",
+  LY: "Libya",
+  LT: "Lithuania",
+  LU: "Luxembourg",
+  MK: "North Macedonia",
+  MG: "Madagascar",
+  MW: "Malawi",
+  MY: "Malaysia",
+  ML: "Mali",
+  MT: "Malta",
+  MR: "Mauritania",
+  MU: "Mauritius",
+  MA: "Morocco",
+  MZ: "Mozambique",
+  NA: "Namibia",
+  NP: "Nepal",
+  NL: "Netherlands",
+  NZ: "New Zealand",
+  NI: "Nicaragua",
+  NE: "Niger",
+  NG: "Nigeria",
+  NO: "Norway",
+  OM: "Oman",
+  PK: "Pakistan",
+  PA: "Panama",
+  PG: "Papua New Guinea",
+  PH: "Philippines",
+  PL: "Poland",
+  PT: "Portugal",
+  QA: "Qatar",
+  RO: "Romania",
+  RW: "Rwanda",
+  SN: "Senegal",
+  RS: "Serbia",
+  SL: "Sierra Leone",
+  SG: "Singapore",
+  SK: "Slovakia",
+  SI: "Slovenia",
+  SO: "Somalia",
+  SD: "Sudan",
+  SS: "South Sudan",
+  SY: "Syria",
+  TW: "Taiwan",
+  TJ: "Tajikistan",
+  TZ: "Tanzania",
+  TH: "Thailand",
+  TL: "Timor-Leste",
+  TG: "Togo",
+  TO: "Tonga",
+  TN: "Tunisia",
+  TR: "Turkey",
+  TM: "Turkmenistan",
+  UG: "Uganda",
+  UA: "Ukraine",
+  AE: "United Arab Emirates",
+  UZ: "Uzbekistan",
+  VN: "Vietnam",
+  YE: "Yemen",
+  ZM: "Zambia",
+  ZW: "Zimbabwe"
+};
 
 function parseCenter(center: string): { latitude: number; longitude: number } | null {
   const match = center.match(/\(([^,]+),\s*([^)]+)\)/);
@@ -38,6 +210,11 @@ function parseCenter(center: string): { latitude: number; longitude: number } | 
 
 const MineralsMap = dynamicImport(() => import('@/components/MineralsMap').then(mod=>mod.default||mod), { ssr: false, loading: ()=>(<div className="aspect-video bg-gray-800/50 rounded-md border border-gray-700/50 flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-earthie-mint"/></div>) });
 
+// Helper function to get full country name
+const getFullCountryName = (countryCode: string): string => {
+  return countryCodeToName[countryCode] || countryCode;
+};
+
 export const dynamic = 'force-dynamic';
 
 export default function MineralsHubPage() {
@@ -50,7 +227,7 @@ export default function MineralsHubPage() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [loadingProps, setLoadingProps] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortKey, setSortKey] = useState<'description'|'country'|'tier'>('description');
+  const [sortKey, setSortKey] = useState<'description'|'country'|'tier'|'tileCount'>('description');
   const [page, setPage] = useState(1);
   const [bbox, setBbox] = useState<string | null>(null);
   const pageSize = 10;
@@ -108,7 +285,8 @@ export default function MineralsHubPage() {
               center:p.attributes.center||'',
               description:p.attributes.description||'Unknown',
               country:p.attributes.country||'',
-              landfieldTier:p.attributes.landfieldTier||1
+              landfieldTier:p.attributes.landfieldTier||1,
+              tileCount:p.attributes.tileCount||0
             }
           }));
           setProperties(transformed);
@@ -151,6 +329,7 @@ export default function MineralsHubPage() {
     switch(sortKey){
       case 'country': return a.attributes.country.localeCompare(b.attributes.country);
       case 'tier': return a.attributes.landfieldTier - b.attributes.landfieldTier;
+      case 'tileCount': return b.attributes.tileCount - a.attributes.tileCount; // Descending by default
       default: return a.attributes.description.localeCompare(b.attributes.description);
     }
   });
@@ -211,6 +390,7 @@ export default function MineralsHubPage() {
                   <option value="description">Description</option>
                   <option value="country">Country</option>
                   <option value="tier">Tier</option>
+                  <option value="tileCount">Tile Count</option>
                 </select>
               </div>
             </div>
@@ -221,6 +401,7 @@ export default function MineralsHubPage() {
                   <TableHead>Description</TableHead>
                   <TableHead>Country</TableHead>
                   <TableHead>Landfield Tier</TableHead>
+                  <TableHead>Tile Count</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -232,6 +413,7 @@ export default function MineralsHubPage() {
                       <TableCell><Skeleton className="h-4 w-full" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-16" /></TableCell>
                       <TableCell><Skeleton className="h-8 w-16" /></TableCell>
                     </TableRow>
                   ))
@@ -240,8 +422,9 @@ export default function MineralsHubPage() {
                     <TableRow key={prop.id}>
                       <TableCell>{prop.id}</TableCell>
                       <TableCell>{prop.attributes.description}</TableCell>
-                      <TableCell>{prop.attributes.country}</TableCell>
+                      <TableCell>{getFullCountryName(prop.attributes.country)}</TableCell>
                       <TableCell>{prop.attributes.landfieldTier}</TableCell>
+                      <TableCell>{prop.attributes.tileCount.toLocaleString()}</TableCell>
                       <TableCell>
                         <Badge onClick={() => handleShowMinerals(prop)} className="cursor-pointer">
                           Show
@@ -251,7 +434,7 @@ export default function MineralsHubPage() {
                   ))
                 ) : (
                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8 text-gray-400">
+                      <TableCell colSpan={6} className="text-center py-8 text-gray-400">
                           {linkedE2UserId
                             ? "No properties found. Visit the Logistics hub to sync."
                             : "Please link your account to see your properties."}
