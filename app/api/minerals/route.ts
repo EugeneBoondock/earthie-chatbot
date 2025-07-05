@@ -212,15 +212,59 @@ export async function GET(req: Request) {
     return all;
   }
 
+  function loadUSGSCritMin(): LocalDeposit[] {
+    const file = path.join(process.cwd(), 'public', 'data', 'minerals', 'PP1802_CritMin_pts.csv');
+    if (!fs.existsSync(file)) return [];
+    const raw = fs.readFileSync(file, 'utf8');
+    const records: any[] = parse(raw, { columns: true, skip_empty_lines: true });
+    let all: LocalDeposit[] = [];
+    for (const r of records) {
+      const lat = Number(r.LATITUDE);
+      const lon = Number(r.LONGITUDE);
+      if (isNaN(lat) || isNaN(lon)) continue;
+      const id = r.DEPOSIT_NAME ? `${r.DEPOSIT_NAME}_${lat},${lon}` : `${lat},${lon}`;
+      const name = r.DEPOSIT_NAME || 'Unnamed';
+      // Commodities: try splitting by ';' first, then ','
+      let commodities: string[] = [];
+      if (r.CRITICAL_MINERAL) {
+        commodities = r.CRITICAL_MINERAL.split(';').map((c: string) => c.trim()).filter(Boolean);
+      }
+      if (commodities.length === 0 && r.commodities) {
+        commodities = r.commodities.split(',').map((c: string) => c.trim()).filter(Boolean);
+      }
+      const expandedCommodities = commodities.map((c: string) => commodityAbbreviationMap[c] || c);
+      const description = r.DEPOSIT_TYPE || null;
+      all.push({
+        id: String(id),
+        name,
+        coordinates: {
+          latitude: lat,
+          longitude: lon
+        },
+        commodities: expandedCommodities,
+        description,
+        references: [],
+        status: 'deposit',
+        source: 'https://mrdata.usgs.gov/pp1802/'
+      });
+    }
+    return all;
+  }
+
   // Only use local data
   const localData = loadLocal();
   const usgsCopper = loadUSGSCopper();
+  const usgsCritMin = loadUSGSCritMin();
 
-  // Deduplicate: don't add a new point if lat/lon (rounded to 5 decimals) already exists in localData
-  const seen = new Set(localData.map(d => `${d.coordinates.latitude.toFixed(5)},${d.coordinates.longitude.toFixed(5)}`));
+  // Deduplicate: don't add a new point if lat/lon (rounded to 5 decimals) already exists in localData or usgsCopper
+  const seen = new Set([
+    ...localData,
+    ...usgsCopper
+  ].map(d => `${d.coordinates.latitude.toFixed(5)},${d.coordinates.longitude.toFixed(5)}`));
   const merged = [
     ...localData,
-    ...usgsCopper.filter(d => !seen.has(`${d.coordinates.latitude.toFixed(5)},${d.coordinates.longitude.toFixed(5)}`))
+    ...usgsCopper,
+    ...usgsCritMin.filter(d => !seen.has(`${d.coordinates.latitude.toFixed(5)},${d.coordinates.longitude.toFixed(5)}`))
   ];
 
   // Filter by bbox

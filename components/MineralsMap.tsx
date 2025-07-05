@@ -42,6 +42,33 @@ const DEPOSIT_TYPE_DEFINITIONS: Record<string, string> = {
   Metamorphic: 'Resulting from the transformation of existing rock types through heat, pressure, or chemically active fluids.'
 };
 
+const commodityAbbreviationMap: { [key: string]: string } = {
+  "Al": "Aluminum",
+  "Ag": "Silver",
+  "Au": "Gold",
+  "B": "Boron",
+  "Be": "Beryllium",
+  "Co": "Cobalt",
+  "Cr": "Chromium",
+  "Cu": "Copper",
+  "Fe": "Iron",
+  "K": "Potassium",
+  "Li": "Lithium",
+  "Mo": "Molybdenum",
+  "Nb": "Niobium",
+  "Ni": "Nickel",
+  "P": "Phosphorus",
+  "Pb": "Lead",
+  "REE": "Rare-earth elements",
+  "S": "Sulfur",
+  "Sn": "Tin",
+  "Ta": "Tantalum",
+  "Ti": "Titanium",
+  "U": "Uranium",
+  "Zn": "Zinc",
+  "Zr": "Zirconium"
+};
+
 const getCommodityIcon = (commodities: string[], status?: string) => {
     const primary = (commodities[0] || '').toLowerCase();
     
@@ -437,8 +464,8 @@ export default function MineralsMap({ center, minerals, loading, onSearchArea }:
                           <div className="flex flex-wrap gap-2 mt-1">
                             {m.commodities && m.commodities.length > 0 ? (
                               m.commodities.map((c, i) => (
-                                <span key={i} className="inline-block bg-cyan-800/80 text-cyan-100 text-xs px-2 py-0.5 rounded-full font-medium shadow-sm border border-cyan-700">
-                                  {c}
+                                <span key={i} className="inline-block bg-cyan-900/60 text-cyan-100 px-2 py-0.5 rounded-full text-xs font-semibold mr-1 mb-1 border border-cyan-700/40">
+                                  {c === 'PGE' ? 'PGE' : (commodityAbbreviationMap[c] || c)}
                                 </span>
                               ))
                             ) : (
