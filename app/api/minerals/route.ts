@@ -31,6 +31,7 @@ const commodityAbbreviationMap: { [key: string]: string } = {
   "Mn": "Manganese",
   "Mg": "Magnesium",
   "W": "Tungsten",
+  "V": "Vanadium",
 };
 
 type Reference = {
