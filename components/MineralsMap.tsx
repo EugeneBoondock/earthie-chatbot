@@ -222,7 +222,19 @@ export default function MineralsMap({ center, minerals, loading, onSearchArea }:
 
           {center && (
               <Marker position={[center.latitude, center.longitude]} icon={propertyIcon}>
-                  <Popup>Your selected property</Popup>
+                  <Popup>
+                    <div className="flex flex-col items-start gap-2">
+                      <span className="font-bold text-lg text-earthie-gold">Your selected property</span>
+                      <a
+                        href={`https://app.earth2.io/?lat=${center.latitude}&lng=${center.longitude}#`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-block bg-cyan-400 hover:bg-cyan-300 text-black text-xs px-3 py-1 rounded-full font-semibold shadow border-2 border-cyan-700 transition"
+                      >
+                        Open in Earth2
+                      </a>
+                    </div>
+                  </Popup>
               </Marker>
           )}
 
@@ -321,9 +333,21 @@ export default function MineralsMap({ center, minerals, loading, onSearchArea }:
                           </div>
                         )}
                       </div>
-                      <div className="flex justify-end items-end pt-2">
-                        <span className="text-[11px] text-gray-400 mr-1">Source:</span>
-                        <a href="https://mrdata.usgs.gov/major-deposits/" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:text-cyan-300 underline text-[11px]">USGS</a>
+                      <div className="flex flex-row items-center justify-between pt-2">
+                        <div>
+                          <a
+                            href={`https://app.earth2.io/?lat=${m.coordinates.latitude}&lng=${m.coordinates.longitude}#`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-block bg-cyan-400 hover:bg-cyan-300 text-black text-xs px-3 py-1 rounded-full font-semibold shadow border-2 border-cyan-700 transition"
+                          >
+                            Open in Earth2
+                          </a>
+                        </div>
+                        <div className="flex justify-end items-end">
+                          <span className="text-[11px] text-gray-400 mr-1">Source:</span>
+                          <a href="https://mrdata.usgs.gov/major-deposits/" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:text-cyan-300 underline text-[11px]">USGS</a>
+                        </div>
                       </div>
                     </div>
                   </Popup>
