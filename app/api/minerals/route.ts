@@ -87,11 +87,15 @@ export async function GET(req: Request) {
   type LocalDeposit = {
     id: string;
     name: string;
-    latitude: number;
-    longitude: number;
+    coordinates: {
+      latitude: number;
+      longitude: number;
+    };
     commodities: string[];
     description: string | null;
     references: Reference[];
+    status: string;
+    source: string;
   };
 
   let cachedLocal: LocalDeposit[] | null = null;
@@ -151,11 +155,15 @@ export async function GET(req: Request) {
         return {
           id,
           name: r.dep_name,
-          latitude: Number(r.latitude),
-          longitude: Number(r.longitude),
+          coordinates: {
+            latitude: Number(r.latitude),
+            longitude: Number(r.longitude)
+          },
           commodities: expandedCommodities,
           description: r.dep_type || null,
           references,
+          status: 'deposit',
+          source: 'local'
         };
       });
     } catch (err) {
@@ -165,14 +173,62 @@ export async function GET(req: Request) {
     return cachedLocal;
   }
 
+  function loadUSGSCopper(): LocalDeposit[] {
+    const files = [
+      path.join(process.cwd(), 'public', 'data', 'minerals', 'pcu_deps_pros.csv'),
+      path.join(process.cwd(), 'public', 'data', 'minerals', 'sedcu_deps_pros.csv'),
+    ];
+    let all: LocalDeposit[] = [];
+    for (const file of files) {
+      if (!fs.existsSync(file)) continue;
+      const raw = fs.readFileSync(file, 'utf8');
+      const records: any[] = parse(raw, { columns: true, skip_empty_lines: true });
+      for (const r of records) {
+        const lat = Number(r.latitude);
+        const lon = Number(r.longitude);
+        if (isNaN(lat) || isNaN(lon)) continue;
+        const id = r.objectid || r.id || r.gmrap_id || `${lat},${lon}`;
+        const name = r.name || r.name_other || r.tract_name || 'Unnamed';
+        const commodities = (r.comm_major || r.commodities || '').split(',').map((c: string) => c.trim()).filter((c: string) => Boolean(c));
+        const expandedCommodities = commodities.map((c: string) => commodityAbbreviationMap[c] || c);
+        const description = r.dep_type || r.dep_subtype || null;
+        const sitestatus = (r.sitestatus || r.sitestatus2 || '').toLowerCase();
+        const status = sitestatus.includes('prospect') ? 'prospect' : 'deposit';
+        all.push({
+          id: String(id),
+          name,
+          coordinates: {
+            latitude: lat,
+            longitude: lon
+          },
+          commodities: expandedCommodities,
+          description,
+          references: [],
+          status,
+          source: 'https://mrdata.usgs.gov/sir20105090z/'
+        });
+      }
+    }
+    return all;
+  }
+
   // Only use local data
   const localData = loadLocal();
+  const usgsCopper = loadUSGSCopper();
+
+  // Deduplicate: don't add a new point if lat/lon (rounded to 5 decimals) already exists in localData
+  const seen = new Set(localData.map(d => `${d.coordinates.latitude.toFixed(5)},${d.coordinates.longitude.toFixed(5)}`));
+  const merged = [
+    ...localData,
+    ...usgsCopper.filter(d => !seen.has(`${d.coordinates.latitude.toFixed(5)},${d.coordinates.longitude.toFixed(5)}`))
+  ];
+
   // Filter by bbox
-  const filtered = localData.filter((d) => {
+  const filtered = merged.filter((d) => {
     if (!bbox) return true;
     return (
-      d.longitude >= bbox[0] && d.longitude <= bbox[2] &&
-      d.latitude >= bbox[1] && d.latitude <= bbox[3]
+      d.coordinates.longitude >= bbox[0] && d.coordinates.longitude <= bbox[2] &&
+      d.coordinates.latitude >= bbox[1] && d.coordinates.latitude <= bbox[3]
     );
   });
   return NextResponse.json({ data: filtered.slice(0, Number(limitParam)) });

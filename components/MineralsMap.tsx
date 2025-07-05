@@ -42,7 +42,7 @@ const DEPOSIT_TYPE_DEFINITIONS: Record<string, string> = {
   Metamorphic: 'Resulting from the transformation of existing rock types through heat, pressure, or chemically active fluids.'
 };
 
-const getCommodityIcon = (commodities: string[]) => {
+const getCommodityIcon = (commodities: string[], status?: string) => {
     const primary = (commodities[0] || '').toLowerCase();
     
     // Icon styles based on commodity type
@@ -57,6 +57,8 @@ const getCommodityIcon = (commodities: string[]) => {
       'zinc': { shape: 'square', color: '#d4d4d8' },
       'nickel': { shape: 'square', color: '#10b981' },
       'iron': { shape: 'square', color: '#ef4444' },
+      'molybdenum': { shape: 'square', color: '#8b5cf6' },
+      'cobalt': { shape: 'square', color: '#06b6d4' },
       // Gems & Industrial
       'diamond': { shape: 'diamond', color: '#60a5fa' },
       'lithium': { shape: 'circle', color: '#a855f7' },
@@ -64,11 +66,41 @@ const getCommodityIcon = (commodities: string[]) => {
       'rare-earth elements': { shape: 'circle', color: '#f472b6' },
       'barite': { shape: 'circle', color: '#8b5cf6' },
       'clay': { shape: 'circle', color: '#fca5a5' },
+      'aluminum': { shape: 'circle', color: '#84cc16' },
+      'titanium': { shape: 'circle', color: '#f97316' },
+      'tungsten': { shape: 'circle', color: '#dc2626' },
+      'tin': { shape: 'circle', color: '#7c3aed' },
+      'antimony': { shape: 'circle', color: '#059669' },
+      'bismuth': { shape: 'circle', color: '#ec4899' },
+      'cadmium': { shape: 'circle', color: '#f59e0b' },
+      'chromium': { shape: 'circle', color: '#0891b2' },
+      'magnesium': { shape: 'circle', color: '#16a34a' },
+      'manganese': { shape: 'circle', color: '#ea580c' },
+      'mercury': { shape: 'circle', color: '#dc2626' },
+      'phosphorus': { shape: 'circle', color: '#22c55e' },
+      'potassium': { shape: 'circle', color: '#eab308' },
+      'sulfur': { shape: 'circle', color: '#fbbf24' },
+      'tantalum': { shape: 'circle', color: '#8b5cf6' },
+      'vanadium': { shape: 'circle', color: '#06b6d4' },
+      'zirconium': { shape: 'circle', color: '#64748b' },
     };
-
-    const style = commodityStyles[primary] || { shape: 'circle', color: '#50E3C1' };
-
-    let html = `<span class='mineral-dot' style='background:${style.color};`;
+    
+    // Get base style for commodity
+    let style = commodityStyles[primary] || { shape: 'circle', color: '#50E3C1' };
+    
+    // Apply status-based modifications (border and opacity)
+    let borderColor = '#0f172a'; // default border
+    let opacity = '1';
+    
+    if (status === 'prospect') {
+      borderColor = '#f59e0b'; // orange border for prospects
+      opacity = '0.8';
+    } else if (status === 'deposit') {
+      borderColor = '#38bdf8'; // blue border for deposits
+      opacity = '1';
+    }
+    
+    let html = `<span class='mineral-dot' style='background:${style.color}; border-color:${borderColor}; opacity:${opacity};`;
     if (style.shape === 'square') {
         html += ` border-radius: 0;'></span>`;
     } else if (style.shape === 'diamond') {
@@ -111,7 +143,7 @@ function MapCenter({ center }: { center: { latitude: number; longitude: number }
   return null;
 }
 
-function TooltipWithPortal({ children, content }: { children: React.ReactNode, content: string }) {
+function TooltipWithPortal({ children, content, left }: { children: React.ReactNode, content: string, left?: boolean }) {
   const [show, setShow] = useState(false);
   const [coords, setCoords] = useState<{ left: number; top: number }>({ left: 0, top: 0 });
   const ref = useRef<HTMLSpanElement>(null);
@@ -135,7 +167,7 @@ function TooltipWithPortal({ children, content }: { children: React.ReactNode, c
       {show && typeof window !== 'undefined' && createPortal(
         <span
           className="fixed z-[9999] bg-gray-900 text-xs text-cyan-100 px-3 py-2 rounded shadow-2xl max-w-xs w-max break-words border border-cyan-700"
-          style={{ left: coords.left, top: coords.top }}
+          style={left ? { left: coords.left - 240, top: coords.top, width: 240 } : { left: coords.left, top: coords.top }}
         >
           {content}
         </span>,
@@ -154,6 +186,7 @@ export default function MineralsMap({ center, minerals, loading, onSearchArea }:
   const [openReferences, setOpenReferences] = useState<string | null>(null);
   const [selectedMineral, setSelectedMineral] = useState<MineralOccurrence | null>(null);
   const [draggedPos, setDraggedPos] = useState<{ lat: number; lng: number } | null>(null);
+  const [legendOpen, setLegendOpen] = useState(true);
 
   const handleBoundsChange = (bounds: L.LatLngBounds) => {
     mapBoundsRef.current = bounds;
@@ -195,6 +228,95 @@ export default function MineralsMap({ center, minerals, loading, onSearchArea }:
       setDraggedPos(null);
     }}>
       <div className="relative w-full h-[600px] rounded-lg overflow-hidden">
+        {/* Legend */}
+        <div className="absolute top-48 right-4 z-[1000]">
+          <div
+            className="bg-black/80 backdrop-blur-sm border border-cyan-700/30 rounded-t-lg p-2 text-white text-xs max-w-64 cursor-pointer flex items-center gap-2 select-none"
+            onClick={() => setLegendOpen((v) => !v)}
+            style={{ borderBottomLeftRadius: legendOpen ? 0 : '0.5rem', borderBottomRightRadius: legendOpen ? 0 : '0.5rem' }}
+          >
+            <span className="font-bold text-cyan-200 text-sm">Mineral Legend</span>
+            <span className="ml-auto">
+              {legendOpen ? (
+                <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M6 8l4 4 4-4" stroke="#67e8f9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              ) : (
+                <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M8 6l4 4-4 4" stroke="#67e8f9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              )}
+            </span>
+          </div>
+          {legendOpen && (
+            <div className="bg-black/80 backdrop-blur-sm border-x border-b border-cyan-700/30 rounded-b-lg p-4 text-white text-xs max-w-64">
+              {/* Status Legend */}
+              <div className="mb-4">
+                <h4 className="font-semibold text-cyan-300 mb-2">Status</h4>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-cyan-500 border-2 border-cyan-400"></span>
+                    <span>Deposit</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-orange-500 border-2 border-orange-400 opacity-80"></span>
+                    <span>Prospect</span>
+                  </div>
+                </div>
+              </div>
+              {/* Commodity Types */}
+              <div className="mb-4">
+                <h4 className="font-semibold text-cyan-300 mb-2">Commodity Types</h4>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 bg-yellow-400 border-2 border-slate-800 transform rotate-45"></span>
+                    <span>Precious Metals (Gold, Silver, PGE
+                      <TooltipWithPortal content="PGE stands for Platinum Group Elements: platinum, palladium, rhodium, ruthenium, iridium, and osmium." left>
+                        <span className="ml-1 inline-block w-4 h-4 rounded-full bg-cyan-700 text-cyan-100 text-[10px] flex items-center justify-center font-bold" style={{cursor:'pointer'}}>i</span>
+                      </TooltipWithPortal>
+                      , Platinum)
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 bg-orange-400 border-2 border-slate-800"></span>
+                    <span>Base Metals (Copper, Lead, Zinc, etc.)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-purple-500 border-2 border-slate-800"></span>
+                    <span>Industrial Minerals (Lithium, Uranium, etc.)</span>
+                  </div>
+                </div>
+              </div>
+              {/* Common Commodities */}
+              <div>
+                <h4 className="font-semibold text-cyan-300 mb-2">Common Commodities</h4>
+                <div className="grid grid-cols-2 gap-1 text-[10px]">
+                  <div className="flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-yellow-400"></span>
+                    <span>Gold</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="w-2 h-2 bg-orange-400"></span>
+                    <span>Copper</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="w-2 h-2 bg-red-500"></span>
+                    <span>Iron</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-purple-500"></span>
+                    <span>Lithium</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="w-2 h-2 bg-green-500"></span>
+                    <span>Nickel</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                    <span>Uranium</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+        
         <MapContainer
           center={mapCenter}
           zoom={8}
@@ -264,7 +386,7 @@ export default function MineralsMap({ center, minerals, loading, onSearchArea }:
                     setDraggedPos({ lat, lng });
                   }
                 }}
-                icon={getCommodityIcon(selectedMineral.commodities)}
+                icon={getCommodityIcon(selectedMineral.commodities, selectedMineral.status && typeof selectedMineral.status === 'string' ? selectedMineral.status : undefined)}
               >
                 <LeafletTooltip direction="top" offset={[0, -16]} permanent>
                   {(() => {
@@ -279,7 +401,7 @@ export default function MineralsMap({ center, minerals, loading, onSearchArea }:
 
           {minerals &&
             minerals.map((m) => {
-              const icon = getCommodityIcon(m.commodities);
+              const icon = getCommodityIcon(m.commodities, m.status && typeof m.status === 'string' ? m.status : undefined);
               return (
                 <Marker key={m.id} position={[m.coordinates.latitude, m.coordinates.longitude]} icon={icon}
                   eventHandlers={{
@@ -295,9 +417,20 @@ export default function MineralsMap({ center, minerals, loading, onSearchArea }:
                 >
                   <Popup minWidth={260} className="mineral-popup bg-black bg-opacity-100 rounded-2xl shadow-2xl border border-cyan-900">
                     <div className="p-4 space-y-3 font-sans">
-                      <h4 className="font-extrabold text-xl text-cyan-200 mb-1 tracking-tight">
-                        {m.name}
-                      </h4>
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-extrabold text-xl text-cyan-200 tracking-tight">
+                          {m.name}
+                        </h4>
+                        {m.status && (
+                          <span className={`inline-block px-2 py-1 text-xs font-bold rounded-full ${
+                            m.status === 'prospect' 
+                              ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30' 
+                              : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                          }`}>
+                            {m.status.charAt(0).toUpperCase() + m.status.slice(1)}
+                          </span>
+                        )}
+                      </div>
                       <div className="flex flex-col gap-2">
                         <div>
                           <span className="text-xs font-semibold text-cyan-400 tracking-widest">Commodities</span>
@@ -346,7 +479,18 @@ export default function MineralsMap({ center, minerals, loading, onSearchArea }:
                         </div>
                         <div className="flex justify-end items-end">
                           <span className="text-[11px] text-gray-400 mr-1">Source:</span>
-                          <a href="https://mrdata.usgs.gov/major-deposits/" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:text-cyan-300 underline text-[11px]">USGS</a>
+                          <a
+                            href={
+                              m.source === "https://mrdata.usgs.gov/sir20105090z/"
+                                ? "https://mrdata.usgs.gov/sir20105090z/"
+                                : "https://mrdata.usgs.gov/major-deposits/"
+                            }
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-cyan-400 hover:text-cyan-300 underline text-[11px]"
+                          >
+                            USGS
+                          </a>
                         </div>
                       </div>
                     </div>
@@ -377,7 +521,18 @@ export default function MineralsMap({ center, minerals, loading, onSearchArea }:
         </DialogContent>
 
         <style jsx global>{`
-          .mineral-dot { width:16px; height:16px; display:block; border:2px solid #0f172a; }
+          .mineral-dot { 
+            width:16px; 
+            height:16px; 
+            display:block; 
+            border:2px solid #0f172a; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            transition: all 0.2s ease-in-out;
+          }
+          .mineral-dot:hover {
+            transform: scale(1.2);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+          }
           .leaflet-marker-icon.mineral-icon { background:transparent; border:none; }
           .property-icon { background:transparent; border:none; }
           /* Force ALL leaflet popups to have a black background */
