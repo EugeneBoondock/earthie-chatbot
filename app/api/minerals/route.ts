@@ -203,20 +203,21 @@ export async function GET(req: Request) {
         });
       }catch{}
 
-      try{
-        const refPath=path.join(process.cwd(),'public','data','minerals','ref.csv');
-        const refRaw=fs.readFileSync(refPath,'utf8');
-        const refRecs:any[]=parse(refRaw,{columns:true,skip_empty_lines:true});
-        refMap=new Map();
-        refRecs.forEach(r=>{
-           if (r.reference && r.onlink) {
-                const refId = r.reference.trim();
-                const refText = r.onlink.trim();
-                const refLink = r.onlink.startsWith('http') ? r.onlink : null;
-                refMap!.set(refId, { text: refText, link: refLink });
-           }
+      // Load references from ref.csv
+      try {
+        const refPath = path.join(process.cwd(), 'public', 'data', 'minerals', 'ref.csv');
+        const refRaw = fs.readFileSync(refPath, 'utf8');
+        const refRecs: any[] = parse(refRaw, { columns: true, skip_empty_lines: true });
+        refMap = new Map();
+        refRecs.forEach(r => {
+          if (r.reference && r.onlink) {
+            const refId = r.reference.trim();
+            const refText = r.onlink.trim();
+            const refLink = refText.startsWith('http') ? refText : null;
+            refMap!.set(refId, { text: refText, link: refLink });
+          }
         });
-      }catch(e){ console.error('Failed to load ref.csv', e)}
+      } catch (e) { console.error('Failed to load ref.csv', e); }
 
       cachedLocal = records.map((r) => {
         const id=String(r.gid);
@@ -226,7 +227,8 @@ export async function GET(req: Request) {
             return commodityAbbreviationMap[normalized] || normalized;
         });
         
-        const citation_ids = (r.citation || '').split(';').map((c:string) => c.trim()).filter(Boolean);
+        // Parse citation IDs and attach references
+        const citation_ids = (r.citation || '').split(';').map((c: string) => c.trim()).filter(Boolean);
         const references: Reference[] = citation_ids.map((cit: string) => refMap?.get(cit)).filter(Boolean) as Reference[];
 
         return {

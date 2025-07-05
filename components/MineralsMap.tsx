@@ -166,59 +166,45 @@ export default function MineralsMap({ center, minerals, loading, onSearchArea }:
               const icon = getCommodityIcon(m.commodities);
               return (
                 <Marker key={m.id} position={[m.coordinates.latitude, m.coordinates.longitude]} icon={icon}>
-                  <Popup minWidth={240} className="mineral-popup">
-                    <div className="p-1" style={{ fontFamily: 'sans-serif' }}>
-                      <h4 className="font-bold text-lg bg-clip-text text-transparent bg-gradient-to-r from-earthie-mint to-cyan-400 mb-3" style={{ color: '#86efac' }}>
+                  <Popup minWidth={260} className="mineral-popup bg-black bg-opacity-100 rounded-2xl shadow-2xl border border-cyan-900">
+                    <div className="p-4 space-y-3 font-sans">
+                      <h4 className="font-extrabold text-xl text-cyan-200 mb-1 tracking-tight">
                         {m.name}
                       </h4>
-                      
-                      <div className="space-y-2.5">
-                        <div className="space-y-1">
-                          <p className="text-xs font-semibold uppercase" style={{ color: 'rgba(156, 163, 175, 0.9)' }}>Commodities</p>
-                          <p className="text-sm font-medium" style={{ color: 'rgba(229, 231, 235, 1)' }}>{m.commodities.join(', ')}</p>
-                        </div>
-
-                        {m.description && 
-                          <div className="space-y-1">
-                            <p className="text-xs font-semibold uppercase" style={{ color: 'rgba(156, 163, 175, 0.9)' }}>Type</p>
-                            <p className="text-sm font-medium" style={{ color: 'rgba(229, 231, 235, 1)' }}>{m.description}</p>
+                      <div className="flex flex-col gap-2">
+                        <div>
+                          <span className="text-xs font-semibold text-cyan-400 tracking-widest">Commodities</span>
+                          <div className="flex flex-wrap gap-2 mt-1">
+                            {m.commodities && m.commodities.length > 0 ? (
+                              m.commodities.map((c, i) => (
+                                <span key={i} className="inline-block bg-cyan-800/80 text-cyan-100 text-xs px-2 py-0.5 rounded-full font-medium shadow-sm border border-cyan-700">
+                                  {c}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-xs text-gray-400">None</span>
+                            )}
                           </div>
-                        }
-                      </div>
-                      
-                      {m.references && m.references.length > 0 ? (
-                        <div className="pt-3 mt-3 border-t border-cyan-400/20">
-                          <Button size="sm" variant="secondary" className="w-full mb-2" onClick={() => setOpenReferences(openReferences === m.id ? null : m.id)}>
-                            {openReferences === m.id ? 'Hide References' : 'Show References'}
-                          </Button>
-                          {openReferences === m.id && (
-                            <div className="space-y-2">
-                              {m.references.map((ref, idx) => (
-                                <div key={idx}>
-                                  {ref.link ? (
-                                    <Button asChild size="sm" variant="outline" className="w-full bg-transparent text-gray-300 hover:bg-cyan-400/10 hover:text-white h-8 text-xs">
-                                      <a href={ref.link} target="_blank" rel="noopener noreferrer" className="flex items-center">
-                                        <ExternalLink className="h-3 w-3 mr-2"/>
-                                        View Online Source
-                                      </a>
-                                    </Button>
-                                  ) : (
-                                    <DialogTrigger asChild>
-                                      <Button onClick={() => setSelectedReference(ref.text)} size="sm" variant="secondary" className="w-full bg-gray-700/50 hover:bg-gray-700/80 h-8 text-xs">
-                                        <BookText className="h-3 w-3 mr-2"/>
-                                        View Reference
-                                      </Button>
-                                    </DialogTrigger>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          )}
                         </div>
-                      ) : (
-                        <div className="pt-3 mt-3 border-t border-cyan-400/20 text-xs text-gray-400">No references available for this resource.</div>
-                      )}
-                      <p className="text-[10px] text-right pt-2 text-gray-500/80">Source: {m.source}</p>
+                        {m.description && (
+                          <div className="pt-2 border-t border-cyan-700/30">
+                            <span className="text-xs font-semibold text-cyan-400 tracking-widest flex items-center gap-1">
+                              <span>Type</span>
+                              <span className="relative group cursor-pointer">
+                                <span className="inline-block w-4 h-4 rounded-full bg-cyan-700 text-cyan-100 text-[10px] flex items-center justify-center font-bold">i</span>
+                                <span className="absolute left-6 top-1/2 -translate-y-1/2 z-10 hidden group-hover:block bg-gray-900 text-xs text-cyan-100 px-3 py-2 rounded shadow-lg min-w-[180px] border border-cyan-700">
+                                  Deposit type refers to the geological classification of the mineral occurrence (e.g., igneous, sedimentary, hydrothermal, etc.).
+                                </span>
+                              </span>
+                            </span>
+                            <div className="text-sm text-cyan-100 mt-1">{m.description}</div>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex justify-end items-end pt-2">
+                        <span className="text-[11px] text-gray-400 mr-1">Source:</span>
+                        <a href="https://mrdata.usgs.gov/major-deposits/" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:text-cyan-300 underline text-[11px]">USGS</a>
+                      </div>
                     </div>
                   </Popup>
                 </Marker>
