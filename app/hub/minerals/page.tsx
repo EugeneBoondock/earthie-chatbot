@@ -45,7 +45,7 @@ export default function MineralsHubPage() {
   const [lon, setLon] = useState<string>('');
   const [radius, setRadius] = useState<number>(10000);
   const [submittedCoords, setSubmittedCoords] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [propertyLocation, setPropertyLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [propertyLocation, setPropertyLocation] = useState<{ latitude: number; longitude: number; _fromProperty?: boolean } | null>(null);
   const [linkedE2UserId, setLinkedE2UserId] = useState<string | null>(null);
   const [properties, setProperties] = useState<Property[]>([]);
   const [loadingProps, setLoadingProps] = useState(true);
@@ -139,7 +139,7 @@ export default function MineralsHubPage() {
     const coords = parseCenter(prop.attributes.center);
     if (coords) {
       setSubmittedCoords(coords);
-      setPropertyLocation(coords);
+      setPropertyLocation({ ...coords, _fromProperty: true });
       setBbox(null);
     }
   };

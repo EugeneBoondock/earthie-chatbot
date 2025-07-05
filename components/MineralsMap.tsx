@@ -1,6 +1,6 @@
 "use client";
 
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Polyline } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { useState, useEffect, useRef } from "react";
 import L from "leaflet";
@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { createPortal } from 'react-dom';
+import { Tooltip as LeafletTooltip } from "react-leaflet";
 
 const MAP_LAYERS: Record<MapLayer, { url: string; attribution: string }> = {
   dark: {
@@ -85,7 +86,7 @@ const getCommodityIcon = (commodities: string[]) => {
 };
 
 interface MineralsMapProps {
-  center: { latitude: number; longitude: number } | null;
+  center: { latitude: number; longitude: number; _fromProperty?: boolean } | null;
   minerals: MineralOccurrence[] | null;
   loading: boolean;
   onSearchArea: (bbox: string) => void;
@@ -151,6 +152,8 @@ export default function MineralsMap({ center, minerals, loading, onSearchArea }:
   const mapRef = useRef<L.Map>(null);
   const [selectedReference, setSelectedReference] = useState<string | null>(null);
   const [openReferences, setOpenReferences] = useState<string | null>(null);
+  const [selectedMineral, setSelectedMineral] = useState<MineralOccurrence | null>(null);
+  const [draggedPos, setDraggedPos] = useState<{ lat: number; lng: number } | null>(null);
 
   const handleBoundsChange = (bounds: L.LatLngBounds) => {
     mapBoundsRef.current = bounds;
@@ -172,8 +175,25 @@ export default function MineralsMap({ center, minerals, loading, onSearchArea }:
 
   const mapCenter: L.LatLngExpression = center ? [center.latitude, center.longitude] : [0,0];
 
+  // Haversine formula for distance in km
+  function getDistanceKm(a: { latitude: number; longitude: number }, b: { latitude: number; longitude: number }) {
+    const toRad = (v: number) => (v * Math.PI) / 180;
+    const R = 6371;
+    const dLat = toRad(b.latitude - a.latitude);
+    const dLon = toRad(b.longitude - a.longitude);
+    const lat1 = toRad(a.latitude);
+    const lat2 = toRad(b.latitude);
+    const aVal = Math.sin(dLat / 2) ** 2 + Math.sin(dLon / 2) ** 2 * Math.cos(lat1) * Math.cos(lat2);
+    const c = 2 * Math.atan2(Math.sqrt(aVal), Math.sqrt(1 - aVal));
+    return R * c;
+  }
+
   return (
-    <Dialog onOpenChange={(isOpen) => !isOpen && setSelectedReference(null)}>
+    <Dialog onOpenChange={(isOpen) => {
+      if (!isOpen) setSelectedReference(null);
+      setSelectedMineral(null);
+      setDraggedPos(null);
+    }}>
       <div className="relative w-full h-[600px] rounded-lg overflow-hidden">
         <MapContainer
           center={mapCenter}
@@ -206,11 +226,61 @@ export default function MineralsMap({ center, minerals, loading, onSearchArea }:
               </Marker>
           )}
 
+          {/* Draggable arrow/line from property to selected mineral */}
+          {center && selectedMineral && (
+            <>
+              <Polyline
+                positions={[
+                  [center.latitude, center.longitude],
+                  draggedPos ? [draggedPos.lat, draggedPos.lng] : [selectedMineral.coordinates.latitude, selectedMineral.coordinates.longitude]
+                ]}
+                color="#38bdf8"
+                weight={4}
+                dashArray="6 8"
+                opacity={0.8}
+              />
+              <Marker
+                position={draggedPos ? [draggedPos.lat, draggedPos.lng] : [selectedMineral.coordinates.latitude, selectedMineral.coordinates.longitude]}
+                draggable={true}
+                eventHandlers={{
+                  drag: (e: L.LeafletEvent) => {
+                    const { lat, lng } = (e.target as L.Marker).getLatLng();
+                    setDraggedPos({ lat, lng });
+                  },
+                  dragend: (e: L.LeafletEvent) => {
+                    const { lat, lng } = (e.target as L.Marker).getLatLng();
+                    setDraggedPos({ lat, lng });
+                  }
+                }}
+                icon={getCommodityIcon(selectedMineral.commodities)}
+              >
+                <LeafletTooltip direction="top" offset={[0, -16]} permanent>
+                  {(() => {
+                    const mineralPos = draggedPos ? { latitude: draggedPos.lat, longitude: draggedPos.lng } : selectedMineral.coordinates;
+                    const dist = getDistanceKm(center, mineralPos);
+                    return `${dist.toFixed(2)} km`;
+                  })()}
+                </LeafletTooltip>
+              </Marker>
+            </>
+          )}
+
           {minerals &&
             minerals.map((m) => {
               const icon = getCommodityIcon(m.commodities);
               return (
-                <Marker key={m.id} position={[m.coordinates.latitude, m.coordinates.longitude]} icon={icon}>
+                <Marker key={m.id} position={[m.coordinates.latitude, m.coordinates.longitude]} icon={icon}
+                  eventHandlers={{
+                    popupopen: () => {
+                      setSelectedMineral(m);
+                      setDraggedPos(null);
+                    },
+                    popupclose: () => {
+                      setSelectedMineral(null);
+                      setDraggedPos(null);
+                    }
+                  }}
+                >
                   <Popup minWidth={260} className="mineral-popup bg-black bg-opacity-100 rounded-2xl shadow-2xl border border-cyan-900">
                     <div className="p-4 space-y-3 font-sans">
                       <h4 className="font-extrabold text-xl text-cyan-200 mb-1 tracking-tight">
@@ -239,6 +309,15 @@ export default function MineralsMap({ center, minerals, loading, onSearchArea }:
                                 <span>{m.description}</span>
                               </TooltipWithPortal>
                             </div>
+                            {/* Distance from property */}
+                            {center && center._fromProperty && (
+                              <div className="text-xs text-cyan-300 mt-2">
+                                Distance from your property: {(() => {
+                                  const dist = getDistanceKm(center, m.coordinates);
+                                  return `${dist.toFixed(2)} km`;
+                                })()}
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
