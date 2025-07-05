@@ -1913,13 +1913,21 @@ export default function KnowYourLandPage() {
       if (!playerElement) return;
 
       if (!document.fullscreenElement) {
-        playerElement.requestFullscreen().catch(err => {
+        playerElement.requestFullscreen().then(() => {
+          const orientation: any = (window.screen as any).orientation;
+          if (orientation && typeof orientation.lock === 'function') {
+            orientation.lock('landscape').catch(() => {});
+          }
+        }).catch((err) => {
           toast.error(`Error attempting to enable full-screen mode: ${err.message}`);
         });
       } else {
-        if (document.exitFullscreen) {
-          document.exitFullscreen();
-        }
+        document.exitFullscreen?.().then(() => {
+          const orientation: any = (window.screen as any).orientation;
+          if (orientation && typeof orientation.unlock === 'function') {
+            orientation.unlock();
+          }
+        });
       }
     };
 

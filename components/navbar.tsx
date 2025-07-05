@@ -4,7 +4,7 @@
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
-import { Menu, X } from "lucide-react"
+import { Menu, X, Heart } from "lucide-react"
 import { useState, useEffect } from "react" // useEffect imported
 import { usePriceContext } from "@/contexts/PriceContext"; // Import the custom hook
 import { format } from 'date-fns'; // For formatting dates if needed elsewhere
@@ -31,6 +31,8 @@ const navItems = [
 // --- Configuration Constants (can be removed if not needed outside context) ---
 const cryptoSymbol = 'ESS';
 const cryptoLink = 'https://www.coingecko.com/en/coins/earth-2-essence';
+// Ethereum / Essence donation address
+const donateAddress = '0x7a82906cf62447aaaff84e7a1f58615d317c3eb9';
 
 export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -177,6 +179,15 @@ export default function Navbar() {
             <div className="hidden md:flex items-center space-x-4 lg:space-x-6">
               {navItems.map((item) => ( <Link key={item.path} href={item.path} className={`text-sm font-medium transition-colors hover:text-earthie-mint ${ pathname === item.path ? "text-earthie-mint border-b-2 border-earthie-mint" : "text-gray-300" }`}> {item.name} </Link> ))}
 
+              {/* Donate Button */}
+              <Link
+                href="/donate"
+                className="text-sm font-medium transition-colors text-gray-300 hover:text-earthie-mint flex items-center gap-1"
+                title="Donate ETH / Essence"
+              >
+                Donate <Heart className="h-4 w-4" />
+              </Link>
+
               {/* Profile Menu */}
               <NavigationMenu>
                 <NavigationMenuList>
@@ -271,27 +282,38 @@ export default function Navbar() {
               
               <hr className="border-gray-600 my-2" />
 
+              {/* Donate link mobile */}
+              <Link
+                href="/donate"
+                className="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Donate
+              </Link>
+
+              <hr className="border-gray-600 my-2" />
+
               {/* Profile related links for mobile */} 
               {user ? (
                 <>
-              <Link href="/hub" onClick={() => setIsMobileMenuOpen(false)} className={`block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white`}>
-                    The Hub
-              </Link>
+                  <Link href="/hub" onClick={() => setIsMobileMenuOpen(false)} className={`block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white`}>
+                        The Hub
+                  </Link>
                   <button onClick={handleLogout} className={`block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white`}>
                     Logout
                   </button>
                 </>
               ) : (
                 <>
-              <Link href="/auth/login" onClick={() => setIsMobileMenuOpen(false)} className={`block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white`}>
-                Login
-              </Link>
-              <Link href="/auth/signup" onClick={() => setIsMobileMenuOpen(false)} className={`block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white`}>
-                Sign Up
-              </Link>
+                  <Link href="/auth/login" onClick={() => setIsMobileMenuOpen(false)} className={`block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white`}>
+                    Login
+                  </Link>
+                  <Link href="/auth/signup" onClick={() => setIsMobileMenuOpen(false)} className={`block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white`}>
+                    Sign Up
+                  </Link>
                 </>
               )}
-              
+
               <hr className="border-gray-600 my-2" />
 
               {/* Mobile Currency Selector */}

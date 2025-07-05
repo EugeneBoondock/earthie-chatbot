@@ -197,7 +197,7 @@ export default function SplashScreen() {
                   fill
                   sizes="(max-width: 768px) 100vw, 33vw"
                   priority
-                  className="object-contain scale-90"
+                  className="object-cover scale-110"
                   quality={90}
                   loading="eager"
                 />
