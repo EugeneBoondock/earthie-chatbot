@@ -11,6 +11,7 @@ import { useMap, useMapEvents } from "react-leaflet";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { createPortal } from 'react-dom';
 
 const MAP_LAYERS: Record<MapLayer, { url: string; attribution: string }> = {
   dark: {
@@ -28,6 +29,16 @@ const MAP_LAYERS: Record<MapLayer, { url: string; attribution: string }> = {
     attribution:
       "Map data: &copy; OpenStreetMap contributors | Map style: &copy; OpenTopoMap",
   },
+};
+
+const DEPOSIT_TYPE_DEFINITIONS: Record<string, string> = {
+  Surficial: 'Formed at or near the Earth\'s surface, typically by weathering, sedimentation, or other surface processes.',
+  Hydrothermal: 'Created by hot, mineral-rich fluids circulating through rocks, often associated with volcanic or geothermal activity.',
+  Igneous: 'Originates from the solidification of molten magma, either below (intrusive) or above (extrusive) the Earth\'s surface.',
+  Sedimentary: 'Formed by the accumulation and lithification of mineral and organic particles, usually in water environments.',
+  Gemstone: 'Deposits primarily containing minerals valued for their beauty, rarity, and durability, used in jewelry and ornamentation.',
+  Unclassified: 'The deposit type is not specified or does not fit standard geological categories.',
+  Metamorphic: 'Resulting from the transformation of existing rock types through heat, pressure, or chemically active fluids.'
 };
 
 const getCommodityIcon = (commodities: string[]) => {
@@ -97,6 +108,40 @@ function MapCenter({ center }: { center: { latitude: number; longitude: number }
     }
   }, [center?.latitude, center?.longitude]);
   return null;
+}
+
+function TooltipWithPortal({ children, content }: { children: React.ReactNode, content: string }) {
+  const [show, setShow] = useState(false);
+  const [coords, setCoords] = useState<{ left: number; top: number }>({ left: 0, top: 0 });
+  const ref = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    if (show && ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+      setCoords({ left: rect.right + 8, top: rect.top });
+    }
+  }, [show]);
+
+  return (
+    <span
+      ref={ref}
+      className="relative group cursor-pointer flex items-center gap-1"
+      onMouseEnter={() => setShow(true)}
+      onMouseLeave={() => setShow(false)}
+    >
+      {children}
+      <span className="inline-block w-4 h-4 rounded-full bg-cyan-700 text-cyan-100 text-[10px] flex items-center justify-center font-bold ml-1">i</span>
+      {show && typeof window !== 'undefined' && createPortal(
+        <span
+          className="fixed z-[9999] bg-gray-900 text-xs text-cyan-100 px-3 py-2 rounded shadow-2xl max-w-xs w-max break-words border border-cyan-700"
+          style={{ left: coords.left, top: coords.top }}
+        >
+          {content}
+        </span>,
+        document.body
+      )}
+    </span>
+  );
 }
 
 export default function MineralsMap({ center, minerals, loading, onSearchArea }: MineralsMapProps) {
@@ -188,16 +233,12 @@ export default function MineralsMap({ center, minerals, loading, onSearchArea }:
                         </div>
                         {m.description && (
                           <div className="pt-2 border-t border-cyan-700/30">
-                            <span className="text-xs font-semibold text-cyan-400 tracking-widest flex items-center gap-1">
-                              <span>Type</span>
-                              <span className="relative group cursor-pointer">
-                                <span className="inline-block w-4 h-4 rounded-full bg-cyan-700 text-cyan-100 text-[10px] flex items-center justify-center font-bold">i</span>
-                                <span className="absolute left-6 top-1/2 -translate-y-1/2 z-10 hidden group-hover:block bg-gray-900 text-xs text-cyan-100 px-3 py-2 rounded shadow-lg min-w-[180px] border border-cyan-700">
-                                  Deposit type refers to the geological classification of the mineral occurrence (e.g., igneous, sedimentary, hydrothermal, etc.).
-                                </span>
-                              </span>
-                            </span>
-                            <div className="text-sm text-cyan-100 mt-1">{m.description}</div>
+                            <span className="text-xs font-semibold text-cyan-400 tracking-widest">Type</span>
+                            <div className="text-sm text-cyan-100 mt-1 flex items-center gap-1">
+                              <TooltipWithPortal content={DEPOSIT_TYPE_DEFINITIONS[m.description] || 'Deposit type refers to the geological classification of the mineral occurrence.'}>
+                                <span>{m.description}</span>
+                              </TooltipWithPortal>
+                            </div>
                           </div>
                         )}
                       </div>
