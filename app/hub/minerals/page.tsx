@@ -3,10 +3,9 @@
 import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import MineralsMap from '@/components/MineralsMap';
+import dynamicImport from 'next/dynamic';
 import { useMinerals } from '@/hooks/useMinerals';
 import { Loader2 } from 'lucide-react';
-import { get as idbGet } from 'idb-keyval';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -33,6 +32,10 @@ function parseCenter(center: string): { latitude: number; longitude: number } | 
   }
   return null;
 }
+
+const MineralsMap = dynamicImport(() => import('@/components/MineralsMap').then(mod=>mod.default||mod), { ssr: false, loading: ()=>(<div className="aspect-video bg-gray-800/50 rounded-md border border-gray-700/50 flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-earthie-mint"/></div>) });
+
+export const dynamic = 'force-dynamic';
 
 export default function MineralsHubPage() {
   const [lat, setLat] = useState<string>('');
@@ -75,6 +78,7 @@ export default function MineralsHubPage() {
     async function load(){
       setLoadingProps(true);
       try{
+        const { get: idbGet } = await import('idb-keyval');
         const data:any = await idbGet(getCacheKey(linkedE2UserId!));
         if(cancelled) return;
         if(Array.isArray(data)){
