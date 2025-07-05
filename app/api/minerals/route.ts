@@ -1,10 +1,40 @@
 import { NextResponse } from "next/server";
+import fs from 'fs';
+import path from 'path';
+import { parse } from 'csv-parse/sync';
 
 // USGS MRData ArcGIS Feature Service (points layer)
 const USGS_ENDPOINT =
   "https://mrdata.usgs.gov/services/mrds/MapServer/0/query";
 
 const MRDS_BBOX_URL = "https://mrdata.usgs.gov/mrds/search-bbox.php";
+
+const commodityAbbreviationMap: { [key: string]: string } = {
+  "Al": "Aluminum",
+  "Ag": "Silver",
+  "Au": "Gold",
+  "B": "Boron",
+  "Be": "Beryllium",
+  "Co": "Cobalt",
+  "Cr": "Chromium",
+  "Cu": "Copper",
+  "Fe": "Iron",
+  "K": "Potassium",
+  "Li": "Lithium",
+  "Mo": "Molybdenum",
+  "Nb": "Niobium",
+  "Ni": "Nickel",
+  "P": "Phosphorus",
+  "Pb": "Lead",
+  "REE": "Rare-earth elements",
+  "S": "Sulfur",
+  "Sn": "Tin",
+  "Ta": "Tantalum",
+  "Ti": "Titanium",
+  "U": "Uranium",
+  "Zn": "Zinc",
+  "Zr": "Zirconium"
+};
 
 /*
   Supported query params:
@@ -128,6 +158,140 @@ export async function GET(req: Request) {
     }catch(err){
       console.error('MRDS bbox fallback failed',err);
     }
+  }
+
+  // ---------- Local dataset (deposit.csv) ----------
+  type LocalDeposit = {
+    id: string;
+    name: string;
+    latitude: number;
+    longitude: number;
+    commodities: string[];
+    description: string | null;
+    ref?: string | null;
+  };
+
+  let cachedLocal: LocalDeposit[] | null = null;
+  let commodityMap: Map<string,string[]> | null = null;
+  let refMap: Map<string,string> | null = null;
+
+  function loadLocal(): LocalDeposit[] {
+    if (cachedLocal) return cachedLocal;
+    try {
+      const csvPath = path.join(process.cwd(), 'public', 'data', 'minerals', 'deposit.csv');
+      const raw = fs.readFileSync(csvPath, 'utf8');
+      const records: any[] = parse(raw, { columns: true, skip_empty_lines: true });
+
+      // load commodity.csv
+      try{
+        const comPath=path.join(process.cwd(),'public','data','minerals','commodity.csv');
+        const comRaw=fs.readFileSync(comPath,'utf8');
+        const comRecs:any[]=parse(comRaw,{columns:true,skip_empty_lines:true});
+        commodityMap=new Map();
+        comRecs.forEach(rec=>{
+          const id=String(rec.gid);
+          const val=(rec.value||'').trim();
+          if(!val) return;
+          if(!commodityMap!.has(id)) commodityMap!.set(id,[]);
+          commodityMap!.get(id)!.push(val);
+        });
+      }catch{}
+
+      try{
+        const refPath=path.join(process.cwd(),'public','data','minerals','ref.csv');
+        const refRaw=fs.readFileSync(refPath,'utf8');
+        const refRecs:any[]=parse(refRaw,{columns:true,skip_empty_lines:true});
+        refMap=new Map();
+        refRecs.forEach(r=>{ refMap!.set(String(r.gid), r.ref); });
+      }catch{}
+
+      cachedLocal = records.map((r) => {
+        const id=String(r.gid);
+        let commodities: string[] = commodityMap?.get(id) ?? (r.commodity? (r.commodity as string).split(',').map((c:string)=>c.trim()): []);
+        const expandedCommodities = commodities.map(c => {
+            const normalized = c.trim();
+            return commodityAbbreviationMap[normalized] || normalized;
+        });
+
+        return {
+          id,
+          name: r.dep_name,
+          latitude: Number(r.latitude),
+          longitude: Number(r.longitude),
+          commodities: expandedCommodities,
+          description: r.dep_type || null,
+          ref: refMap?.get(id) ?? null,
+        };
+      });
+    } catch (err) {
+      console.error('Failed to load local minerals CSV', err);
+      cachedLocal = [];
+    }
+    return cachedLocal;
+  }
+
+  function haversineDistKm(lat1:number, lon1:number, lat2:number, lon2:number){
+    const toRad=(d:number)=>d*Math.PI/180;
+    const R=6371000; // metres
+    const dLat=toRad(lat2-lat1);
+    const dLon=toRad(lon2-lon1);
+    const a=Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+    const c=2*Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R*c; // metres
+  }
+
+  // --- Attempt LOCAL CSV first ---
+  const localData = (() => {
+    try {
+      const deposits = loadLocal();
+      if (!deposits.length) return [];
+
+      if (bbox) {
+        const [xmin, ymin, xmax, ymax] = bbox;
+        return deposits.filter(d => 
+          d.longitude >= xmin && d.longitude <= xmax &&
+          d.latitude >= ymin && d.latitude <= ymax
+        ).slice(0, Number(limitParam))
+        .map((d) => ({
+          id: d.id,
+          name: d.name,
+          commodities: d.commodities,
+          description: d.description,
+          coordinates: { latitude: d.latitude, longitude: d.longitude },
+          ref: d.ref ?? null,
+          source: 'USGS',
+        }));
+      }
+
+      let centerLat = latParam ? Number(latParam) : null;
+      let centerLon = lonParam ? Number(lonParam) : null;
+      let radiusM = radiusParam ? Number(radiusParam) : 10000;
+      
+      if (centerLat === null || centerLon === null) return [];
+      const center = { lat: centerLat, lon: centerLon };
+      const distLimit = radiusM;
+      return deposits
+        .filter((d) => {
+          const dist = haversineDistKm(center.lat, center.lon, d.latitude, d.longitude);
+          return dist <= distLimit;
+        })
+        .slice(0, Number(limitParam))
+        .map((d) => ({
+          id: d.id,
+          name: d.name,
+          commodities: d.commodities,
+          description: d.description,
+          coordinates: { latitude: d.latitude, longitude: d.longitude },
+          ref: d.ref ?? null,
+          source: 'USGS',
+        }));
+    } catch (err) {
+      return [];
+    }
+  })();
+
+  if (localData.length) {
+    return NextResponse.json({ data: localData, source: 'USGS', sourceCount: localData.length });
   }
 
   return NextResponse.json({ data, sourceCount: data.length });

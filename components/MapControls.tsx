@@ -1,6 +1,6 @@
 'use client';
 
-import { Layers, Eye, Route, MapPin, Type } from 'lucide-react';
+import { Layers, Eye, Route, MapPin, Type, Map, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { 
   DropdownMenu, 
@@ -19,79 +19,69 @@ export type MapLayer = 'dark' | 'satellite' | 'topo';
 interface MapControlsProps {
   currentLayer: MapLayer;
   onLayerChange: (layer: MapLayer) => void;
-  showAllProperties: boolean;
-  onShowAllPropertiesChange: (show: boolean) => void;
+  onSearchArea: () => void;
   showRoute: boolean;
-  onShowRouteChange: (show: boolean) => void;
+  onShowRouteChange: (value: boolean) => void;
   showLabels: boolean;
-  onShowLabelsChange: (show: boolean) => void;
+  onShowLabelsChange: (value: boolean) => void;
 }
 
 export function MapControls({
   currentLayer,
   onLayerChange,
-  showAllProperties,
-  onShowAllPropertiesChange,
+  onSearchArea,
   showRoute,
   onShowRouteChange,
   showLabels,
   onShowLabelsChange,
 }: MapControlsProps) {
   return (
-    <div className="leaflet-top leaflet-right">
-      <div className="leaflet-control leaflet-bar bg-black/50 backdrop-blur-md border border-cyan-400/30 rounded-lg p-2 flex flex-col gap-2">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-10 w-10 text-white hover:bg-cyan-400/20 hover:text-cyan-300">
-              <Layers className="h-5 w-5" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="bg-gray-900 text-white border-gray-700">
-            <DropdownMenuLabel>Map Biome</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuRadioGroup value={currentLayer} onValueChange={(value) => onLayerChange(value as MapLayer)}>
-              <DropdownMenuRadioItem value="dark" className='cursor-pointer hover:bg-gray-800 focus:bg-gray-800'>Dark</DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="satellite" className='cursor-pointer hover:bg-gray-800 focus:bg-gray-800'>Satellite</DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="topo" className='cursor-pointer hover:bg-gray-800 focus:bg-gray-800'>Topographic</DropdownMenuRadioItem>
-            </DropdownMenuRadioGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        <div className="flex items-center justify-center h-10 w-10" title="Show All Properties">
-           <Switch
-             id="show-all-properties"
-             checked={showAllProperties}
-             onCheckedChange={onShowAllPropertiesChange}
-             className="!mt-0"
-           />
-        </div>
-        
-         <div className="flex items-center justify-center h-10 w-10" title="Show Route">
-           <Switch
-             id="show-route"
-             checked={showRoute}
-             onCheckedChange={onShowRouteChange}
-             className="!mt-0"
-           />
-        </div>
-
-        {/* Labels toggle - only show when satellite view is active */}
-        {currentLayer === 'satellite' && (
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className={`h-10 w-10 transition-colors ${
-              showLabels 
-                ? 'text-cyan-300 bg-cyan-400/20 hover:bg-cyan-400/30' 
-                : 'text-white hover:bg-cyan-400/20 hover:text-cyan-300'
-            }`}
-            onClick={() => onShowLabelsChange(!showLabels)}
-            title="Toggle Country Names & City Labels"
+    <div className="absolute top-2 right-2 z-[1000] p-2 bg-gray-800/80 backdrop-blur-sm rounded-lg border border-cyan-400/20 text-white shadow-lg space-y-3">
+      <div className="flex flex-col gap-2">
+        <Label className="text-sm font-medium">Map Type</Label>
+        <div className="flex items-center space-x-1">
+          <Button
+            size="icon"
+            variant={currentLayer === "dark" ? "secondary" : "ghost"}
+            onClick={() => onLayerChange("dark")}
+            className="h-8 w-8"
           >
-            <Type className="h-5 w-5" />
+            <Map className="h-4 w-4" />
           </Button>
+          <Button
+            size="icon"
+            variant={currentLayer === "satellite" ? "secondary" : "ghost"}
+            onClick={() => onLayerChange("satellite")}
+            className="h-8 w-8"
+          >
+            <Layers className="h-4 w-4" />
+          </Button>
+          <Button
+            size="icon"
+            variant={currentLayer === "topo" ? "secondary" : "ghost"}
+            onClick={() => onLayerChange("topo")}
+            className="h-8 w-8"
+          >
+            <Layers className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+      <div className="border-t border-gray-700/50 my-2"></div>
+      <div className="flex flex-col gap-2">
+        <Button onClick={onSearchArea} size="sm" className="bg-earthie-mint/20 hover:bg-earthie-mint/40 text-earthie-mint font-medium">
+            <Search className="h-4 w-4 mr-2" />
+            Search This Area
+        </Button>
+        {currentLayer === 'satellite' && (
+            <div className="flex items-center space-x-2">
+                <Switch
+                id="show-labels"
+                checked={showLabels}
+                onCheckedChange={onShowLabelsChange}
+                />
+                <Label htmlFor="show-labels">Show Labels</Label>
+            </div>
         )}
-
       </div>
     </div>
   );

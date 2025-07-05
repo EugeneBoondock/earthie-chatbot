@@ -9,6 +9,9 @@ import { Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import type { MineralOccurrence } from '@/hooks/useMinerals';
+import { MapControls } from '@/components/MapControls';
+import { Skeleton } from '@/components/ui/skeleton';
 
 // Minimal Property type used from logistics
 type Property = {
@@ -42,18 +45,26 @@ export default function MineralsHubPage() {
   const [lon, setLon] = useState<string>('');
   const [radius, setRadius] = useState<number>(10000);
   const [submittedCoords, setSubmittedCoords] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [propertyLocation, setPropertyLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [linkedE2UserId, setLinkedE2UserId] = useState<string | null>(null);
   const [properties, setProperties] = useState<Property[]>([]);
-  const [loadingProps, setLoadingProps] = useState(false);
+  const [loadingProps, setLoadingProps] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortKey, setSortKey] = useState<'description'|'country'|'tier'>('description');
   const [page, setPage] = useState(1);
+  const [bbox, setBbox] = useState<string | null>(null);
   const pageSize = 10;
 
-  const { data, loading, error } = useMinerals(submittedCoords, {
-    radius,
-    enabled: !!submittedCoords,
-  });
+  const { data, loading, error } = useMinerals(
+    submittedCoords,
+    {
+      radius,
+      enabled: !!submittedCoords || !!bbox,
+    },
+    bbox
+  );
+
+  const mineralsToShow = data;
 
   // fetch linked id
   useEffect(() => {
@@ -61,11 +72,20 @@ export default function MineralsHubPage() {
     async function fetchLinked(){
       try{
         const r=await fetch('/api/me/e2profile');
-        if(!r.ok){return;}
+        if(!r.ok){
+            if (!cancelled) setLoadingProps(false);
+            return;
+        }
         const j=await r.json();
         if(cancelled) return;
-        if(j.e2_user_id){setLinkedE2UserId(j.e2_user_id);}        
-      }catch{}
+        if(j.e2_user_id){
+            setLinkedE2UserId(j.e2_user_id);
+        } else {
+            if (!cancelled) setLoadingProps(false);
+        }
+      }catch{
+        if (!cancelled) setLoadingProps(false);
+      }
     }
     fetchLinked();
     return()=>{cancelled=true};
@@ -104,13 +124,23 @@ export default function MineralsHubPage() {
     const latNum = parseFloat(lat);
     const lonNum = parseFloat(lon);
     if (Number.isNaN(latNum) || Number.isNaN(lonNum)) return;
-    setSubmittedCoords({ latitude: latNum, longitude: lonNum });
+    const newCoords = { latitude: latNum, longitude: lonNum };
+    setSubmittedCoords(newCoords);
+    setPropertyLocation(newCoords);
+    setBbox(null);
+  };
+
+  const handleSearchArea = (newBbox: string) => {
+    setBbox(newBbox);
+    setSubmittedCoords(null);
   };
 
   const handleShowMinerals = (prop: Property) => {
     const coords = parseCenter(prop.attributes.center);
     if (coords) {
       setSubmittedCoords(coords);
+      setPropertyLocation(coords);
+      setBbox(null);
     }
   };
 
@@ -159,47 +189,54 @@ export default function MineralsHubPage() {
       )}
 
       {/* Map */}
-      {submittedCoords ? (
-        <MineralsMap center={submittedCoords} minerals={data} loading={loading} />
+      {submittedCoords || bbox ? (
+        <MineralsMap center={propertyLocation} minerals={mineralsToShow} loading={loading} onSearchArea={handleSearchArea} />
       ) : (
         <p className="text-gray-400">Enter coordinates and search to view mineral occurrences.</p>
       )}
 
       {/* Property List */}
-      {properties.length > 0 && (
-        <div className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Properties</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {/* Filters */}
-              <div className="flex flex-wrap items-center gap-4 mb-4">
-                <Input placeholder="Search description or country" value={searchTerm} onChange={e=>{setSearchTerm(e.target.value); setPage(1);}} className="w-64" />
-                <div className="flex items-center gap-2 text-sm text-gray-300">
-                  Sort by:
-                  <select value={sortKey} onChange={e=>setSortKey(e.target.value as any)} className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white">
-                    <option value="description">Description</option>
-                    <option value="country">Country</option>
-                    <option value="tier">Tier</option>
-                  </select>
-                </div>
+      <div className="mt-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Properties</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {/* Filters */}
+            <div className="flex flex-wrap items-center gap-4 mb-4">
+              <Input placeholder="Search description or country" value={searchTerm} onChange={e=>{setSearchTerm(e.target.value); setPage(1);}} className="w-64" />
+              <div className="flex items-center gap-2 text-sm text-gray-300">
+                Sort by:
+                <select value={sortKey} onChange={e=>setSortKey(e.target.value as any)} className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white">
+                  <option value="description">Description</option>
+                  <option value="country">Country</option>
+                  <option value="tier">Tier</option>
+                </select>
               </div>
-              {loadingProps && (
-                <div className="flex items-center gap-2 text-sm text-gray-300 mb-2"><Loader2 className="h-4 w-4 animate-spin"/>Loading properties...</div>
-              )}
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Country</TableHead>
-                    <TableHead>Landfield Tier</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paginatedProps.map((prop) => (
+            </div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>ID</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead>Country</TableHead>
+                  <TableHead>Landfield Tier</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loadingProps ? (
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <TableRow key={`skel-${i}`}>
+                      <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                      <TableCell><Skeleton className="h-8 w-16" /></TableCell>
+                    </TableRow>
+                  ))
+                ) : paginatedProps.length > 0 ? (
+                  paginatedProps.map((prop) => (
                     <TableRow key={prop.id}>
                       <TableCell>{prop.id}</TableCell>
                       <TableCell>{prop.attributes.description}</TableCell>
@@ -211,21 +248,29 @@ export default function MineralsHubPage() {
                         </Badge>
                       </TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              {/* Pagination */}
-              {totalPages>1 && (
-                <div className="flex justify-end items-center gap-4 mt-4">
-                  <Button variant="outline" size="sm" disabled={page===1} onClick={()=>changePage(page-1)}>Prev</Button>
-                  <span className="text-sm text-gray-300">Page {page} / {totalPages}</span>
-                  <Button variant="outline" size="sm" disabled={page===totalPages} onClick={()=>changePage(page+1)}>Next</Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      )}
+                  ))
+                ) : (
+                   <TableRow>
+                      <TableCell colSpan={5} className="text-center py-8 text-gray-400">
+                          {linkedE2UserId
+                            ? "No properties found. Visit the Logistics hub to sync."
+                            : "Please link your account to see your properties."}
+                      </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+            {/* Pagination */}
+            {totalPages > 1 && !loadingProps && (
+              <div className="flex justify-end items-center gap-4 mt-4">
+                <Button variant="outline" size="sm" disabled={page===1} onClick={()=>changePage(page-1)}>Prev</Button>
+                <span className="text-sm text-gray-300">Page {page} / {totalPages}</span>
+                <Button variant="outline" size="sm" disabled={page===totalPages} onClick={()=>changePage(page+1)}>Next</Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 } 
