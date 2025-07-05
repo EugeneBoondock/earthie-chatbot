@@ -3,12 +3,6 @@ import fs from 'fs';
 import path from 'path';
 import { parse } from 'csv-parse/sync';
 
-// USGS MRData ArcGIS Feature Service (points layer)
-const USGS_ENDPOINT =
-  "https://mrdata.usgs.gov/services/mrds/MapServer/0/query";
-
-const MRDS_BBOX_URL = "https://mrdata.usgs.gov/mrds/search-bbox.php";
-
 const commodityAbbreviationMap: { [key: string]: string } = {
   "Al": "Aluminum",
   "Ag": "Silver",
@@ -62,8 +56,6 @@ export async function GET(req: Request) {
   if (bboxParam) {
     const parts = bboxParam.split(",").map(Number);
     if (parts.length === 4 && parts.every((n) => !Number.isNaN(n))) {
-      // LeafletJS uses south,west,north,east (lat/lon)
-      // we need xmin,ymin,xmax,ymax (lon/lat)
       bbox = [parts[1], parts[0], parts[3], parts[2]];
     } else {
       return NextResponse.json(
@@ -87,83 +79,8 @@ export async function GET(req: Request) {
       );
     }
     const radiusM = Number(radiusParam ?? 10000);
-    const deg = radiusM / 111_000; // approximate metres to degrees conversion
+    const deg = radiusM / 111_000;
     bbox = [lon - deg, lat - deg, lon + deg, lat + deg];
-  }
-
-  const outFields = [
-    "siteid",
-    "sitename",
-    "commod1",
-    "commod2",
-    "commod3",
-    "lat",
-    "long_",
-    "hostrck",
-    "deposit",
-    "status",
-  ].join(",");
-
-  const qs = new URLSearchParams({
-    geometry: bbox.join(","),
-    geometryType: "esriGeometryEnvelope",
-    inSR: "4326",
-    spatialRel: "esriSpatialRelIntersects",
-    outFields,
-    returnGeometry: "true",
-    outSR: "4326",
-    f: "pjson",
-    where: "1=1",
-  });
-
-  const usgsUrl = `${USGS_ENDPOINT}?${qs.toString()}`;
-
-  let data:any[]=[];
-  try{
-    const usgsRes = await fetch(usgsUrl, { next: { revalidate: 3600 } });
-    if(usgsRes.ok){
-      const json = await usgsRes.json();
-      const featuresArr = Array.isArray(json.features)? json.features.slice(0,Number(limitParam)) : [];
-      data = featuresArr.map((f:any)=>{
-        const attrs=f.attributes||{}; const geom=f.geometry||{};
-        return {
-          id: attrs.siteid ?? attrs.OBJECTID ?? `${Math.random()}`,
-          name: attrs.sitename ?? 'Unknown site',
-          commodities: [attrs.commod1, attrs.commod2, attrs.commod3].filter(Boolean),
-          description: attrs.deposit ?? null,
-          status: attrs.status ?? null,
-          coordinates:{ latitude:geom.y, longitude:geom.x },
-          source:'USGS_MRDS'
-        }
-      });
-    }
-  }catch(err){
-    console.warn('ArcGIS MRDS fetch failed, falling back',err);
-  }
-
-  if(data.length===0){
-    // fallback MRDS bbox
-    const [xmin,ymin,xmax,ymax]=bbox;
-    const url=`${MRDS_BBOX_URL}?xmin=${xmin}&ymin=${ymin}&xmax=${xmax}&ymax=${ymax}&format=json`;
-    try{
-      const resp=await fetch(url,{ next:{ revalidate:3600 }});
-      if(resp.ok){
-        const j=await resp.json();
-        if(Array.isArray(j)){
-          data=j.slice(0,Number(limitParam)).map((r:any)=>({
-            id:r.id,
-            name:r.name || 'Unknown site',
-            commodities:(r.commodity||'').split(';').map((c:string)=>c.trim()).filter(Boolean),
-            description:r.depsummary||null,
-            status:r.status||null,
-            coordinates:{ latitude:Number(r.lat), longitude:Number(r.lon) },
-            source:'USGS_MRDS_BBOX'
-          }));
-        }
-      }
-    }catch(err){
-      console.error('MRDS bbox fallback failed',err);
-    }
   }
 
   // ---------- Local dataset (deposit.csv) ----------
@@ -248,69 +165,15 @@ export async function GET(req: Request) {
     return cachedLocal;
   }
 
-  function haversineDistKm(lat1:number, lon1:number, lat2:number, lon2:number){
-    const toRad=(d:number)=>d*Math.PI/180;
-    const R=6371000; // metres
-    const dLat=toRad(lat2-lat1);
-    const dLon=toRad(lon2-lon1);
-    const a=Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
-    const c=2*Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R*c; // metres
-  }
-
-  // --- Attempt LOCAL CSV first ---
-  const localData = (() => {
-    try {
-      const deposits = loadLocal();
-      if (!deposits.length) return [];
-
-      if (bbox) {
-        const [xmin, ymin, xmax, ymax] = bbox;
-        return deposits.filter(d => 
-          d.longitude >= xmin && d.longitude <= xmax &&
-          d.latitude >= ymin && d.latitude <= ymax
-        ).slice(0, Number(limitParam))
-        .map((d) => ({
-          id: d.id,
-          name: d.name,
-          commodities: d.commodities,
-          description: d.description,
-          coordinates: { latitude: d.latitude, longitude: d.longitude },
-          references: d.references ?? [],
-          source: 'USGS',
-        }));
-      }
-
-      const lat = Number(latParam);
-      const lon = Number(lonParam);
-      if (Number.isNaN(lat) || Number.isNaN(lon)) {
-        return [];
-      }
-      
-      const radiusM = Number(radiusParam ?? 10000);
-      const center = { lat, lon };
-      const distLimit = radiusM;
-
-      return deposits
-        .filter((d) => {
-          const dist = haversineDistKm(center.lat, center.lon, d.latitude, d.longitude);
-          return dist <= distLimit;
-        })
-        .slice(0, Number(limitParam))
-        .map((d) => ({
-          id: d.id,
-          name: d.name,
-          commodities: d.commodities,
-          description: d.description,
-          coordinates: { latitude: d.latitude, longitude: d.longitude },
-          references: d.references ?? [],
-          source: 'USGS',
-        }));
-    } catch (err) {
-      console.error('Local minerals search failed', err)
-      return [];
-    }
-  })();
-
-  return NextResponse.json({ data: localData });
+  // Only use local data
+  const localData = loadLocal();
+  // Filter by bbox
+  const filtered = localData.filter((d) => {
+    if (!bbox) return true;
+    return (
+      d.longitude >= bbox[0] && d.longitude <= bbox[2] &&
+      d.latitude >= bbox[1] && d.latitude <= bbox[3]
+    );
+  });
+  return NextResponse.json({ data: filtered.slice(0, Number(limitParam)) });
 } 
