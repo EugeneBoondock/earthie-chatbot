@@ -10,6 +10,10 @@ export interface MineralOccurrence {
   status: string | null;
   coordinates: { latitude: number; longitude: number };
   source: string;
+  references: {
+      text: string;
+      link: string | null;
+  }[];
 }
 
 interface Options {

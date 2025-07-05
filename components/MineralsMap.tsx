@@ -6,8 +6,11 @@ import { useState, useEffect, useRef } from "react";
 import L from "leaflet";
 import { MapControls, MapLayer } from "@/components/MapControls";
 import { MineralOccurrence } from "@/hooks/useMinerals";
-import { Loader2 } from "lucide-react";
+import { Loader2, BookText, ExternalLink } from "lucide-react";
 import { useMap, useMapEvents } from "react-leaflet";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const MAP_LAYERS: Record<MapLayer, { url: string; attribution: string }> = {
   dark: {
@@ -81,6 +84,7 @@ function MapChangeHandler({ onBoundsChange }: { onBoundsChange: (bounds: L.LatLn
     const map = useMapEvents({
         moveend: () => onBoundsChange(map.getBounds()),
         zoomend: () => onBoundsChange(map.getBounds()),
+        load: () => onBoundsChange(map.getBounds()),
     });
     return null;
 }
@@ -88,26 +92,27 @@ function MapChangeHandler({ onBoundsChange }: { onBoundsChange: (bounds: L.LatLn
 function MapCenter({ center }: { center: { latitude: number; longitude: number } }) {
   const map = useMap();
   useEffect(() => {
-    map.setView([center.latitude, center.longitude]);
-  }, [center.latitude, center.longitude]);
+    if (center) {
+      map.setView([center.latitude, center.longitude]);
+    }
+  }, [center?.latitude, center?.longitude]);
   return null;
 }
 
 export default function MineralsMap({ center, minerals, loading, onSearchArea }: MineralsMapProps) {
   const [layer, setLayer] = useState<MapLayer>("dark");
   const [showLabels, setShowLabels] = useState(true);
-  const [mapBounds, setMapBounds] = useState<L.LatLngBounds | null>(null);
+  const mapBoundsRef = useRef<L.LatLngBounds | null>(null);
   const mapRef = useRef<L.Map>(null);
+  const [selectedReference, setSelectedReference] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (mapRef.current) {
-      setMapBounds(mapRef.current.getBounds());
-    }
-  }, []);
+  const handleBoundsChange = (bounds: L.LatLngBounds) => {
+    mapBoundsRef.current = bounds;
+  };
 
   const handleSearchArea = () => {
-    if (mapBounds) {
-        const bboxStr = `${mapBounds.getSouth()},${mapBounds.getWest()},${mapBounds.getNorth()},${mapBounds.getEast()}`;
+    if (mapBoundsRef.current) {
+        const bboxStr = `${mapBoundsRef.current.getSouth()},${mapBoundsRef.current.getWest()},${mapBoundsRef.current.getNorth()},${mapBoundsRef.current.getEast()}`;
         onSearchArea(bboxStr);
     }
   };
@@ -122,71 +127,144 @@ export default function MineralsMap({ center, minerals, loading, onSearchArea }:
   const mapCenter: L.LatLngExpression = center ? [center.latitude, center.longitude] : [0,0];
 
   return (
-    <div className="relative w-full h-[600px] rounded-lg overflow-hidden">
-      <MapContainer
-        center={mapCenter}
-        zoom={8}
-        className="w-full h-full"
-        ref={mapRef}
-      >
-        <TileLayer attribution={MAP_LAYERS[layer].attribution} url={MAP_LAYERS[layer].url} />
-        {layer === "satellite" && showLabels && (
-          <TileLayer
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            opacity={0.4}
-            zIndex={998}
+    <Dialog onOpenChange={(isOpen) => !isOpen && setSelectedReference(null)}>
+      <div className="relative w-full h-[600px] rounded-lg overflow-hidden">
+        <MapContainer
+          center={mapCenter}
+          zoom={8}
+          className="w-full h-full"
+          ref={mapRef}
+        >
+          <TileLayer attribution={MAP_LAYERS[layer].attribution} url={MAP_LAYERS[layer].url} />
+          {layer === "satellite" && showLabels && (
+            <TileLayer
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              opacity={0.4}
+              zIndex={998}
+            />
+          )}
+          <MapControls
+            currentLayer={layer}
+            onLayerChange={setLayer}
+            onSearchArea={handleSearchArea}
+            showRoute={false}
+            onShowRouteChange={() => {}}
+            showLabels={showLabels}
+            onShowLabelsChange={setShowLabels}
           />
-        )}
-        <MapControls
-          currentLayer={layer}
-          onLayerChange={setLayer}
-          onSearchArea={handleSearchArea}
-          showRoute={false}
-          onShowRouteChange={() => {}}
-          showLabels={showLabels}
-          onShowLabelsChange={setShowLabels}
-        />
-        <MapChangeHandler onBoundsChange={setMapBounds} />
+          <MapChangeHandler onBoundsChange={handleBoundsChange} />
 
-        {center && (
-            <Marker position={[center.latitude, center.longitude]} icon={propertyIcon}>
-                <Popup>Your selected property</Popup>
-            </Marker>
-        )}
-
-        {minerals &&
-          minerals.map((m) => {
-            const icon = getCommodityIcon(m.commodities);
-            return (
-              <Marker key={m.id} position={[m.coordinates.latitude, m.coordinates.longitude]} icon={icon}>
-                <Popup minWidth={160}>
-                  <div className="space-y-1">
-                    <h4 className="font-medium text-sm">{m.name}</h4>
-                    {m.commodities.length > 0 && (
-                      <p className="text-xs">{m.commodities.join(', ')}</p>
-                    )}
-                    {(m as any).ref && (
-                      <p className="text-[11px] italic text-gray-400">{(m as any).ref}</p>
-                    )}
-                    <p className="text-[10px] mt-1 text-gray-500">USGS</p>
-                  </div>
-                </Popup>
+          {center && (
+              <Marker position={[center.latitude, center.longitude]} icon={propertyIcon}>
+                  <Popup>Your selected property</Popup>
               </Marker>
-            );
-          })}
-        {loading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-[1000]">
-            <Loader2 className="h-8 w-8 animate-spin text-earthie-mint" />
-          </div>
-        )}
-        {center && <MapCenter center={center} />}
-      </MapContainer>
+          )}
 
-      <style jsx global>{`
-        .mineral-dot { width:16px; height:16px; display:block; border:2px solid #0f172a; }
-        .leaflet-marker-icon.mineral-icon { background:transparent; border:none; }
-        .property-icon { background:transparent; border:none; }
-      `}</style>
-    </div>
+          {minerals &&
+            minerals.map((m) => {
+              const icon = getCommodityIcon(m.commodities);
+              return (
+                <Marker key={m.id} position={[m.coordinates.latitude, m.coordinates.longitude]} icon={icon}>
+                  <Popup minWidth={240} className="mineral-popup">
+                    <div className="p-1" style={{ fontFamily: 'sans-serif' }}>
+                      <h4 className="font-bold text-lg bg-clip-text text-transparent bg-gradient-to-r from-earthie-mint to-cyan-400 mb-3" style={{ color: '#86efac' }}>
+                        {m.name}
+                      </h4>
+                      
+                      <div className="space-y-2.5">
+                        <div className="space-y-1">
+                          <p className="text-xs font-semibold uppercase" style={{ color: 'rgba(156, 163, 175, 0.9)' }}>Commodities</p>
+                          <p className="text-sm font-medium" style={{ color: 'rgba(229, 231, 235, 1)' }}>{m.commodities.join(', ')}</p>
+                        </div>
+
+                        {m.description && 
+                          <div className="space-y-1">
+                            <p className="text-xs font-semibold uppercase" style={{ color: 'rgba(156, 163, 175, 0.9)' }}>Type</p>
+                            <p className="text-sm font-medium" style={{ color: 'rgba(229, 231, 235, 1)' }}>{m.description}</p>
+                          </div>
+                        }
+                      </div>
+                      
+                      {m.references && m.references.length > 0 && (
+                        <div className="pt-3 mt-3 border-t border-cyan-400/20">
+                          <div className="space-y-2">
+                            {m.references.slice(0, 2).map((ref, idx) => (
+                               <div key={idx}>
+                                {ref.link ? (
+                                    <Button asChild size="sm" variant="outline" className="w-full bg-transparent text-gray-300 hover:bg-cyan-400/10 hover:text-white h-8 text-xs">
+                                        <a href={ref.link} target="_blank" rel="noopener noreferrer" className="flex items-center">
+                                            <ExternalLink className="h-3 w-3 mr-2"/>
+                                            View Online Source
+                                        </a>
+                                    </Button>
+                                ) : (
+                                    <DialogTrigger asChild>
+                                        <Button onClick={() => setSelectedReference(ref.text)} size="sm" variant="secondary" className="w-full bg-gray-700/50 hover:bg-gray-700/80 h-8 text-xs">
+                                            <BookText className="h-3 w-3 mr-2"/>
+                                            View Reference
+                                        </Button>
+                                    </DialogTrigger>
+                                )}
+                               </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      <p className="text-[10px] text-right pt-2 text-gray-500/80">Source: {m.source}</p>
+                    </div>
+                  </Popup>
+                </Marker>
+              );
+            })}
+          {loading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-[1000]">
+              <Loader2 className="h-8 w-8 animate-spin text-earthie-mint" />
+            </div>
+          )}
+          {center && <MapCenter center={center} />}
+        </MapContainer>
+
+        <DialogContent className="bg-gray-900/80 backdrop-blur-sm border-cyan-400/20 text-white">
+          <DialogHeader>
+            <DialogTitle>Bibliographic Reference</DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="max-h-[60vh] p-4 rounded-md">
+              <p className="text-sm">{selectedReference}</p>
+          </ScrollArea>
+          <DialogFooter>
+              <DialogTrigger asChild>
+                  <Button variant="outline">Close</Button>
+              </DialogTrigger>
+          </DialogFooter>
+        </DialogContent>
+
+        <style jsx global>{`
+          .mineral-dot { width:16px; height:16px; display:block; border:2px solid #0f172a; }
+          .leaflet-marker-icon.mineral-icon { background:transparent; border:none; }
+          .property-icon { background:transparent; border:none; }
+          .mineral-popup .leaflet-popup-content-wrapper {
+              background: rgba(10, 20, 35, 0.88);
+              backdrop-filter: blur(12px);
+              -webkit-backdrop-filter: blur(12px);
+              border-radius: 12px;
+              border: 1px solid rgba(56, 189, 248, 0.4);
+              color: #fff;
+              padding: 6px;
+              box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2), 
+                          0 0 25px rgba(56, 189, 248, 0.2) inset;
+          }
+          .mineral-popup .leaflet-popup-tip {
+              background: rgba(10, 20, 35, 0.88);
+          }
+          .mineral-popup .leaflet-popup-close-button {
+              color: #e5e7eb !important;
+              transition: color 0.2s ease-in-out;
+          }
+          .mineral-popup .leaflet-popup-close-button:hover {
+              color: #fff !important;
+          }
+        `}</style>
+      </div>
+    </Dialog>
   );
 } 

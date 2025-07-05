@@ -36,6 +36,11 @@ const commodityAbbreviationMap: { [key: string]: string } = {
   "Zr": "Zirconium"
 };
 
+type Reference = {
+  text: string;
+  link: string | null;
+}
+
 /*
   Supported query params:
   - lat, lon  : centre coordinate (decimal degrees)
@@ -50,14 +55,15 @@ export async function GET(req: Request) {
   const latParam = searchParams.get("lat");
   const lonParam = searchParams.get("lon");
   const radiusParam = searchParams.get("radius");
-  const limitParam = searchParams.get("limit") ?? "200";
+  const limitParam = searchParams.get("limit") ?? "5000";
 
   let bbox: [number, number, number, number] | null = null;
 
   if (bboxParam) {
     const parts = bboxParam.split(",").map(Number);
     if (parts.length === 4 && parts.every((n) => !Number.isNaN(n))) {
-      // ArcGIS expects xmin,ymin,xmax,ymax (lon/lat)
+      // LeafletJS uses south,west,north,east (lat/lon)
+      // we need xmin,ymin,xmax,ymax (lon/lat)
       bbox = [parts[1], parts[0], parts[3], parts[2]];
     } else {
       return NextResponse.json(
@@ -168,12 +174,12 @@ export async function GET(req: Request) {
     longitude: number;
     commodities: string[];
     description: string | null;
-    ref?: string | null;
+    references: Reference[];
   };
 
   let cachedLocal: LocalDeposit[] | null = null;
   let commodityMap: Map<string,string[]> | null = null;
-  let refMap: Map<string,string> | null = null;
+  let refMap: Map<string,Reference> | null = null;
 
   function loadLocal(): LocalDeposit[] {
     if (cachedLocal) return cachedLocal;
@@ -202,8 +208,12 @@ export async function GET(req: Request) {
         const refRaw=fs.readFileSync(refPath,'utf8');
         const refRecs:any[]=parse(refRaw,{columns:true,skip_empty_lines:true});
         refMap=new Map();
-        refRecs.forEach(r=>{ refMap!.set(String(r.gid), r.ref); });
-      }catch{}
+        refRecs.forEach(r=>{
+           if (r.reference) {
+                refMap!.set(r.reference.trim(), { text: r.reference, link: r.onlink || null });
+           }
+        });
+      }catch(e){ console.error('Failed to load ref.csv', e)}
 
       cachedLocal = records.map((r) => {
         const id=String(r.gid);
@@ -212,6 +222,9 @@ export async function GET(req: Request) {
             const normalized = c.trim();
             return commodityAbbreviationMap[normalized] || normalized;
         });
+        
+        const citations = (r.citation || '').split(';').map((c:string) => c.trim()).filter(Boolean);
+        const references: Reference[] = citations.map((cit: string) => refMap?.get(cit)).filter((r: Reference | undefined): r is Reference => !!r);
 
         return {
           id,
@@ -220,7 +233,7 @@ export async function GET(req: Request) {
           longitude: Number(r.longitude),
           commodities: expandedCommodities,
           description: r.dep_type || null,
-          ref: refMap?.get(id) ?? null,
+          references,
         };
       });
     } catch (err) {
@@ -258,18 +271,21 @@ export async function GET(req: Request) {
           commodities: d.commodities,
           description: d.description,
           coordinates: { latitude: d.latitude, longitude: d.longitude },
-          ref: d.ref ?? null,
+          references: d.references ?? [],
           source: 'USGS',
         }));
       }
 
-      let centerLat = latParam ? Number(latParam) : null;
-      let centerLon = lonParam ? Number(lonParam) : null;
-      let radiusM = radiusParam ? Number(radiusParam) : 10000;
+      const lat = Number(latParam);
+      const lon = Number(lonParam);
+      if (Number.isNaN(lat) || Number.isNaN(lon)) {
+        return [];
+      }
       
-      if (centerLat === null || centerLon === null) return [];
-      const center = { lat: centerLat, lon: centerLon };
+      const radiusM = Number(radiusParam ?? 10000);
+      const center = { lat, lon };
       const distLimit = radiusM;
+
       return deposits
         .filter((d) => {
           const dist = haversineDistKm(center.lat, center.lon, d.latitude, d.longitude);
@@ -282,17 +298,14 @@ export async function GET(req: Request) {
           commodities: d.commodities,
           description: d.description,
           coordinates: { latitude: d.latitude, longitude: d.longitude },
-          ref: d.ref ?? null,
+          references: d.references ?? [],
           source: 'USGS',
         }));
     } catch (err) {
+      console.error('Local minerals search failed', err)
       return [];
     }
   })();
 
-  if (localData.length) {
-    return NextResponse.json({ data: localData, source: 'USGS', sourceCount: localData.length });
-  }
-
-  return NextResponse.json({ data, sourceCount: data.length });
+  return NextResponse.json({ data: localData });
 } 
