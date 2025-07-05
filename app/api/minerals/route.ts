@@ -209,8 +209,11 @@ export async function GET(req: Request) {
         const refRecs:any[]=parse(refRaw,{columns:true,skip_empty_lines:true});
         refMap=new Map();
         refRecs.forEach(r=>{
-           if (r.reference) {
-                refMap!.set(r.reference.trim(), { text: r.reference, link: r.onlink || null });
+           if (r.reference && r.onlink) {
+                const refId = r.reference.trim();
+                const refText = r.onlink.trim();
+                const refLink = r.onlink.startsWith('http') ? r.onlink : null;
+                refMap!.set(refId, { text: refText, link: refLink });
            }
         });
       }catch(e){ console.error('Failed to load ref.csv', e)}
@@ -223,8 +226,8 @@ export async function GET(req: Request) {
             return commodityAbbreviationMap[normalized] || normalized;
         });
         
-        const citations = (r.citation || '').split(';').map((c:string) => c.trim()).filter(Boolean);
-        const references: Reference[] = citations.map((cit: string) => refMap?.get(cit)).filter((r: Reference | undefined): r is Reference => !!r);
+        const citation_ids = (r.citation || '').split(';').map((c:string) => c.trim()).filter(Boolean);
+        const references: Reference[] = citation_ids.map((cit: string) => refMap?.get(cit)).filter(Boolean) as Reference[];
 
         return {
           id,
