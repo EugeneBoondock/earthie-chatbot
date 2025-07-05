@@ -230,6 +230,16 @@ export default function HomePageClientContent() {
               <p className="text-center text-gray-300 text-sm flex-grow"> Advanced property logistics planning with interactive satellite maps, intelligent routing, multi-modal transport, and country-based search capabilities. </p>
               <Link href="/hub/logistics" passHref className="mt-auto pt-4"> <Button variant="outline" className="bg-[#343547] text-cyan-400 border-cyan-400 hover:bg-cyan-400/10 hover:text-cyan-400"> Open Command Center <ArrowRight className="ml-2 h-4 w-4" /> </Button> </Link>
             </div>
+            {/* Minerals Explorer */}
+            <div className="flex flex-col items-center space-y-4 p-6 rounded-2xl bg-gradient-to-br from-[#0b0e13]/80 to-[#23243a]/70 border border-[#1d1f24] relative">
+              {userLoaded && !user && (
+                <span className="absolute top-3 right-3 px-2 py-0.5 text-xs rounded bg-rose-500/30 text-rose-200 animate-pulse shadow-sm" style={{zIndex:2, fontWeight:500, letterSpacing:'0.02em'}}>Login Required</span>
+              )}
+              <div className="p-3 rounded-full bg-amber-400/20"> <MapPin className="w-8 h-8 text-amber-400" /> </div>
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">Minerals Explorer</h3>
+              <p className="text-center text-gray-300 text-sm flex-grow"> Discover mineral deposits and prospects near your properties with detailed geological data and interactive mapping. </p>
+              <Link href="/hub/minerals" passHref className="mt-auto pt-4"> <Button variant="outline" className="bg-[#343547] text-amber-400 border-amber-400 hover:bg-amber-400/10 hover:text-amber-400"> Explore Minerals <ArrowRight className="ml-2 h-4 w-4" /> </Button> </Link>
+            </div>
           </div>
         </div>
       </section>

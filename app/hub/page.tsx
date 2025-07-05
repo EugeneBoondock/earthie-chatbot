@@ -1,4 +1,4 @@
-import { ArrowRight, Book, Building, BarChart3, User, Route } from 'lucide-react';
+import { ArrowRight, Book, Building, BarChart3, User, Route, MapPin } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 
@@ -51,6 +51,14 @@ export default function HubPage() {
       link: "/hub/logistics",
       gradient: "from-gray-800/50 to-slate-800/50",
       borderColor: "border-gray-400/30"
+    },
+    {
+      title: "Minerals Explorer",
+      description: "Discover mineral deposits and prospects near your properties with detailed geological data.",
+      icon: <MapPin className="h-8 w-8 text-earthie-mint" />,
+      link: "/hub/minerals",
+      gradient: "from-amber-800/50 to-orange-800/50",
+      borderColor: "border-amber-400/30"
     }
   ];
 

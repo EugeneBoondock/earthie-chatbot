@@ -2,7 +2,7 @@
 
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import L from "leaflet";
 import { MapControls, MapLayer } from "@/components/MapControls";
 import { MineralOccurrence } from "@/hooks/useMinerals";
@@ -204,6 +204,26 @@ function TooltipWithPortal({ children, content, left }: { children: React.ReactN
   );
 }
 
+// Static country-to-continent map (partial, expand as needed)
+const countryToContinent: Record<string, string> = {
+  "United States of America": "North America",
+  "Canada": "North America",
+  "Mexico": "North America",
+  "Brazil": "South America",
+  "Argentina": "South America",
+  "Peru": "South America",
+  "Chile": "South America",
+  "Australia": "Oceania",
+  "China": "Asia",
+  "India": "Asia",
+  "Russia": "Europe",
+  "France": "Europe",
+  "Germany": "Europe",
+  "South Africa": "Africa",
+  "Morocco": "Africa",
+  // ... add more as needed ...
+};
+
 export default function MineralsMap({ center, minerals, loading, onSearchArea }: MineralsMapProps) {
   const [layer, setLayer] = useState<MapLayer>("dark");
   const [showLabels, setShowLabels] = useState(true);
@@ -214,6 +234,12 @@ export default function MineralsMap({ center, minerals, loading, onSearchArea }:
   const [selectedMineral, setSelectedMineral] = useState<MineralOccurrence | null>(null);
   const [draggedPos, setDraggedPos] = useState<{ lat: number; lng: number } | null>(null);
   const [legendOpen, setLegendOpen] = useState(true);
+  const [searchModalOpen, setSearchModalOpen] = useState(false);
+  const [selectedContinent, setSelectedContinent] = useState<string>("");
+  const [selectedCountry, setSelectedCountry] = useState<string>("");
+  const [searchSelectedMineral, setSearchSelectedMineral] = useState<string>("");
+  const [filteredMinerals, setFilteredMinerals] = useState<MineralOccurrence[] | null>(null);
+  const [searchZoomCenter, setSearchZoomCenter] = useState<L.LatLngTuple | null>(null);
 
   const handleBoundsChange = (bounds: L.LatLngBounds) => {
     mapBoundsRef.current = bounds;
@@ -233,7 +259,70 @@ export default function MineralsMap({ center, minerals, loading, onSearchArea }:
       iconAnchor: [16, 32],
   });
 
-  const mapCenter: L.LatLngExpression = center ? [center.latitude, center.longitude] : [0,0];
+  // Debug logging
+  console.log("Minerals received:", minerals);
+  console.log("Sample mineral with country:", minerals?.[0]);
+  console.log("All countries from minerals:", minerals?.map(m => m.country).filter(Boolean));
+
+  const allCountries = useMemo(() => {
+    if (!minerals) return [];
+    const set = new Set<string>();
+    minerals.forEach(m => {
+      const country = m.country || '';
+      if (country) set.add(country);
+    });
+    return Array.from(set).sort();
+  }, [minerals]);
+
+  const allContinents = useMemo(() => {
+    const set = new Set<string>();
+    allCountries.forEach(c => {
+      const cont = countryToContinent[c];
+      if (cont) set.add(cont);
+    });
+    return Array.from(set).sort();
+  }, [allCountries]);
+
+  const countriesInContinent = useMemo(() => {
+    if (!selectedContinent) return allCountries;
+    return allCountries.filter(c => countryToContinent[c] === selectedContinent);
+  }, [allCountries, selectedContinent]);
+
+  const mineralsInCountry = useMemo(() => {
+    if (!minerals || !selectedCountry) return [];
+    const set = new Set<string>();
+    minerals.forEach(m => {
+      const country = m.country || '';
+      if (country === selectedCountry) {
+        (m.commodities || []).forEach((c: string) => set.add(c));
+      }
+    });
+    return Array.from(set).sort();
+  }, [minerals, selectedCountry]);
+
+  // Handle search submit
+  const handleSearch = () => {
+    if (!minerals || !selectedCountry || !searchSelectedMineral) return;
+    const filtered = minerals.filter(m => {
+      const country = m.country || '';
+      return (
+        country === selectedCountry &&
+        (m.commodities || []).includes(searchSelectedMineral)
+      );
+    });
+    setFilteredMinerals(filtered);
+    // Zoom to the first result if available
+    if (filtered.length > 0) {
+      setSearchZoomCenter([
+        filtered[0].coordinates.latitude,
+        filtered[0].coordinates.longitude
+      ]);
+    }
+    setSearchModalOpen(false);
+  };
+
+  // Always use LatLngTuple for map center
+  const mapCenter: L.LatLngTuple = center ? [center.latitude, center.longitude] : [0, 0];
 
   // Haversine formula for distance in km
   function getDistanceKm(a: { latitude: number; longitude: number }, b: { latitude: number; longitude: number }) {
@@ -255,6 +344,12 @@ export default function MineralsMap({ center, minerals, loading, onSearchArea }:
       setDraggedPos(null);
     }}>
       <div className="relative w-full h-[600px] rounded-lg overflow-hidden">
+        {/* Search Minerals Button */}
+        <div className="absolute left-20 top-4 z-[1100]">
+          <Button variant="outline" className="bg-black/80 text-cyan-200 border-cyan-700/40 hover:bg-cyan-900/80" onClick={() => setSearchModalOpen(true)}>
+            Search Minerals
+          </Button>
+        </div>
         {/* Legend */}
         <div className="absolute top-48 right-4 z-[1000]">
           <div
@@ -345,8 +440,8 @@ export default function MineralsMap({ center, minerals, loading, onSearchArea }:
         </div>
         
         <MapContainer
-          center={mapCenter}
-          zoom={8}
+          center={searchZoomCenter || mapCenter}
+          zoom={searchZoomCenter ? 5 : 8}
           className="w-full h-full"
           ref={mapRef}
         >
@@ -532,6 +627,43 @@ export default function MineralsMap({ center, minerals, loading, onSearchArea }:
           )}
           {center && <MapCenter center={center} />}
         </MapContainer>
+
+        {/* Search Modal */}
+        {searchModalOpen && (
+          <Dialog open={searchModalOpen} onOpenChange={setSearchModalOpen}>
+            <DialogContent className="bg-gray-900/90 border-cyan-400/20 text-white max-w-md">
+              <DialogHeader>
+                <DialogTitle>Search for Minerals</DialogTitle>
+              </DialogHeader>
+              <div className="flex flex-col gap-4 mt-2">
+                <div>
+                  <label className="block text-xs mb-1 text-cyan-300">Continent</label>
+                  <select className="w-full rounded bg-black/60 border border-cyan-700/40 p-2 text-cyan-100" value={selectedContinent} onChange={e => { setSelectedContinent(e.target.value); setSelectedCountry(""); setSearchSelectedMineral(""); }}>
+                    <option value="">Select a continent</option>
+                    {allContinents.map(cont => <option key={cont} value={cont}>{cont}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs mb-1 text-cyan-300">Country</label>
+                  <select className="w-full rounded bg-black/60 border border-cyan-700/40 p-2 text-cyan-100" value={selectedCountry} onChange={e => { setSelectedCountry(e.target.value); setSearchSelectedMineral(""); }}>
+                    <option value="">Select a country</option>
+                    {countriesInContinent.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs mb-1 text-cyan-300">Mineral</label>
+                  <select className="w-full rounded bg-black/60 border border-cyan-700/40 p-2 text-cyan-100" value={searchSelectedMineral} onChange={e => setSearchSelectedMineral(e.target.value)}>
+                    <option value="">Select a mineral</option>
+                    {mineralsInCountry.map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+                <Button className="mt-2 bg-cyan-700 hover:bg-cyan-600 text-white" onClick={handleSearch} disabled={!selectedContinent || !selectedCountry || !searchSelectedMineral}>
+                  Search
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
 
         <DialogContent className="bg-gray-900/80 backdrop-blur-sm border-cyan-400/20 text-white">
           <DialogHeader>

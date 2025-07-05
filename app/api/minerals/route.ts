@@ -96,6 +96,7 @@ export async function GET(req: Request) {
     references: Reference[];
     status: string;
     source: string;
+    country?: string;
   };
 
   let cachedLocal: LocalDeposit[] | null = null;
@@ -163,7 +164,8 @@ export async function GET(req: Request) {
           description: r.dep_type || null,
           references,
           status: 'deposit',
-          source: 'local'
+          source: 'local',
+          country: r.country || r.LOCATION || null
         };
       });
     } catch (err) {
@@ -205,7 +207,8 @@ export async function GET(req: Request) {
           description,
           references: [],
           status,
-          source: 'https://mrdata.usgs.gov/sir20105090z/'
+          source: 'https://mrdata.usgs.gov/sir20105090z/',
+          country: r.country || r.LOCATION || null
         });
       }
     }
@@ -245,7 +248,8 @@ export async function GET(req: Request) {
         description,
         references: [],
         status: 'deposit',
-        source: 'https://mrdata.usgs.gov/pp1802/'
+        source: 'https://mrdata.usgs.gov/pp1802/',
+        country: r.LOCATION || r.country || null
       });
     }
     return all;

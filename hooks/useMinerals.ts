@@ -14,6 +14,7 @@ export interface MineralOccurrence {
       text: string;
       link: string | null;
   }[];
+  country?: string;
 }
 
 interface Options {

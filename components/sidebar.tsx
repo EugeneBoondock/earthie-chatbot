@@ -15,7 +15,8 @@ import {
   MessageSquare,
   Coins,
   FileText,
-  Route
+  Route,
+  MapPin
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -53,6 +54,7 @@ export default function Sidebar({ className }: SidebarProps) {
     { href: '/hub/profile', label: 'My Profile', icon: UserCircle },
     { href: '/hub/know-your-land', label: 'Know Your Land', icon: FileText },
     { href: '/hub/logistics', label: 'Logistics Planner', icon: Route },
+    { href: '/hub/minerals', label: 'Minerals Explorer', icon: MapPin },
     { href: '/hub/essence', label: 'Essence Tracker', icon: Coins },
     { href: '/hub/essence-report', label: 'Essence Report', icon: FileText },
     { href: '/hub/lobbyist', label: 'My Lobbyist', icon: MessageSquare },
