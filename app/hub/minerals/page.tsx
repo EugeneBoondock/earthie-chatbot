@@ -388,19 +388,7 @@ export default function MineralsHubPage() {
       {/* Map */}
       {submittedCoords || bbox ? (
         <div className="relative">
-        <MineralsMap center={propertyLocation} minerals={mineralsToShow} loading={loading} onSearchArea={handleSearchArea} />
-          {propertyLocation?._fromProperty && (
-            <div className="absolute bottom-4 left-4 z-[1200]">
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={handleClearProperty}
-                className="bg-red-600/80 hover:bg-red-700/80 text-white border-red-500/50 hover:border-red-400/50"
-              >
-                Clear Property
-              </Button>
-            </div>
-          )}
+        <MineralsMap center={propertyLocation} minerals={mineralsToShow} loading={loading} onSearchArea={handleSearchArea} onClearProperty={handleClearProperty} />
         </div>
       ) : (
         <p className="text-gray-400">Enter coordinates and search to view mineral occurrences.</p>

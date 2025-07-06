@@ -195,6 +195,7 @@ interface MineralsMapProps {
   minerals: MineralOccurrence[] | null;
   loading: boolean;
   onSearchArea: (bbox: string) => void;
+  onClearProperty?: () => void;
 }
 
 // Function to load USGS oil and gas data
@@ -437,7 +438,7 @@ const countryToContinent: Record<string, string> = {
   // ... add more as needed ...
 };
 
-export default function MineralsMap({ center, minerals, loading, onSearchArea }: MineralsMapProps) {
+export default function MineralsMap({ center, minerals, loading, onSearchArea, onClearProperty }: MineralsMapProps) {
   const [layer, setLayer] = useState<MapLayer>("dark");
   const [showLabels, setShowLabels] = useState(true);
   const mapBoundsRef = useRef<L.LatLngBounds | null>(null);
@@ -609,8 +610,8 @@ export default function MineralsMap({ center, minerals, loading, onSearchArea }:
             Search Minerals
           </Button>
         </div>
-        {/* Legend */}
-        <div className="absolute top-48 right-4 z-[1000]">
+        {/* Legend - now bottom left */}
+        <div className="absolute bottom-4 left-4 z-[1000]">
           <div
             className="bg-black/80 backdrop-blur-sm border border-cyan-700/30 rounded-t-lg p-2 text-white text-xs max-w-64 cursor-pointer flex items-center gap-2 select-none"
             onClick={() => setLegendOpen((v) => !v)}
@@ -647,12 +648,8 @@ export default function MineralsMap({ center, minerals, loading, onSearchArea }:
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <span className="w-3 h-3 bg-yellow-400 border-2 border-slate-800 transform rotate-45"></span>
-                    <span>Precious Metals (Gold, Silver, PGE
-                      <TooltipWithPortal content="PGE stands for Platinum Group Elements: platinum, palladium, rhodium, ruthenium, iridium, and osmium." left>
-                        <span className="ml-1 inline-block w-4 h-4 rounded-full bg-cyan-700 text-cyan-100 text-[10px] flex items-center justify-center font-bold" style={{cursor:'pointer'}}>i</span>
-                      </TooltipWithPortal>
-                      , Platinum)
-                    </span>
+                    <span>Precious Metals (Gold, Silver, PGE, Platinum)</span>
+                    <TooltipWithPortal content="PGE stands for Platinum Group Elements: platinum, palladium, rhodium, ruthenium, iridium, and osmium." left>{null}</TooltipWithPortal>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="w-3 h-3 bg-orange-400 border-2 border-slate-800"></span>
@@ -715,6 +712,23 @@ export default function MineralsMap({ center, minerals, loading, onSearchArea }:
             </div>
           )}
         </div>
+        {/* Clear Property - now bottom right */}
+        {center && center._fromProperty && (
+          <div className="absolute bottom-4 right-4 z-[1200]">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => {
+                if (typeof onClearProperty === 'function') onClearProperty();
+                setDraggedPos(null);
+                setSelectedMineral(null);
+              }}
+              className="bg-red-600/80 hover:bg-red-700/80 text-white border-red-500/50 hover:border-red-400/50"
+            >
+              Clear Property
+            </Button>
+          </div>
+        )}
         
         <MapContainer
           center={searchZoomCenter || mapCenter}
