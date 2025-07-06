@@ -14,6 +14,21 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { createPortal } from 'react-dom';
 import { Tooltip as LeafletTooltip } from "react-leaflet";
 
+// Oil and Gas Field type
+type OilGasField = {
+  id: string;
+  name: string;
+  contents: string;
+  country: string;
+  size: string;
+  status?: string;
+  coordinates: {
+    latitude: number;
+    longitude: number;
+  };
+  source: 'usgs' | 'gem';
+};
+
 const MAP_LAYERS: Record<MapLayer, { url: string; attribution: string }> = {
   dark: {
     url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
@@ -144,12 +159,210 @@ const getCommodityIcon = (commodities: string[], status?: string) => {
     });
 };
 
+const getOilGasIcon = (contents: string) => {
+    // Black icons for oil and gas fields
+    const isOil = contents.toLowerCase().includes('oil');
+    const isGas = contents.toLowerCase().includes('gas');
+    
+    let shape = 'circle';
+    if (isOil && isGas) {
+        shape = 'diamond'; // Both oil and gas
+    } else if (isOil) {
+        shape = 'square'; // Oil only
+    } else if (isGas) {
+        shape = 'circle'; // Gas only
+    }
+    
+    let html = `<span class='oil-gas-dot' style='background:#000000; border-color:#ffffff; border-width:2px;`;
+    if (shape === 'square') {
+        html += ` border-radius: 0;'></span>`;
+    } else if (shape === 'diamond') {
+        html += ` transform: rotate(45deg); border-radius: 2px;'></span>`;
+    } else { // circle
+        html += ` border-radius: 50%;'></span>`;
+    }
+
+    return L.divIcon({
+        html: html,
+        className: 'oil-gas-icon',
+        iconSize: [16, 16],
+        iconAnchor: [8, 8]
+    });
+};
+
 interface MineralsMapProps {
   center: { latitude: number; longitude: number; _fromProperty?: boolean } | null;
   minerals: MineralOccurrence[] | null;
   loading: boolean;
   onSearchArea: (bbox: string) => void;
 }
+
+// Function to load USGS oil and gas data
+const loadUSGSOilGasData = async (): Promise<OilGasField[]> => {
+  try {
+    const response = await fetch('/data/minerals/World_Oil_and_Gas_Fields.csv');
+    const csvText = await response.text();
+    const lines = csvText.split('\n').slice(1); // Skip header
+    
+    return lines
+      .filter(line => line.trim())
+      .map(line => {
+        const [x, y, objectId, name, diakCode, contents, fipsCountry, size] = line.split(',');
+        
+        // Convert Web Mercator coordinates (EPSG:3857) to lat/lng (EPSG:4326)
+        const xCoord = parseFloat(x);
+        const yCoord = parseFloat(y);
+        
+        // Web Mercator to WGS84 conversion
+        const longitude = (xCoord / 20037508.34) * 180;
+        const latitude = (Math.atan(Math.exp(yCoord * Math.PI / 20037508.34)) * 2 - Math.PI / 2) * 180 / Math.PI;
+        
+        return {
+          id: objectId,
+          name: name?.replace(/"/g, '') || 'Unknown',
+          contents: contents?.replace(/"/g, '') || 'Unknown',
+          country: fipsCountry || 'Unknown',
+          size: size?.replace(/"/g, '') || 'Unknown',
+          coordinates: { latitude, longitude },
+          source: 'usgs' as const
+        };
+      });
+  } catch (error) {
+    console.error('Error loading USGS oil and gas data:', error);
+    return [];
+  }
+};
+
+// Function to load GEM oil and gas data
+const loadGEMOilGasData = async (): Promise<OilGasField[]> => {
+  try {
+    const response = await fetch('/data/minerals/Oil & Gas Extraction-map-file-2025-02-26.csv');
+    const csvText = await response.text();
+    const lines = csvText.split('\n').slice(1); // Skip header
+    
+    const validFields: OilGasField[] = [];
+    
+    lines
+      .filter(line => line.trim())
+      .forEach(line => {
+        const columns = line.split(',');
+        const [
+          country,
+          wikiName,
+          status,
+          statusDisplay,
+          productionStartYear,
+          operator,
+          owner,
+          parent,
+          lat,
+          lng,
+          locationAccuracy,
+          subnationalUnit,
+          gemRegion,
+          unitId,
+          url,
+          countryList,
+          discoveryYear,
+          fidYear,
+          productionOil,
+          productionYearOil,
+          productionGas,
+          productionYearGas,
+          productionTotal
+        ] = columns;
+        
+        const latitude = parseFloat(lat);
+        const longitude = parseFloat(lng);
+        
+        // Skip if coordinates are invalid
+        if (isNaN(latitude) || isNaN(longitude)) {
+          return;
+        }
+        
+        // Determine contents based on production data
+        let contents = 'Oil and Gas';
+        const oilProd = parseFloat(productionOil) || 0;
+        const gasProd = parseFloat(productionGas) || 0;
+        
+        if (oilProd > 0 && gasProd > 0) {
+          contents = 'oil,gas';
+        } else if (oilProd > 0) {
+          contents = 'oil';
+        } else if (gasProd > 0) {
+          contents = 'gas';
+        }
+        
+        // Determine size based on total production
+        const totalProd = parseFloat(productionTotal) || 0;
+        let size = 'Small';
+        if (totalProd > 10) {
+          size = 'Very large';
+        } else if (totalProd > 1) {
+          size = 'Large';
+        } else if (totalProd > 0.1) {
+          size = 'Medium';
+        }
+        
+        validFields.push({
+          id: unitId || `gem-${Math.random().toString(36).substr(2, 9)}`,
+          name: wikiName?.replace(/"/g, '') || 'Unknown',
+          contents,
+          country: country || 'Unknown',
+          size,
+          status: status || undefined,
+          coordinates: { latitude, longitude },
+          source: 'gem' as const
+        });
+      });
+    
+    return validFields;
+  } catch (error) {
+    console.error('Error loading GEM oil and gas data:', error);
+    return [];
+  }
+};
+
+// Function to load and merge all oil and gas data
+const loadOilGasData = async (): Promise<OilGasField[]> => {
+  try {
+    const [usgsData, gemData] = await Promise.all([
+      loadUSGSOilGasData(),
+      loadGEMOilGasData()
+    ]);
+    
+    console.log('Loaded USGS data:', usgsData.length, 'fields');
+    console.log('Loaded GEM data:', gemData.length, 'fields');
+    
+    // Create a map to avoid duplicates based on coordinates and name
+    const uniqueFields = new Map<string, OilGasField>();
+    
+    // Add USGS data first
+    usgsData.forEach(field => {
+      const key = `${field.coordinates.latitude.toFixed(4)},${field.coordinates.longitude.toFixed(4)}`;
+      if (!uniqueFields.has(key)) {
+        uniqueFields.set(key, field);
+      }
+    });
+    
+    // Add GEM data, avoiding duplicates
+    gemData.forEach(field => {
+      const key = `${field.coordinates.latitude.toFixed(4)},${field.coordinates.longitude.toFixed(4)}`;
+      if (!uniqueFields.has(key)) {
+        uniqueFields.set(key, field);
+      }
+    });
+    
+    const mergedData = Array.from(uniqueFields.values());
+    console.log('Merged unique fields:', mergedData.length, 'fields');
+    console.log('Sample merged field:', mergedData[0]);
+    
+    return mergedData;
+  } catch (error) {
+    console.error('Error loading oil and gas data:', error);
+    return [];
+  }
+};
 
 function MapChangeHandler({ onBoundsChange }: { onBoundsChange: (bounds: L.LatLngBounds) => void }) {
     const map = useMapEvents({
@@ -240,6 +453,9 @@ export default function MineralsMap({ center, minerals, loading, onSearchArea }:
   const [searchSelectedMineral, setSearchSelectedMineral] = useState<string>("");
   const [filteredMinerals, setFilteredMinerals] = useState<MineralOccurrence[] | null>(null);
   const [searchZoomCenter, setSearchZoomCenter] = useState<L.LatLngTuple | null>(null);
+  const [oilGasFields, setOilGasFields] = useState<OilGasField[]>([]);
+  const [loadingOilGas, setLoadingOilGas] = useState(false);
+  const [currentSearchArea, setCurrentSearchArea] = useState<L.LatLngBounds | null>(null);
 
   const handleBoundsChange = (bounds: L.LatLngBounds) => {
     mapBoundsRef.current = bounds;
@@ -248,6 +464,7 @@ export default function MineralsMap({ center, minerals, loading, onSearchArea }:
   const handleSearchArea = () => {
     if (mapBoundsRef.current) {
         const bboxStr = `${mapBoundsRef.current.getSouth()},${mapBoundsRef.current.getWest()},${mapBoundsRef.current.getNorth()},${mapBoundsRef.current.getEast()}`;
+        setCurrentSearchArea(mapBoundsRef.current);
         onSearchArea(bboxStr);
     }
   };
@@ -321,6 +538,48 @@ export default function MineralsMap({ center, minerals, loading, onSearchArea }:
     setSearchModalOpen(false);
   };
 
+  // Load oil and gas data on component mount
+  useEffect(() => {
+    const loadData = async () => {
+      setLoadingOilGas(true);
+      try {
+        const data = await loadOilGasData();
+        console.log('Loaded oil and gas fields:', data.length, 'fields');
+        console.log('Sample oil/gas field:', data[0]);
+        setOilGasFields(data);
+      } catch (error) {
+        console.error('Error loading oil and gas data:', error);
+      } finally {
+        setLoadingOilGas(false);
+      }
+    };
+    loadData();
+  }, []);
+
+  // Filter oil and gas fields to only show those in the current search area
+  const filteredOilGasFields = useMemo(() => {
+    // Only show oil and gas fields if there's a current search area
+    if (!currentSearchArea || oilGasFields.length === 0) {
+      console.log('No search area or no oil/gas fields loaded');
+      return [];
+    }
+    
+    const filtered = oilGasFields.filter(field => {
+      const { latitude, longitude } = field.coordinates;
+      return currentSearchArea.contains([latitude, longitude]);
+    });
+    
+    console.log(`Filtered oil/gas fields: ${filtered.length} out of ${oilGasFields.length} total fields in current search area`);
+    return filtered;
+  }, [oilGasFields, currentSearchArea]);
+
+  // Clear search area when minerals are cleared (indicating no search area)
+  useEffect(() => {
+    if (!minerals) {
+      setCurrentSearchArea(null);
+    }
+  }, [minerals]);
+
   // Always use LatLngTuple for map center
   const mapCenter: L.LatLngTuple = center ? [center.latitude, center.longitude] : [0, 0];
 
@@ -357,7 +616,7 @@ export default function MineralsMap({ center, minerals, loading, onSearchArea }:
             onClick={() => setLegendOpen((v) => !v)}
             style={{ borderBottomLeftRadius: legendOpen ? 0 : '0.5rem', borderBottomRightRadius: legendOpen ? 0 : '0.5rem' }}
           >
-            <span className="font-bold text-cyan-200 text-sm">Mineral Legend</span>
+            <span className="font-bold text-cyan-200 text-sm">Map Legend</span>
             <span className="ml-auto">
               {legendOpen ? (
                 <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M6 8l4 4 4-4" stroke="#67e8f9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -406,7 +665,7 @@ export default function MineralsMap({ center, minerals, loading, onSearchArea }:
                 </div>
               </div>
               {/* Common Commodities */}
-              <div>
+              <div className="mb-4">
                 <h4 className="font-semibold text-cyan-300 mb-2">Common Commodities</h4>
                 <div className="grid grid-cols-2 gap-1 text-[10px]">
                   <div className="flex items-center gap-1">
@@ -432,6 +691,24 @@ export default function MineralsMap({ center, minerals, loading, onSearchArea }:
                   <div className="flex items-center gap-1">
                     <span className="w-2 h-2 rounded-full bg-blue-500"></span>
                     <span>Uranium</span>
+                  </div>
+                </div>
+              </div>
+              {/* Oil and Gas Fields */}
+              <div>
+                <h4 className="font-semibold text-gray-300 mb-2">Oil & Gas Fields</h4>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-black border-2 border-white"></span>
+                    <span>Gas Field</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 bg-black border-2 border-white"></span>
+                    <span>Oil Field</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 bg-black border-2 border-white transform rotate-45"></span>
+                    <span>Oil & Gas Field</span>
                   </div>
                 </div>
               </div>
@@ -620,6 +897,86 @@ export default function MineralsMap({ center, minerals, loading, onSearchArea }:
                 </Marker>
               );
             })}
+
+          {/* Oil and Gas Fields */}
+          {filteredOilGasFields.map((field) => {
+            const icon = getOilGasIcon(field.contents);
+            return (
+              <Marker key={`oil-gas-${field.id}`} position={[field.coordinates.latitude, field.coordinates.longitude]} icon={icon}>
+                <Popup minWidth={260} className="oil-gas-popup bg-black bg-opacity-100 rounded-2xl shadow-2xl border border-gray-900">
+                  <div className="p-4 space-y-3 font-sans">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-extrabold text-xl text-gray-200 tracking-tight">
+                        {field.name}
+                      </h4>
+                      <span className="inline-block px-2 py-1 text-xs font-bold rounded-full bg-gray-700/20 text-gray-300 border border-gray-600/30">
+                        {field.size}
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <div>
+                        <span className="text-xs font-semibold text-gray-400 tracking-widest">Contents</span>
+                        <div className="flex flex-wrap gap-2 mt-1">
+                          <span className="inline-block bg-gray-800/60 text-gray-100 px-2 py-0.5 rounded-full text-xs font-semibold border border-gray-700/40">
+                            {field.contents}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="pt-2 border-t border-gray-700/30">
+                        <span className="text-xs font-semibold text-gray-400 tracking-widest">Country</span>
+                        <div className="text-sm text-gray-100 mt-1">
+                          {field.country}
+                        </div>
+                        {field.status && (
+                          <div className="mt-2">
+                            <span className="text-xs font-semibold text-gray-400 tracking-widest">Status</span>
+                            <div className="text-sm text-gray-100 mt-1">
+                              {field.status}
+                            </div>
+                          </div>
+                        )}
+                        {/* Distance from property */}
+                        {center && center._fromProperty && (
+                          <div className="text-xs text-gray-300 mt-2">
+                            Distance from your property: {(() => {
+                              const dist = getDistanceKm(center, field.coordinates);
+                              return `${dist.toFixed(2)} km`;
+                            })()}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex flex-row items-center justify-between pt-2">
+                      <div>
+                        <a
+                          href={`https://app.earth2.io/?lat=${field.coordinates.latitude}&lng=${field.coordinates.longitude}#`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-block bg-gray-600 hover:bg-gray-500 text-white text-xs px-3 py-1 rounded-full font-semibold shadow border-2 border-gray-700 transition"
+                        >
+                          Open in Earth2
+                        </a>
+                      </div>
+                      <div className="flex justify-end items-end">
+                        <span className="text-[11px] text-gray-400 mr-1">Source:</span>
+                        <a
+                          href={field.source === 'usgs' 
+                            ? "https://hub.arcgis.com/maps/schools-BE::world-oil-and-gas-fields"
+                            : "https://globalenergymonitor.org/projects/global-oil-gas-extraction-tracker/tracker-map/"
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-gray-400 hover:text-gray-300 underline text-[11px]"
+                        >
+                          {field.source === 'usgs' ? 'ARCGIS' : 'Global Energy Monitor'}
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </Popup>
+              </Marker>
+            );
+          })}
           {loading && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-[1000]">
               <Loader2 className="h-8 w-8 animate-spin text-earthie-mint" />
@@ -692,7 +1049,19 @@ export default function MineralsMap({ center, minerals, loading, onSearchArea }:
             transform: scale(1.2);
             box-shadow: 0 4px 8px rgba(0,0,0,0.4);
           }
+          .oil-gas-dot { 
+            width:16px; 
+            height:16px; 
+            display:block; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            transition: all 0.2s ease-in-out;
+          }
+          .oil-gas-dot:hover {
+            transform: scale(1.2);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+          }
           .leaflet-marker-icon.mineral-icon { background:transparent; border:none; }
+          .leaflet-marker-icon.oil-gas-icon { background:transparent; border:none; }
           .property-icon { background:transparent; border:none; }
           /* Force ALL leaflet popups to have a black background */
           .leaflet-popup-content-wrapper, .leaflet-popup-tip {
